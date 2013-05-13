@@ -17,7 +17,7 @@ Options:
 
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
-  -i    				use specified instance URL to connect
+  -i                    use specified instance URL to connect
   -f                    invokes merge process in the foreground as blocking 
                         operation
 
