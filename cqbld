@@ -94,5 +94,5 @@ $CURLBIN \
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $?
+exit $EXITCODE
 
