@@ -7,9 +7,9 @@ Installs already uploaded CRX package by group id and name in CRX Package
 Manager using instance URL.
  
 Examples:
-  cqdel -u admin pack            # Install package named pack
-  cqdel -u admin -g GRP pack     # Install package named pack in group GRP
-  cqdel -i http://localhost:5510 # Install package for localhost instance on tcp
+  cqrun -u admin pack            # Install package named pack
+  cqrun -u admin -g GRP pack     # Install package named pack in group GRP
+  cqrun -i http://localhost:5510 # Install package for localhost instance on tcp
         -g com.group stuff       # port 5510 named stuff in group: com.group
         -p secret                # with password provided: secret 
 
