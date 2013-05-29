@@ -130,10 +130,11 @@ _curlcode()
 	86 RTSP: mismatch of Session Identifiers
 	87 unable to parse FTP file list
 	88 FTP chunk callback reported error
+        '
 	EOF
 	)
-	msg=`echo "$codes"|grep "^$1 "|cut -f2- -d ' '`
-	echo "CURL ERROR $1: ${msg}" >&2
+    msg=`echo "$codes"|grep "^$1 "|cut -f2- -d ' '`
+    echo "CURL ERROR $1: ${msg}" >&2
     exit $EXITCODE
 }
 
@@ -148,34 +149,27 @@ curlexitcode=0
 while getopts ":Pu:p:i:fcC:" opt; do
   case $opt in
     P)
-      parse=1
-      ;;
+      parse=1;;
     u) 
       username=$OPTARG
-      explicit=1
-      ;;
+      explicit=1;;
     p)
       password=$OPTARG
-      explicit=1
-      ;;
+      explicit=1;;
     i)
       instance=$OPTARG
-      explicit=1
-      ;;
+      explicit=1;;
     c)
-	  curlpath=1
-      ;;
+      curlpath=1;;
     C)
-	  curlcode=1
-	  curlexitcode=$OPTARG
-	  ;;
+      curlcode=1
+      curlexitcode=$OPTARG;;
     \?)
       if [ $parse -ne 1 ]
       then
 	      echo "Invalid option: -$OPTARG" >&2
     	  _usage
-      fi
-      ;;
+      fi;;
     :)
       api=`echo "$OPTARG"|tr -cd 'upi'|wc -c`
       if [ $parse -eq 1 -a $api -ne 0 ]
@@ -185,25 +179,24 @@ while getopts ":Pu:p:i:fcC:" opt; do
       then
       	  echo "Option -$OPTARG requires an argument." >&2
       	  _usage
-      fi      		
-      ;;
+      fi;;
   esac
 done
 shift $((OPTIND-1))
 if [ $parse -eq 1 ]
 then
-	echo "$username\t$password\t$instance\t$explicit\tu:p:i:"
-	exit 0
+    echo "$username\t$password\t$instance\t$explicit\tu:p:i:"
+    exit 0
 fi
 if [ $curlpath -eq 1 ]
 then
-	_curlpath
-	exit 0
+    _curlpath
+    exit 0
 fi
 if [ $curlcode -eq 1 ]
 then
-	_curlcode $curlexitcode
-	exit 0
+    _curlcode $curlexitcode
+    exit 0
 fi
 
 _usage
