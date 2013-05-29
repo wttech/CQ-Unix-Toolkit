@@ -1,0 +1,97 @@
+#!/bin/sh
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...] package-name
+Installs already uploaded CRX package by group id and name in CRX Package
+Manager using instance URL.
+ 
+Examples:
+  cqdel -u admin pack            # Install package named pack
+  cqdel -u admin -g GRP pack     # Install package named pack in group GRP
+  cqdel -i http://localhost:5510 # Install package for localhost instance on tcp
+        -g com.group stuff       # port 5510 named stuff in group: com.group
+        -p secret                # with password provided: secret 
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -g                    locate package by additional group ID  
+
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+while getopts ":f${apigetopts}" opt; do
+  case $opt in
+     g)  
+      group="$OPTARG";;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ge 2 -o $passed -eq 0 ];
+then
+	_usage
+fi
+name=$1
+
+if [ -z  "${group}" ]
+then
+        group_arg=""
+else
+        group_arg="-F group=${group}"
+fi
+
+
+REFERER="$instance/crx/packmgr"
+AUTH="$username:$password"
+FILEPATH="/crx/packmgr/service.jsp"
+REFERERHEADER="Referer: $REFERER"
+
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+        -F cmd=inst \
+        ${group_arg} \
+        -F name=${name}
+	"$instance${FILEPATH}" 
+
+EXITCODE=$?
+$API -C $EXITCODE
+exit $?
+
