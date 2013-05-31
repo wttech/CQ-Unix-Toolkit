@@ -130,6 +130,7 @@ _curlcode()
 	86 RTSP: mismatch of Session Identifiers
 	87 unable to parse FTP file list
 	88 FTP chunk callback reported error
+	127 Unknown error
         '
 	EOF
 	)
@@ -158,6 +159,7 @@ while getopts ":Pu:p:i:fcC:" opt; do
       explicit=1;;
     i)
       instance=$OPTARG
+      instance=`echo "$instance"|sed -r 's#[/]+$##'`
       explicit=1;;
     c)
       curlpath=1;;
