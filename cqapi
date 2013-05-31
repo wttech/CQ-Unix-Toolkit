@@ -169,8 +169,10 @@ while getopts ":Pu:p:i:fcC:" opt; do
     \?)
       if [ $parse -ne 1 ]
       then
-	      echo "Invalid option: -$OPTARG" >&2
-    	  _usage
+           echo "Invalid option: -$OPTARG" >&2
+          _usage
+      else
+          OPTIND=$((OPTIND+1))
       fi;;
     :)
       api=`echo "$OPTARG"|tr -cd 'upi'|wc -c`
