@@ -51,7 +51,6 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-background=true
 while getopts ":f${apigetopts}" opt; do
   case $opt in
      g)  
