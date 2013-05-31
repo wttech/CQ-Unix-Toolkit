@@ -51,7 +51,7 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-while getopts ":f${apigetopts}" opt; do
+while getopts ":g:${apigetopts}" opt; do
   case $opt in
      g)  
       group="$OPTARG";;
@@ -63,7 +63,7 @@ while getopts ":f${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -ge 2 -o $passed -eq 0 ];
+if [ $# -gt 1 -o $passed -eq 0 ];
 then
 	_usage
 fi
