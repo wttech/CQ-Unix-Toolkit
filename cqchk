@@ -72,7 +72,7 @@ fi
 REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
 AUTH="$username:$password"
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/traversa\
-lCheck/java.lang.String%2Cjava.lang.Boolean%2C"
+lCheck/java.lang.String%2Cjava.lang.Boolean%2Cjava.lang.Boolean"
 REFERERHEADER="Referer: $REFERER"
 
 $CURLBIN \
