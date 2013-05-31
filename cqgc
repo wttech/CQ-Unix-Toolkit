@@ -1,0 +1,110 @@
+#!/bin/sh
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...]
+Invoke DataStore compaction/garbage collection operation for specified CQ
+instance by default with 15ms sleeping phase per each node (to not load CQ
+heavily).
+ 
+Examples:
+  cqgc -u admin -d 1            # Invokes garbage collection with minimal 
+                                # sleeping phase i.e. during night to shorten 
+                                # process 
+  cqgc -i http://localhost:5510 # Invokes garbace collection for localhost
+                                # instance on tcp port 5510
+  cqgc -p secret                # Invokes garbage collection using provided 
+                                # login password: secret
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -d                    changes sleeping phase for each node  
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+delay_ms=15
+while getopts ":d:${apigetopts}" opt; do
+  case $opt in
+     d)  
+      delay_ms=`echo $OPTARG|tr -cd '[:digit:]'`;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -gt 0 -o $passed -eq 0 ];
+then
+	_usage
+fi
+
+
+REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
+AUTH="$username:$password"
+FILEPATH1="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/a/DataStor\
+eGarbageCollectionDelay"
+FILEPATH2="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/runData\
+StoreGarbageCollection/java.lang.Boolean"
+REFERERHEADER="Referer: $REFERER"
+
+# Setting GC sleeping phase delay
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	-X POST --data value=$delayms \
+	"$instance${FILEPATH1}" 
+
+EXITCODE=$?
+$API -C $EXITCODE
+if [ "$EXITCODE" -ne 0 ]
+then
+    echo "Cannot set garbage collection sleeping phase." >&2
+    exit $EXITCODE
+fi
+
+# Invoke GC process in the foreground
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	-X POST --data delete=true \
+	"$instance${FILEPATH2}" 
+
+EXITCODE=$?
+$API -C $EXITCODE
+exit $EXITCODE
+
