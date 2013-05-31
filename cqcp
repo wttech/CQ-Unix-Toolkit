@@ -90,16 +90,18 @@ fi
 
 REFERER="$instance/etc/packages"
 AUTH="$username:$password"
-FILEPATH="/etc/packages/${group_part}${name}.zip"
+FILEPATH="/crx/packmgr/service.jsp"
 REFERERHEADER="Referer: $REFERER"
 
 $CURLBIN \
-	-s \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-        -f \
+        -s \
+        -u "$AUTH" \
+        -H "$REFERERHEADER" \
+        -F cmd=get \
+        ${group_arg} \
+        -F name=${name} \
         ${redirection} \
-	"$instance${FILEPATH}" 
+        "$instance${FILEPATH}"
 
 EXITCODE=$?
 $API -C $EXITCODE
