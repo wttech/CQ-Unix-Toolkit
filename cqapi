@@ -51,8 +51,8 @@ _curlcode()
 {
 	if [ -z "$1" -o "$1" -eq 0 ] 
 	then
-	    echo "OK"	
-		exit 0
+            echo "OK" >&2
+            exit 0
 	fi
 	codes=$(cat <<-'EOF'
 	1 Unsupported protocol. This build of curl has no support for this protocol.
