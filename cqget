@@ -48,10 +48,10 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-while getopts ":o${apigetopts}" opt; do
+while getopts ":o:${apigetopts}" opt; do
   case $opt in
      o)  
-      file="$OPTARG";;
+      outfile="$OPTARG";;
     \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
@@ -65,12 +65,11 @@ then
 	_usage
 fi
 URL=$1
-
 REFERER="$URL"
 AUTH="$username:$password"
 REFERERHEADER="Referer: $REFERER"
 
-if [ -z "$file" ]
+if [ -z "$outfile" ]
 then
         redirection=""
 else
@@ -83,7 +82,7 @@ $CURLBIN \
 	-H "$REFERERHEADER" \
         -f \
         ${redirection} \
-	"$URL" 
+	"$URL"
 
 EXITCODE=$?
 $API -C $EXITCODE
