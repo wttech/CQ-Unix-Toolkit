@@ -81,8 +81,8 @@ do
         	-u "$AUTH" \
         	-H "$REFERERHEADER" \
                 -F file=@"$file" \
-                -F force=true
-                -F install=false
+                -F force=true \
+                -F install=false \
         	"$instance${FILEPATH}" 
         EXITCODE=$?
         $API -C $EXITCODE
@@ -90,6 +90,7 @@ do
         then
             bad=1
         fi
+        shift
 done
 if [ $bad -eq 1 ]
 then
