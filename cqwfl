@@ -1,0 +1,82 @@
+#!/bin/sh
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...] 
+Returns CQ instance active workflows status in form of JSON data using instance
+URL.
+ 
+Examples:
+  cqwfl -u admin                 # Returns JSON data with active workflows from
+                                 # local instance
+  cqwfl -i http://localhost:5510 # Returns JSON data with active workflows for
+        -p secret                # localhost instance on tcp port 5510 with 
+                                 # password provided: secret 
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+while getopts ":${apigetopts}" opt; do
+  case $opt in
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -gt 0 -o $passed -eq 0 ];
+then
+	_usage
+fi
+
+REFERER="$instance/libs/cq/workflow/content/console/instances.html"
+AUTH="$username:$password"
+FILEPATH="/libs/cq/workflow/content/console/instances.json"
+REFERERHEADER="Referer: $REFERER"
+
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	"$instance${FILEPATH}" 
+
+EXITCODE=$?
+$API -C $EXITCODE
+exit $EXITCODE
+
