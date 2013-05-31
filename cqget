@@ -1,0 +1,91 @@
+#!/bin/sh
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...] URL
+Download specified file or resource from CQ URL using instance URL.
+ 
+Examples:
+  cqget -u admin http://localhost:5410/etc/packages/pack.zip            
+                                 # Get package named pack.zip from CQ on stdout
+  cqget -u admin -o PACK.zip http://localhost:5410/etc/packages/pack.zip
+                                 # Get package named pack.zip and save it to
+                                 # file named: PACK.zip
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -o                    saves remote resource using provided path or file name
+
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+while getopts ":o${apigetopts}" opt; do
+  case $opt in
+     o)  
+      file="$OPTARG";;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ne 1 ];
+then
+	_usage
+fi
+URL=$1
+
+REFERER="$URL"
+AUTH="$username:$password"
+REFERERHEADER="Referer: $REFERER"
+
+if [ -z "$file" ]
+then
+        redirection=""
+else
+        redirection="-o $outfile"
+fi
+
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+        -f \
+        ${redirection} \
+	"$URL" 
+
+EXITCODE=$?
+$API -C $EXITCODE
+exit $EXITCODE
+
