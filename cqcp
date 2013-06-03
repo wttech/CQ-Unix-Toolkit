@@ -80,7 +80,7 @@ else
         group_part="${group}/"
 fi
 
-if [ -z "$file" ]
+if [ -z "$outfile" ]
 then
         redirection="-o ${name}.zip"
 else
