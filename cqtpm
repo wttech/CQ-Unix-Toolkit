@@ -1,0 +1,177 @@
+#!/bin/sh
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...]
+Invoke TAR PersistenceManager optimization/compaction process for specified CQ
+instance in the background by default. There is possibility to invoke
+compaction in the background and polling its status in the foreground to
+wait until operation is finished.
+ 
+Examples:
+  cqtpm -u admin -f -s 60        # Invoke compaction in the background and waits 
+                                 # in the foreground (using status pooling every
+                                 # minute) for the end of process
+  cqtpm -i http://localhost:5510 # Invoke compaction for localhost instance on
+                                 # tcp port 5510
+  cqtpm -p secret -d 2           # Invoke compaction in the background using 
+                                 # provided password: secret, with additional
+                                 # delay 2ms between optimization transaction
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -f                    simulates optimization in the foreground as blocking 
+                        operation. This may not work for all versions.
+  -s                    sets delay in seconds between each status pooling 
+                        request (default 10 seconds). Used only when -f 
+                        parameter is specified.
+  -d                    sets delay in miliseconds between each compacted
+                        transaction
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+background=true
+pooling=10
+delayms=1
+while getopts ":fs:d:${apigetopts}" opt; do
+  case $opt in
+     f)  
+      background=false;;
+     s)
+      pooling=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-4`;;
+     d)
+      delayms=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-3`;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ge 1 -o $passed -eq 0 ];
+then
+	_usage
+fi
+
+
+REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
+AUTH="$username:$password"
+REFERERHEADER="Referer: $REFERER"
+
+echo -n "Stopping current TarPM compaction (if started)..."
+FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/stopTar\
+Optimization/"
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	-X POST \
+	"$instance${FILEPATH}" > /dev/null
+
+
+EXITCODE=$?
+$API -C $EXITCODE
+
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+
+
+
+echo -n "Setting TarPM compaction sleeping phase..."
+FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/a/TarOptimi\
+zationDelay"
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+        -X POST --data value=$delayms \
+	"$instance${FILEPATH}" > /dev/null
+EXITCODE=$?
+$API -C $EXITCODE
+
+if [ $EXITCODE -ne 0 ]
+then
+    echo "Cannot set compaction delay to ${delay} ms."
+    exit $EXITCODE
+fi
+
+
+if [ "${background}" = "false" ]
+then
+    background_text="foreground"
+else
+    background_text="background"
+fi
+
+echo -n "Running TarPM compaction in the ${background_text}..."
+FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/startTar\
+Optimization/"
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	-X POST  \
+	"$instance${FILEPATH}" > /dev/null
+
+
+EXITCODE=$?
+$API -C $EXITCODE
+
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+
+FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/"
+if [ "${background}" = "false" ]
+then
+    echo -n "Pooling TarPM optimization status..."
+    status="1"
+    
+    while [ "${status}" != "0" ]
+    do
+        sleep ${pooling}s
+        status=`$CURLBIN -s -u "$AUTH" -H "$REFERERHEADER" \
+                "${instance}${FILEPATH}"|grep TarOptimizationRunningSince\
+                |tr -cd '0-9 '|tr -s ' '|sed 's#^ *##'|cut -f2 -d ' '`
+        if [ -z "${status}" ]
+        then
+            status=0
+        fi
+    done
+    echo "DONE"
+fi
