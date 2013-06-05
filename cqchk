@@ -75,6 +75,7 @@ FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/traversa\
 lCheck/java.lang.String%2Cjava.lang.Boolean%2Cjava.lang.Boolean"
 REFERERHEADER="Referer: $REFERER"
 
+
 $CURLBIN \
 	-s \
 	-u "$AUTH" \
@@ -82,6 +83,21 @@ $CURLBIN \
 	-X POST --data "logEach=false&fixInconsistencies=${fix}" \
 	"$instance${FILEPATH}" 
 
+EXITCODE=$?
+$API -C $EXITCODE
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+
+FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/consiste\
+ncyCheck/java.lang.String%2Cjava.lang.Boolean"
+$CURLBIN \
+	-s \
+	-u "$AUTH" \
+	-H "$REFERERHEADER" \
+	-X POST --data "fixInconsistencies=${fix}" \
+	"$instance${FILEPATH}" 
 EXITCODE=$?
 $API -C $EXITCODE
 exit $EXITCODE
