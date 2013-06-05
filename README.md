@@ -13,24 +13,25 @@ usage output that allows to perform these tasks easily.
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
-  $ ./cqbld
-  Usage: cqbld [OPTION...] package-name
-  Build (rebuild) already uploaded package by group id and name in CQ Package
-  Manager using instance URL.
 
-  Examples:
-    cqbld -u admin pack            # Build package named pack
-    cqbld -u admin -g GRP pack     # Build package named pack in group GRP
-    cqbld -i http://localhost:5510 # Build package for localhost instance on tcp
-          -g com.group stuff       # port 5510 named stuff in group:com.group
-          -p secret                # with password provided: secret
+    $ ./cqbld
+    Usage: cqbld [OPTION...] package-name
+    Build (rebuild) already uploaded package by group id and name in CQ Package
+    Manager using instance URL.
 
-  Options:
+    Examples:
+      cqbld -u admin pack            # Build package named pack
+      cqbld -u admin -g GRP pack     # Build package named pack in group GRP
+      cqbld -i http://localhost:5510 # Build package for localhost instance on tcp
+            -g com.group stuff       # port 5510 named stuff in group:com.group
+            -p secret                # with password provided: secret
 
-    -u                    use specified usernamed for connection
-    -p                    use provided password for authentication
-    -i                    use specified instance URL to connect
-    -g                    locate package by additional group ID
+    Options:
+
+      -u                    use specified usernamed for connection
+      -p                    use provided password for authentication
+      -i                    use specified instance URL to connect
+      -g                    locate package by additional group ID
 
 
 so you can find out how to operate and specify required arguments.
