@@ -20,11 +20,11 @@ Usage: `basename $0` [OPTION...]
 CQ UNIX Toolkit API command.
  
 Examples:
-  cqapi -u admin                 # Merge indexes in the foreground.
-  cqapi -i http://localhost:5510 # Merge indexes for localhost instance on tcp
-                                 # port 5510
-  cqapi -p secret                # Merge indexes in the background using 
-                                 # provided password: secret
+  cqapi -u admin                 # Provides username to connect to CQ
+  cqapi -i http://localhost:5510 # Provided instance URL to connect to CQ
+                                 # on local machine  on port 5510
+  cqapi -p secret                # Provides password: secret to connect to 
+                                 # CQ
   cqapi -c                       # Get curl binary path
   cqapi -P -u admin              # Enable parse mode for common arguments
   cqapi -C 2                     # Get curl error for exit code: 2
