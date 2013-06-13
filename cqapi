@@ -45,11 +45,19 @@ exit 1
 
 _curlpath()
 {
-    WHEREIS=`whereis whereis|cut -f2 -d ' '`
-    if [ $? -ne 0 ] 
+    WHEREIS=`whereis whereis 2>/dev/null|cut -f2 -d ' '`
+    EXITCODE=$?
+    if [ $EXITCODE -ne 0 -o -z "$WHEREIS" ] 
     then
-        echo "Cannot locate required command: whereis." >&2
-        exit 1
+        CURLBIN=`which curl`
+        EXITCODE=$?
+        if [ $EXITCODE -ne 0 -o -z "${CURLBIN}" ]
+        then
+            echo "Cannot locate required command: curl (using which/whereis method)." >&2
+            exit 1
+        fi
+        echo "$CURLBIN"
+        exit 0
     fi
     CURLBIN=`${WHEREIS} -b curl|cut -f2 -d ' '`
     EXITCODE=$?
