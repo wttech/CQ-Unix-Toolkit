@@ -11,6 +11,34 @@ party commands to perform some different tasks such as:
 Each separate action is wrapped to separate stand-alone script with additional
 usage output that allows to perform these tasks easily.
 
+At least every tool requires valid login to CQ instance using three basic
+parameters:
+
+   * -u (username)
+   * -p (password)
+   * -i (URL to instance) i.e. https://localhost:5510
+
+
+Which for what?
+===============
+
+Below is list of separate tools and purpose of each other
+
+* cqbld -- Builds remotely uploaded CQ package using connection parameters
+* cqcp -- Makes a copy of remote CQ package to your local environment 
+* cqget -- Makes a copy of CQ resource to your local environment
+* cqrun -- Install uploaded CQ package on remote instanse
+* cqdel -- Remove completely remotely available CQ package 
+* cqput -- Upload package from your local environment
+* cqls -- List packages uploaded/installed in remote CQ
+* cqchk -- Checks remote CQ instance repository if it's consistent
+* cqgc -- Deletes effectively removed content from instance to reclaim free 
+          space 
+* cqmrg -- Merge CQ TarPM indexes
+* cqtpm -- Deletes effectively removed content from TarPM CQ storage
+* cqwfl -- Display active (or broken) workflow instances
+
+
 Each script can be executed *without parameters* from your terminal i.e.:
 
 
