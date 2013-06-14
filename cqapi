@@ -211,7 +211,7 @@ done
 shift $((OPTIND-1))
 if [ $parse -eq 1 ]
 then
-    echo "$username\t$password\t$instance\t$explicit\tu:p:i:"
+    echo -e "$username\t$password\t$instance\t$explicit\tu:p:i:"
     exit 0
 fi
 if [ $curlpath -eq 1 ]
