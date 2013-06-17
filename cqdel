@@ -65,7 +65,7 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-while getopts ":f${apigetopts}" opt; do
+while getopts ":g:${apigetopts}" opt; do
   case $opt in
      g)  
       group="$OPTARG";;
@@ -102,7 +102,7 @@ $CURLBIN \
 	-H "$REFERERHEADER" \
         -F cmd=rm \
         ${group_arg} \
-        -F name=${name}
+        -F name=${name} \
 	"$instance${FILEPATH}" 
 
 EXITCODE=$?
