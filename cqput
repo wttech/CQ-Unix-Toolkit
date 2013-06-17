@@ -90,19 +90,32 @@ bad=0
 while [ $# -ne 0 ] 
 do
         file=$1
-        $CURLBIN \
-        	-s \
-        	-u "$AUTH" \
-        	-H "$REFERERHEADER" \
+        if [ ! -f $file ]
+        then
+            echo "Cannot find file: $file" >&2 
+            bad=1
+        else
+            STATUS=`$CURLBIN \
+            	-s \
+                --write-out "%{http_code}" \
+            	-u "$AUTH" \
+            	-H "$REFERERHEADER" \
                 -F file=@"$file" \
                 -F force=true \
                 -F install=false \
-        	"$instance${FILEPATH}" 
-        EXITCODE=$?
-        $API -C $EXITCODE
-        if [ "$EXITCODE" -ne 0 ]
-        then
-            bad=1
+            	"${instance}${FILEPATH}"`
+            EXITCODE=$?
+            $API -C $EXITCODE
+            STATUSCODE=`echo "$STATUS"|tail -n 1`
+            STATUS=`echo "$STATUS"|sed '$d'`
+            $API -H $STATUSCODE
+            if [ "$EXITCODE" -ne 0 -o $STATUSCODE != "200" ]
+            then
+                bad=1
+            else
+                echo "$STATUS"
+                echo "OK" >&2
+            fi
         fi
         shift
 done
