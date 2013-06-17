@@ -81,7 +81,7 @@ while getopts ":o:g:${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -ge 2 -o $passed -eq 0 ];
+if [ $# -ne 1 -o $passed -eq 0 ];
 then
 	_usage
 fi
@@ -89,35 +89,81 @@ name=$1
 
 if [ -z  "${group}" ]
 then
-        group_part=""
+        group_arg=""
 else
-        group_part="${group}/"
+        group_arg="-F group=${group}"
 fi
 
 if [ -z "$outfile" ]
 then
-        redirection="-o ${name}.zip"
-else
-        redirection="-o $outfile"
+        outfile="${name}.zip"
 fi
-
+redirection="-o $outfile"
 
 REFERER="$instance/etc/packages"
 AUTH="$username:$password"
 FILEPATH="/crx/packmgr/service.jsp"
 REFERERHEADER="Referer: $REFERER"
 
-$CURLBIN \
-        -s \
-        -u "$AUTH" \
-        -H "$REFERERHEADER" \
-        -F cmd=get \
-        ${group_arg} \
-        -F name=${name} \
-        ${redirection} \
-        "$instance${FILEPATH}"
-
+STATUS=`$CURLBIN \
+    -s \
+    --write-out "%{content_type} %{http_code}" \
+    -u "$AUTH" \
+    -H "$REFERERHEADER" \
+    -F cmd=get \
+    ${group_arg} \
+    -o /dev/null \
+    -F name=${name} \
+    "${instance}${FILEPATH}"`
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+STATUSFIELDS=`echo "$STATUS"|tail -n 1`
+STATUSCODE=`echo "$STATUSFIELDS"|cut -f2 -d ' '`
+CONTENTTYPE=`echo "$STATUSFIELDS"|cut -f1 -d ' '`
+$API -H ${STATUSCODE}
+EXITCODE2=$?
+fullfile=`readlink -f $outfile`
+plain=0
+if [ "${EXITCODE2}" -eq 0 -a ${EXITCODE} -eq 0 ]
+then
+    plain=`echo "$CONTENTTYPE"|grep -c 'plain'`
+fi
+EXITCODE=$((EXITCODE + EXITCODE2))
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+
+if [ $plain -eq 1 ]
+then
+    redirection="-o -"
+fi
+
+STATUS=`$CURLBIN \
+    -s \
+    --write-out "%{http_code}" \
+    -u "$AUTH" \
+    -H "$REFERERHEADER" \
+    -F cmd=get \
+    ${group_arg} \
+    -F name=${name} \
+    ${redirection} \
+    "${instance}${FILEPATH}"`
+EXITCODE=$?
+$API -C $EXITCODE
+STATUSCODE=`echo "$STATUS"|tail -n 1|cut -f1 -d ' '`
+CONTENTTYPE=`echo "$STATUS"|tail -n 1|cut -f2 -d ' '`
+STATUS=`echo "$STATUS"|sed '$d'`
+$API -H ${STATUSCODE}
+EXITCODE2=$?
+if [ ${EXITCODE2} -eq 0 -a ${EXITCODE} -eq 0 ]
+then
+    if [ $plain -eq 0 ]
+    then
+        echo "Package copied to: $fullfile"
+    else
+        echo "$STATUS"
+    fi
+fi
+exit $((EXITCODE + EXITCODE2))
 
