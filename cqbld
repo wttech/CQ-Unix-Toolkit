@@ -77,7 +77,7 @@ while getopts ":g:${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -gt 1 -o $passed -eq 0 ];
+if [ $# -ne 1 -o $passed -eq 0 ];
 then
 	_usage
 fi
@@ -96,16 +96,22 @@ AUTH="$username:$password"
 FILEPATH="/crx/packmgr/service.jsp"
 REFERERHEADER="Referer: $REFERER"
 
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+	--write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -F cmd=build \
         ${group_arg} \
         -F name=${name} \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d'`
+$API -H $STATUSCODE
+EXITCODE2=$?
+echo "${STATUS}"
+exit $((EXITCODE + EXITCODE2))
 

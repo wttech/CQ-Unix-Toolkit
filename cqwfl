@@ -84,13 +84,19 @@ AUTH="$username:$password"
 FILEPATH="/libs/cq/workflow/content/console/instances.json"
 REFERERHEADER="Referer: $REFERER"
 
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+    --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+$API -H ${STATUSCODE}
+EXITCODE2=$?
+STATUS=`echo "$STATUS"|sed -r 's#[0-9]{3}$##'`
+echo "${STATUS}"
+exit $((EXITCODE + EXITCODE2))
 

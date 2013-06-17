@@ -96,16 +96,22 @@ AUTH="$username:$password"
 FILEPATH="/crx/packmgr/service.jsp"
 REFERERHEADER="Referer: $REFERER"
 
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+    --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -F cmd=inst \
         ${group_arg} \
         -F name=${name} \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+$API -H ${STATUSCODE}
+EXITCODE2=$?
+STATUS=`echo "$STATUS"|sed '$d'`
+echo "${STATUS}"
+exit $((EXITCODE + EXITCODE2))
 

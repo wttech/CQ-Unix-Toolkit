@@ -109,7 +109,8 @@ do
             STATUSCODE=`echo "$STATUS"|tail -n 1`
             STATUS=`echo "$STATUS"|sed '$d'`
             $API -H $STATUSCODE
-            if [ "$EXITCODE" -ne 0 -o $STATUSCODE != "200" ]
+            EXITCODE2=$?
+            if [ "$EXITCODE" -ne 0 -o "$EXITCODE2" -ne 0 ]
             then
                 bad=1
             else
