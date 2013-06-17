@@ -90,15 +90,28 @@ else
         redirection="-o $outfile"
 fi
 
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+    --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -f \
         ${redirection} \
-	"$URL"
+	"$URL"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+$API -H ${STATUSCODE}
+EXITCODE2=$?
+if [ ${EXITCODE} -eq 0 -a ${EXITCODE} -eq 0 ]
+then
+    if [ ! -z "$outfile" ]
+    then
+        fullfile=`readlink -f $outfile`
+        echo "Resource copied to: $fullfile" 
+    fi
+fi
+
+exit $((EXITCODE + EXITCODE2))
 
