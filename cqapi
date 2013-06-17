@@ -28,6 +28,8 @@ Examples:
   cqapi -c                       # Get curl binary path
   cqapi -P -u admin              # Enable parse mode for common arguments
   cqapi -C 2                     # Get curl error for exit code: 2
+  cqapi -H 401                   # Get HTTP textual error for HTTP 401 error 
+                                 # code
 
 Options:
 
@@ -38,6 +40,7 @@ Options:
   -P                    Enable parse mode for API common arguments. This must
                         be first parameter.
   -C                    Get curl friendly error for specified exit code.
+  -H                    Get HTTP friendly error response instead of code
 
 EOT
 exit 1
@@ -73,7 +76,6 @@ _curlcode()
 {
 	if [ -z "$1" -o "$1" -eq 0 ] 
 	then
-            echo "OK" >&2
             exit 0
 	fi
 	codes=$(cat <<-'EOF'
@@ -156,20 +158,56 @@ _curlcode()
         '
 	EOF
 	)
-    msg=`echo "$codes"|grep "^$1 "|cut -f2- -d ' '`
+    msg=`echo "$codes"|sed -r 's#^[ \t]+##'|grep "^$1 "|cut -f2- -d ' '`
+    if [ -z "$msg" ]
+    then
+        msg="Unknown code"
+    fi    
     echo "CURL ERROR $1: ${msg}" >&2
     exit $EXITCODE
 }
+
+_httpcode()
+{
+	if [ -z "$1" -o "$1" -eq 200 ] 
+	then
+            exit 0
+	fi
+	codes=$(cat <<-'EOF'
+	301 Resource has been moved permanently
+	302 Resource has been moved temporarily
+    400 HTTP Bad request
+    401 Unauthorized properly: please check supplied username and password
+    403 Forbidden resource: please check permissions
+    404 Not found or forbidden: please check permissions 
+    410 Gone: resource is not available anymore
+    500 Internal CQ error 
+    501 Internal CQ error
+    502 Internal CQ error
+    503 Internal CQ error
+	EOF
+	)
+    msg=`echo "$codes"|sed -r 's#^[ \t]+##'|grep "^$1 "|cut -f2- -d ' '`
+    if [ -z "$msg" ]
+    then
+        msg="Unknown response"
+    fi
+    echo "HTTP RESPONSE $1: ${msg}" >&2
+    exit 1
+}
+
 
 instance="http://localhost:5410"
 username=admin
 password=admin
 curlpath=0
 curlcode=0
+httpcode=0
 explicit=0
 parse=0
 curlexitcode=0
-while getopts ":Pu:p:i:fcC:" opt; do
+ECHO=`which echo`
+while getopts ":Pu:p:i:fcC:H:" opt; do
   case $opt in
     P)
       parse=1;;
@@ -188,6 +226,9 @@ while getopts ":Pu:p:i:fcC:" opt; do
     C)
       curlcode=1
       curlexitcode=$OPTARG;;
+    H)
+      httpcode=1
+      httpresponsecode=$OPTARG;;
     \?)
       if [ $parse -ne 1 ]
       then
@@ -211,7 +252,7 @@ done
 shift $((OPTIND-1))
 if [ $parse -eq 1 ]
 then
-    echo -e "$username\t$password\t$instance\t$explicit\tu:p:i:"
+    $ECHO -e "$username\t$password\t$instance\t$explicit\tu:p:i:"
     exit 0
 fi
 if [ $curlpath -eq 1 ]
@@ -224,6 +265,12 @@ then
     _curlcode $curlexitcode
     exit 0
 fi
+if [ $httpcode -eq 1 ]
+then
+    _httpcode $httpresponsecode
+    exit 0
+fi
+
 
 _usage
 
