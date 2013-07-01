@@ -95,30 +95,62 @@ StoreGarbageCollection/java.lang.Boolean"
 REFERERHEADER="Referer: $REFERER"
 
 # Setting GC sleeping phase delay
-$CURLBIN \
+echo -n "Setting DataStore garbage collection sleeping phase..."
+STATUS=`$CURLBIN \
 	-s \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
-	-X POST --data value=$delayms \
-	"$instance${FILEPATH1}" 
+	-X POST --data value=$delay_ms \
+	"$instance${FILEPATH1}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-if [ "$EXITCODE" -ne 0 ]
+
+if [ $EXITCODE -ne 0 ]
 then
     echo "Cannot set garbage collection sleeping phase." >&2
     exit $EXITCODE
 fi
 
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot set garbage collection sleeping phase." >&2
+    exit $EXITCODE2
+fi
+
 # Invoke GC process in the foreground
-$CURLBIN \
+echo -n "Running DataStore garbage collection..."
+STATUS=`$CURLBIN \
 	-s \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
 	-X POST --data delete=true \
-	"$instance${FILEPATH2}" 
+	"$instance${FILEPATH2}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+
+if [ $EXITCODE -ne 0 ]
+then
+    echo "Cannot invoke garbage collection." >&2
+    exit $EXITCODE
+fi
+
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot invoke garbage collection." >&2
+    exit $EXITCODE2
+fi
 
