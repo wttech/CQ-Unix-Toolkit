@@ -85,14 +85,13 @@ REFERERHEADER="Referer: $REFERER"
 
 if [ -z "$outfile" ]
 then
-        redirection=""
-else
-        redirection="-o $outfile"
+        outfile=`basename "$URL"`
 fi
+redirection="-o $outfile"
 
 STATUS=`$CURLBIN \
 	-s \
-    --write-out "%{http_code}" \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -f \
