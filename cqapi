@@ -207,7 +207,7 @@ explicit=0
 parse=0
 curlexitcode=0
 ECHO=`which echo`
-while getopts ":Pu:p:i:fcC:H:" opt; do
+while getopts ":Pu:p:i:fcC:H:-:" opt; do
   case $opt in
     P)
       parse=1;;
