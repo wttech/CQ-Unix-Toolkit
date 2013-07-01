@@ -15,9 +15,11 @@
 # limitations under the License.
 _usage()
 {
+        DIR=`dirname $0`
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 CQ UNIX Toolkit API command.
+Version `cat $DIR/VERSION`
  
 Examples:
   cqapi -u admin                 # Provides username to connect to CQ
@@ -30,6 +32,7 @@ Examples:
   cqapi -C 2                     # Get curl error for exit code: 2
   cqapi -H 401                   # Get HTTP textual error for HTTP 401 error 
                                  # code
+  cqapi -v                       # Returns toolkit version
 
 Options:
 
@@ -41,6 +44,7 @@ Options:
                         be first parameter.
   -C                    Get curl friendly error for specified exit code.
   -H                    Get HTTP friendly error response instead of code
+  -v                    Provides toolkit version
 
 EOT
 exit 1
@@ -207,7 +211,7 @@ explicit=0
 parse=0
 curlexitcode=0
 ECHO=`which echo`
-while getopts ":Pu:p:i:fcC:H:" opt; do
+while getopts ":Pu:p:i:fcC:H:v" opt; do
   case $opt in
     P)
       parse=1;;
@@ -229,6 +233,8 @@ while getopts ":Pu:p:i:fcC:H:" opt; do
     H)
       httpcode=1
       httpresponsecode=$OPTARG;;
+    v)
+      DIR=`dirname $0`; cat $DIR/VERSION; exit 0;;
     \?)
       if [ $parse -ne 1 ]
       then
