@@ -77,13 +77,14 @@ apigetopts=`echo "${cmdapi}" | cut -f5`
 # Custom arguments
 background=true
 pooling=10
+pooling_set=0
 delayms=1
 while getopts ":fs:d:${apigetopts}" opt; do
   case $opt in
      f)  
       background=false;;
      s)
-      pooling=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-4`;;
+      pooling=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-4`; pooling_set=1;;
      d)
       delayms=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-3`;;
     \?)
@@ -94,9 +95,14 @@ while getopts ":fs:d:${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
+if [ $pooling_set -eq 1 -a "$background" = "true" ]
+then
+    _usage
+fi
+
 if [ $# -ge 1 -o $passed -eq 0 ];
 then
-	_usage
+    _usage
 fi
 
 
