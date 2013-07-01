@@ -24,8 +24,8 @@ Examples:
   cqdel -u admin pack            # Remove package named pack
   cqdel -u admin -g GRP pack     # Remove package named pack in group GRP
   cqdel -i http://localhost:5510 # Remove package for localhost instance on tcp
-        -g com.group stuff       # port 5510 named stuff in group:com.group
-        -p secret                # with password provided: secret 
+        -g com.group -p secret   # port 5510 named stuff in group:com.group
+        stuff                    # with password provided: secret 
 
 Options:
 
@@ -77,7 +77,7 @@ while getopts ":g:${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -lt 1 -o $passed -eq 0 ];
+if [ $# -gt 1 -o $passed -eq 0 ];
 then
 	_usage
 fi
@@ -98,7 +98,7 @@ REFERERHEADER="Referer: $REFERER"
 
 STATUS=`$CURLBIN \
 	-s \
-    --write-out "%{http_code}" \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -F cmd=rm \
