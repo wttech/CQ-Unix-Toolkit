@@ -55,7 +55,6 @@ then
 	exit 1
 fi
 
-
 # API common options
 cmdapi=`    $API -P $@`
 username=`  echo "${cmdapi}" | cut -f1`
@@ -66,7 +65,8 @@ apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
 background=true
-while getopts ":f${apigetopts}" opt; do
+while getopts ":f${apigetopts}" opt
+do
   case $opt in
      f)  
       background=false;;
@@ -78,7 +78,7 @@ while getopts ":f${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ $# -ge 1 -o $passed -eq 0 ];
+if [ $# -ge 1 -o $passed -eq 0 ]
 then
 	_usage
 fi
@@ -90,14 +90,33 @@ FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/tarInde\
 xMerge/java.lang.Boolean"
 REFERERHEADER="Referer: $REFERER"
 
-$CURLBIN \
+echo -n 'Invoking TarPM index merge operation...'
+STATUS=`$CURLBIN \
 	-s \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
 	-X POST --data background=$background \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+
+if [ $EXITCODE -ne 0 ]
+then
+    echo "Cannot invoke TarPM index merge operation." >&2
+    exit $EXITCODE
+fi
+
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot invoke TarPM index merge operation." >&2
+    exit $EXITCODE2
+fi
+
 
