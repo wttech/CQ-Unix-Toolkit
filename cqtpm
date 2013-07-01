@@ -18,9 +18,9 @@ _usage()
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 Invoke TAR PersistenceManager optimization/compaction process for specified CQ
-instance in the background by default. There is possibility to invoke
-compaction in the background and polling its status in the foreground to
-wait until operation is finished.
+instance in the background by default with 1 ms sleeping phase between each
+TarPM transaction. There is possibility to invoke compaction in the background
+and polling its status in the foreground to wait until operation is finished.
  
 Examples:
   cqtpm -u admin -f -s 60        # Invoke compaction in the background and waits 
