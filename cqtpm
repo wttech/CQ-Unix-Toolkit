@@ -113,40 +113,63 @@ REFERERHEADER="Referer: $REFERER"
 echo -n "Stopping current TarPM compaction (if started)..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/stopTar\
 Optimization/"
-$CURLBIN \
-	-s \
+STATUS=`$CURLBIN \
+	-s  \
 	-u "$AUTH" \
+        --write-out "%{http_code}" \
 	-H "$REFERERHEADER" \
 	-X POST \
-	"$instance${FILEPATH}" > /dev/null
+	"$instance${FILEPATH}"`
 
 
 EXITCODE=$?
 $API -C $EXITCODE
-
 if [ $EXITCODE -ne 0 ]
 then
+    echo "Cannot stop TarPM optimization." >&2
     exit $EXITCODE
 fi
 
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot stop TarPM optimization." >&2
+    exit $EXITCODE2
+fi
 
 
 echo -n "Setting TarPM compaction sleeping phase..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/a/TarOptimi\
 zationDelay"
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
 	-u "$AUTH" \
+        --write-out "%{http_code}" \
 	-H "$REFERERHEADER" \
         -X POST --data value=$delayms \
-	"$instance${FILEPATH}" > /dev/null
+	"$instance${FILEPATH}"`
+
 EXITCODE=$?
 $API -C $EXITCODE
-
 if [ $EXITCODE -ne 0 ]
 then
-    echo "Cannot set compaction delay to ${delay} ms."
+    echo "Cannot set compaction delay to ${delay} ms." >&2
     exit $EXITCODE
+fi
+
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot set compaction delay to ${delay} ms."
+    exit $EXITCODE2
 fi
 
 
@@ -160,37 +183,64 @@ fi
 echo -n "Running TarPM compaction in the ${background_text}..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/startTar\
 Optimization/"
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
 	-u "$AUTH" \
+        --write-out "%{http_code}" \
 	-H "$REFERERHEADER" \
 	-X POST  \
-	"$instance${FILEPATH}" > /dev/null
-
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
 
 if [ $EXITCODE -ne 0 ]
 then
+    echo "Cannot start TarPM compaction." >&2
     exit $EXITCODE
 fi
+
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot start TarPM compaction." >&2
+    exit $EXITCODE2
+fi
+
 
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/"
 if [ "${background}" = "false" ]
 then
-    echo -n "Pooling TarPM optimization status..."
-    status="1"
+    echo "Pooling TarPM optimization status..."
+    tarpm_status="1"
     
-    while [ "${status}" != "0" ]
+    while [ "${tarpm_status}" != "0" ]
     do
         sleep ${pooling}s
-        status=`$CURLBIN -s -u "$AUTH" -H "$REFERERHEADER" \
-                "${instance}${FILEPATH}"|grep TarOptimizationRunningSince\
-                |tr -cd '0-9 '|tr -s ' '|sed 's#^ *##'|cut -f2 -d ' '`
-        if [ -z "${status}" ]
+        STATUS=`$CURLBIN \
+                    -s \
+                    -u "$AUTH" \
+                    --write-out "%{http_code}" \
+                    -H "$REFERERHEADER" \
+                    "${instance}${FILEPATH}"`
+        STATUSCODE=`echo "$STATUS"|tail -n 1`
+        $API -H $STATUSCODE
+        if [ $EXITCODE -ne 0 ]
         then
-            status=0
+            echo "Cannot pool properly TarPM compaction status" >&2
+            exit $EXITCODE
+        fi
+
+
+        tarpm_status=`echo "$STATUS"|grep TarOptimizationRunningSince\
+                        |tr -cd '0-9 '|tr -s ' '|sed 's#^ *##'|cut -f2 -d ' '`
+        if [ -z "${tarpm_status}" ]
+        then
+            tarpm_status=0
         fi
     done
     echo "DONE"
