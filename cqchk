@@ -83,6 +83,7 @@ then
 fi
 
 
+echo -n "Starting repository traversal check..."
 REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
 AUTH="$username:$password"
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/traversa\
@@ -90,29 +91,61 @@ lCheck/java.lang.String%2Cjava.lang.Boolean%2Cjava.lang.Boolean"
 REFERERHEADER="Referer: $REFERER"
 
 
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
 	-X POST --data "logEach=false&fixInconsistencies=${fix}" \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
 if [ $EXITCODE -ne 0 ]
 then
+    echo "Cannot invoke repository traversal check." >&2
     exit $EXITCODE
 fi
 
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot invoke repository traversal check." >&2
+    exit $EXITCODE2
+fi
+
+
+echo -n "Starting repository consistency check..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/consiste\
 ncyCheck/java.lang.String%2Cjava.lang.Boolean"
-$CURLBIN \
+STATUS=`$CURLBIN \
 	-s \
+        --write-out "%{http_code}" \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
 	-X POST --data "fixInconsistencies=${fix}" \
-	"$instance${FILEPATH}" 
+	"$instance${FILEPATH}" `
 EXITCODE=$?
 $API -C $EXITCODE
-exit $EXITCODE
+if [ $EXITCODE -ne 0 ]
+then
+    echo "Cannot invoke repository consistency check." >&2
+    exit $EXITCODE
+fi
+
+STATUSCODE=`echo "$STATUS"|tail -n 1`
+STATUS=`echo "$STATUS"|sed '$d;'`
+echo "${STATUS}"
+$API -H $STATUSCODE
+EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Cannot invoke repository consistency check." >&2
+    exit $EXITCODE2
+fi
+
 
