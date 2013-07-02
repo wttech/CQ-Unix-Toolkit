@@ -30,6 +30,8 @@ Examples:
   cqapi -C 2                     # Get curl error for exit code: 2
   cqapi -H 401                   # Get HTTP textual error for HTTP 401 error 
                                  # code
+  cqapi -E                       # Extract exception message from stdin
+  cqapi -e                       # Detect if on stdin there is exception
 
 Options:
 
@@ -41,6 +43,9 @@ Options:
                         be first parameter.
   -C                    Get curl friendly error for specified exit code.
   -H                    Get HTTP friendly error response instead of code
+  -E                    Return on stdout only exception message skipping
+                        stack trace at the same time
+  -e                    Detect if on stdin thereis exception stacktrace
 
 EOT
 exit 1
@@ -56,7 +61,8 @@ _curlpath()
         EXITCODE=$?
         if [ $EXITCODE -ne 0 -o -z "${CURLBIN}" ]
         then
-            echo "Cannot locate required command: curl (using which/whereis method)." >&2
+            echo "Cannot locate required command: curl (using which/whereis\
+             method)." >&2
             exit 1
         fi
         echo "$CURLBIN"
@@ -197,6 +203,17 @@ _httpcode()
 }
 
 
+_java_exception()
+{
+    head -n 1 | cut -f2 -d ':' | sed -r 's#^[ ]+##'
+}
+
+_java_exception_detection()
+{
+    grep -Ec "(^[\.[:alnum:]]+Exception:.*$|^[[:space:]]+at[[:space:]][\.\
+        [:alnum:]]+(\(.+\))?)"
+}
+
 instance="http://localhost:5410"
 username=admin
 password=admin
@@ -204,10 +221,12 @@ curlpath=0
 curlcode=0
 httpcode=0
 explicit=0
+exception=0
+exception_detection=0
 parse=0
 curlexitcode=0
 ECHO=`which echo`
-while getopts ":Pu:p:i:fcC:H:-:" opt; do
+while getopts ":Pu:p:i:fcC:H:-:Ee" opt; do
   case $opt in
     P)
       parse=1;;
@@ -229,6 +248,10 @@ while getopts ":Pu:p:i:fcC:H:-:" opt; do
     H)
       httpcode=1
       httpresponsecode=$OPTARG;;
+    E)
+      exception=1;;
+    e)
+      exception_detection=1;;
     \?)
       if [ $parse -ne 1 ]
       then
@@ -268,6 +291,16 @@ fi
 if [ $httpcode -eq 1 ]
 then
     _httpcode $httpresponsecode
+    exit 0
+fi
+if [ $exception -eq 1 ]
+then
+    _java_exception
+    exit 0
+fi
+if [ $exception_detection -eq 1 ]
+then
+    _java_exception_detection
     exit 0
 fi
 
