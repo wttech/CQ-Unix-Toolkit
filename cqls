@@ -29,10 +29,115 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-
+  -1                    list only package names without summary
+  -l                    list all fields (dates) with summary
+  -m                    list all fields without summary in machine-readable
+                        format
+  -x                    output original raw response from CQ (portable and the 
+                        fastest one)
 
 EOT
 exit 1
+}
+
+_extract_xml_field()
+{
+    field=`echo "$1"|grep -oE "<$2>.+</$2>"|sed -r "s#<$2>(.+)</$2>#\1#"|\
+        tr -d '\n'`
+    if [ -z "$field" ]
+    then
+        echo "null"
+    else
+        echo "$field"
+    fi
+}
+
+_print_preformatted()
+{
+    OUTPUT=$1
+    mode=$2
+    items=`echo $OUTPUT|sed -r 's#^[ ]+##g; s#[ ]+$##g;'|\
+        tr -d '\n'|sed 's#<package>#\n<package>#g'|grep -E '<package>'`
+    items_count=`echo "$items"|wc -l`
+    idx=0
+    
+    # Table header
+    output_template="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
+    case $mode in
+      0) output="${output_template}\n";;
+      1) output="";;
+      2) output="";;
+      3) dates="CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
+         output="${output_template}|${dates}\n";;      
+    esac
+    
+    # Table rows
+    while [ $idx -lt $items_count ]
+    do
+        idx=$((idx+1))       
+        line=`echo "${items}"|head -n $idx|tail -n 1`
+        name=`_extract_xml_field "$line" name`
+        if [ $mode -ne 1 ]
+        then
+            group=`_extract_xml_field "$line" group`
+            download=`_extract_xml_field "$line" downloadName`
+            version=`_extract_xml_field "$line" version`    
+            size=`_extract_xml_field "$line" size`
+        fi
+        if [ $mode -ge 2 ] 
+        then        
+            created=`_extract_xml_field "$line" created`
+            createdBy=`_extract_xml_field "$line" createdBy`  
+            modified=`_extract_xml_field "$line" lastModified`
+            modifiedBy=`_extract_xml_field "$line" lastModifiedBy`
+            installed=`_extract_xml_field "$line" lastUnpacked`    
+            installedBy=`_extract_xml_field "$line" lastUnpackedBy`
+        fi
+
+        if [ $mode -eq 2 ]
+        then
+            sep="\t"
+        else
+            sep="|"
+        fi
+        
+        dates=""
+        if [ $mode -ge 2 ]
+        then
+             createdCols="$created${sep}$createdBy"
+             modifiedCols="$modified${sep}$modifiedBy"
+             installedCols="$installed${sep}$installedBy"
+             dates="$createdCols${sep}$modifiedCols${sep}$installedCols"
+        fi     
+        
+        details=""
+        if [ $mode -ne 1 ]
+        then
+             details="$group${sep}$version${sep}$size${sep}$download"
+        fi        
+
+        row="${name}${sep}${details}${sep}${dates}\n"
+        output="${output}${row}"        
+    done
+    
+    # Output form    
+    if [ $mode -eq 2 ]
+    then
+        ECHO=`which echo`
+        if [ $? -ne 0 ]
+        then
+            echo "${output}"
+        else
+            $ECHO -en "${output}"
+        fi
+    else
+        if [ $mode -ne 1 ]
+        then
+            echo "$items_count packages total."
+            echo ""    
+        fi
+        echo "${output}"|column -xt -c 5 -s "${sep}"
+    fi
 }
 
 CWD=`dirname $0`
@@ -61,8 +166,24 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-while getopts ":${apigetopts}" opt; do
+listing_long=0
+listing_names=0
+listing_machine=0
+listing_mode=0
+listing_original=0
+while getopts ":l1mx${apigetopts}" opt; do
   case $opt in
+    l)
+      listing_long=1
+      listing_mode=3;;
+    1)
+      listing_names=1
+      listing_mode=1;;
+    m)
+      listing_machine=1
+      listing_mode=2;;
+    x)
+      listing_original=1;;
     \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
@@ -70,6 +191,13 @@ while getopts ":${apigetopts}" opt; do
   esac
 done
 shift $((OPTIND-1))
+
+listing=$((listing_long+listing_names+listing_machines+listing_original))
+if [ $listing -ge 2 ]
+then
+    echo "Listing options -l, -1, -m and -x cannot be used together. Choose one."
+    _usage
+fi
 
 if [ $# -gt 0 -o $passed -eq 0 ];
 then
@@ -96,6 +224,11 @@ STATUSCODE=`echo "$STATUS"|tail -n 1`
 $API -H ${STATUSCODE}
 EXITCODE2=$?
 STATUS=`echo "$STATUS"|sed '$d'`
-echo "${STATUS}"
+if [ $listing_original -eq 1 ]
+then
+    echo "${STATUS}"
+else
+    _print_preformatted "${STATUS}" $listing_mode
+fi    
 exit $((EXITCODE + EXITCODE2))
 
