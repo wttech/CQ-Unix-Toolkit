@@ -66,8 +66,10 @@ _print_preformatted()
         echo ""
         output="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD\n"
     fi
-    for idx in `seq 1 $items_count`
+    idx=0
+    while [ $idx -lt $items_count ]
     do
+        idx=$((idx+1))
         line=`echo "${items}"|head -n $idx|tail -n 1`
         item=`_extract_json "$line" item`
         state=`_extract_json "$line" state`
