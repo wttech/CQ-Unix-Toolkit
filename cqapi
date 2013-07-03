@@ -226,7 +226,9 @@ exception_detection=0
 parse=0
 curlexitcode=0
 ECHO=`which echo`
-while getopts ":Pu:p:i:fcC:H:-:Ee" opt; do
+min=0
+while getopts ":Pu:p:i:cC:H:Ee-:" opt
+do
   case $opt in
     P)
       parse=1;;
@@ -258,6 +260,11 @@ while getopts ":Pu:p:i:fcC:H:-:Ee" opt; do
            echo "Invalid option: -$OPTARG" >&2
           _usage
       else
+          if [ $OPTIND -eq $min ]
+          then
+              break;
+          fi
+          min=$OPTIND
           OPTIND=$((OPTIND+1))
       fi;;
     :)
@@ -269,6 +276,8 @@ while getopts ":Pu:p:i:fcC:H:-:Ee" opt; do
       then
       	  echo "Option -$OPTARG requires an argument." >&2
       	  _usage
+      else
+          _usage
       fi;;
   esac
 done
