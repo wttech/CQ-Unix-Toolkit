@@ -16,16 +16,16 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...] 
+Usage: `basename $0` [OPTION...]
 Returns CQ instance active workflows status in pretty-printed form using
 instance URL. Use -j to return original JSON form. Use -m for machine
- 
+
 Examples:
   cqwfl -u admin                 # Returns JSON data with active workflows from
                                  # local instance
   cqwfl -i http://localhost:5510 # Returns JSON data with active workflows for
-        -p secret                # localhost instance on tcp port 5510 with 
-                                 # password provided: secret 
+        -p secret                # localhost instance on tcp port 5510 with
+                                 # password provided: secret
 
 Options:
 
@@ -86,17 +86,31 @@ _print_preformatted()
             output="${output}${oneline}"
         fi
     done
+    ECHO=`which echo`
+    if [ $? -ne 0 -o -z "$ECHO" ]
+    then
+        # fallback to echo
+        ECHO="echo"
+    else
+        ECHO="$ECHO -e "
+    fi
     if [ $machine_friendly -eq 1 ]
     then
         ECHO=`which echo`
         if [ $? -ne 0 ]
         then
-            echo "${output}"
+            $ECHO "${output}"
         else
-            $ECHO -en "${output}"
+            $ECHO -n "${output}"
         fi
     else
-        echo "${output}"|column -xt -c 5 -s "|"
+        COLUMN=`which column`
+        if [ $? -ne 0 -o -z "$COLUMN" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        $ECHO "${output}"|column -xt -c 5 -s "|"
     fi
 }
 
