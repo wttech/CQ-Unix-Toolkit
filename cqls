@@ -127,10 +127,12 @@ _print_preformatted()
         # fallback to echo
         ECHO="echo"
         exit 1
+    else
+        ECHO="$ECHO -e "
     fi
     if [ $mode -eq 2 ]
     then
-        if [ $? -ne 0 ]
+        if [ $ECHO == "echo" ]
         then
             $ECHO "${output}"
         else
