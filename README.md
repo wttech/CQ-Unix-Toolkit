@@ -86,21 +86,27 @@ of the following solutions:
 
 * Change git config option to core.autocrlf = false:
 
+
     $ git config --global core.autocrlf input
 
+
 * Prefix each call with bash -o igncr
+
 
     $ ./cqapi
     ./cqapi: line 16: syntax error `$'\r''
     '/cqapi: line 16: `_usage()
 
+
     $ bash -o igncr ./cqapi
     Usage: cqapi [OPTION...]
     ...
 
+
   This requires changing cqapi line endings using
 
-      $ dos2unix cqapi
+
+    $ dos2unix cqapi
 
 
 
