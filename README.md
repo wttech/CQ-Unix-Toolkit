@@ -13,6 +13,10 @@ Table of contents
 6. Installation
 7. Contributors
 
+
+Introduction
+------------
+
 CQ Unix Toolkit is a set of POSIX shell tools that calls curl and other 3rd
 party commands to perform some different tasks on Adobe CQ platform such as:
 
@@ -49,8 +53,6 @@ Below is list of separate tools and purpose of each other
 * cqmrg -- Merge CQ TarPM indexes
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
-
-More information you can find in *GUIDE.md* file.
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
