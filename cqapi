@@ -76,6 +76,7 @@ _curlpath()
         exit 1
     fi
     echo "$CURLBIN"
+    exit
 }
 
 _curlcode()
@@ -175,7 +176,7 @@ _curlcode()
 
 _httpcode()
 {
-	if [ -z "$1" -o "$1" -eq 200 ] 
+	if [ -z "$1" -o "$1" = "200" ]
 	then
             exit 0
 	fi
@@ -206,113 +207,132 @@ _httpcode()
 _java_exception()
 {
     head -n 1 | cut -f2 -d ':' | sed -r 's#^[ ]+##'
+    exit
 }
 
 _java_exception_detection()
 {
     grep -Ec "(^[\.[:alnum:]]+Exception:.*$|^[[:space:]]+at[[:space:]][\.\
         [:alnum:]]+(\(.+\))?)"
+    exit
+}
+
+_parse()
+{
+    ECHO=`which echo`
+    $ECHO -e "$1\t$2\t$3\t$4\t$5"
+    exit
+}
+
+_invalid_option()
+{
+    if [ $1 -ne 1 ]
+    then
+       echo "Invalid option: -$2" >&2
+      _usage
+    fi
+}
+
+_missing_argument()
+{
+    if [ $1 -eq 0 ]
+    then
+      echo "Option -$2 requires an argument." >&2
+      _usage
+    fi
 }
 
 instance="http://localhost:5410"
 username=admin
 password=admin
-curlpath=0
-curlcode=0
-httpcode=0
-explicit=0
-exception=0
-exception_detection=0
-parse=0
-curlexitcode=0
-ECHO=`which echo`
-min=0
-while getopts ":Pu:p:i:cC:H:Ee-:" opt
+
+OPTIONS=":Pu:p:i:cC:H:Ee-:"
+PARSE_OPTIONS="u:p:i:"
+
+explicit_option=0
+parse_mode=0
+
+idle_pass=0
+mode=?
+argument=?
+
+while getopts "${OPTIONS}" option
 do
-  case $opt in
-    P)
-      parse=1;;
-    u) 
-      username=$OPTARG
-      explicit=1;;
-    p)
-      password=$OPTARG
-      explicit=1;;
-    i)
-      instance=$OPTARG
-      instance=`echo "$instance"|sed -r 's#[/]+$##'`
-      explicit=1;;
-    c)
-      curlpath=1;;
-    C)
-      curlcode=1
-      curlexitcode=$OPTARG;;
-    H)
-      httpcode=1
-      httpresponsecode=$OPTARG;;
-    E)
-      exception=1;;
-    e)
-      exception_detection=1;;
-    \?)
-      if [ $parse -ne 1 ]
-      then
-           echo "Invalid option: -$OPTARG" >&2
-          _usage
-      else
-          if [ $OPTIND -eq $min ]
-          then
-              break;
-          fi
-          min=$OPTIND
-          OPTIND=$((OPTIND+1))
-      fi;;
-    :)
-      api=`echo "$OPTARG"|tr -cd 'upi'|wc -c`
-      if [ $parse -eq 1 -a $api -ne 0 ]
-      then
-	      echo "Option -$OPTARG requires an argument." >&2
-      elif [ $parse -eq 0 ]
-      then
-      	  echo "Option -$OPTARG requires an argument." >&2
-      	  _usage
-      else
-          _usage
-      fi;;
-  esac
+    mode=$option
+    case $option in
+        P) parse_mode=1; OPTIONS=":P${PARSE_OPTIONS}";;
+        u) username=$OPTARG; explicit_option=1;;
+        p) password=$OPTARG; explicit_option=1;;
+        i) instance=`echo "$OPTARG"|sed -r 's#[/]+$##'`; explicit_option=1;;
+        C) argument=$OPTARG;;
+        H) argument=$OPTARG;;
+        \?) _invalid_option $parse_mode $OPTARG;;
+        :) _missing_argument $parse_mode $OPTARG;;
+    esac
+
+    continue=1
+    last_optind=$OPTIND
+    total_shift=0
+    delta=0
+    while [ $continue -eq 1 ]; do
+        optind_before=$OPTIND
+        getopts "${OPTIONS}" vopt
+        getopts_status=$?
+        total_shift=$((total_shift+delta))
+        delta=$((OPTIND-optind_before))
+
+        if [ $getopts_status -ne 0 ]; then
+            if [ $# -le $OPTIND ]; then
+                # Parse break - EOL reached
+                continue=0
+            elif [ $delta -ge 0 ]; then
+                # Skip broken argument
+                OPTIND=$((OPTIND+1))
+                continue=1
+            fi
+        elif [ "$vopt" = "?" -o "$vopt" = ":" ]; then
+            # Invalid option - continue readahed
+            continue=1
+        else
+            # Valid option - calculate shift
+            continue=0
+            valid_option_shift=$((optind_before-last_optind))
+            if [ $valid_option_shift -ge 0  ]; then
+                total_shift=$valid_option_shift
+            fi
+        fi
+    done
+
+    OPTIND=$((last_optind+total_shift))
+    # Check for infinitive parsing of the same argument twice by getopts
+    if [ $OPTIND -eq $last_optind ]; then
+        if [ $idle_pass -gt 2 ]; then
+            # Skip in case of infinitive loop
+            OPTIND=$((OPTIND+1))
+        fi
+        idle_pass=$((idle_pass+1))
+    else
+        idle_pass=0
+    fi
 done
+
 shift $((OPTIND-1))
-if [ $parse -eq 1 ]
+
+# cqapi Parse mode for -u -p -i parameters
+if [ $parse_mode -eq 1 ]
 then
-    $ECHO -e "$username\t$password\t$instance\t$explicit\tu:p:i:"
-    exit 0
-fi
-if [ $curlpath -eq 1 ]
-then
-    _curlpath
-    exit 0
-fi
-if [ $curlcode -eq 1 ]
-then
-    _curlcode $curlexitcode
-    exit 0
-fi
-if [ $httpcode -eq 1 ]
-then
-    _httpcode $httpresponsecode
-    exit 0
-fi
-if [ $exception -eq 1 ]
-then
-    _java_exception
-    exit 0
-fi
-if [ $exception_detection -eq 1 ]
-then
-    _java_exception_detection
+    _parse $username $password $instance $explicit_option $PARSE_OPTIONS
     exit 0
 fi
 
+# cqapi normal modes
+case $mode in
+  c) _curlpath;;
+  C) _curlcode $argument;;
+  H) _httpcode $argument;;
+  E) _java_exception;;
+  e) _java_exception_detection;;
+esac
 
 _usage
 
