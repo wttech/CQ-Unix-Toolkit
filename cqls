@@ -220,9 +220,21 @@ STATUS=`$CURLBIN \
 
 EXITCODE=$?
 $API -C $EXITCODE
+if [ $EXITCODE -ne 0 ]
+then
+    echo "Couldn't get packages list"
+    exit $EXITCODE
+fi
+
 STATUSCODE=`echo "$STATUS"|tail -n 1`
 $API -H ${STATUSCODE}
 EXITCODE2=$?
+if [ $EXITCODE2 -ne 0 ]
+then
+    echo "Couldn't get packages list"
+    exit $EXITCODE2
+fi
+
 STATUS=`echo "$STATUS"|sed '$d'`
 if [ $listing_original -eq 1 ]
 then
@@ -230,5 +242,5 @@ then
 else
     _print_preformatted "${STATUS}" $listing_mode
 fi    
-exit $((EXITCODE + EXITCODE2))
+exit 0
 
