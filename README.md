@@ -1,6 +1,18 @@
 CQ-Unix-Toolkit
 ===============
 
+
+Table of contents
+-----------------
+
+1. Introduction
+2. Which for what? (quick description for each tool)
+3. Supported shell environments
+4. Notes on Cygwin compatibility
+5. CQ Compatibilty
+6. Installation
+7. Contributors
+
 CQ Unix Toolkit is a set of POSIX shell tools that calls curl and other 3rd
 party commands to perform some different tasks on Adobe CQ platform such as:
 
@@ -25,15 +37,15 @@ Which for what?
 Below is list of separate tools and purpose of each other
 
 * cqbld -- Builds remotely uploaded CQ package using connection parameters
-* cqcp -- Makes a copy of remote CQ package to your local environment 
+* cqcp -- Makes a copy of remote CQ package to your local environment
 * cqget -- Makes a copy of CQ resource to your local environment
 * cqrun -- Install uploaded CQ package on remote instanse
-* cqdel -- Remove completely remotely available CQ package 
+* cqdel -- Remove completely remotely available CQ package
 * cqput -- Upload package from your local environment
 * cqls -- List packages uploaded/installed in remote CQ
 * cqchk -- Checks remote CQ instance repository if it's consistent
-* cqgc -- Deletes effectively removed content from instance to reclaim free 
-          space 
+* cqgc -- Deletes effectively removed content from instance to reclaim free
+          space
 * cqmrg -- Merge CQ TarPM indexes
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
@@ -65,7 +77,7 @@ Each script can be executed *without parameters* from your terminal i.e.:
 
 so you can find out how to operate and specify required arguments.
 
-Supported shell environments 
+Supported shell environments
 ----------------------------
 
 Currently CQ Unix Toolkit supports only some subset of shell environments.
@@ -79,10 +91,14 @@ in your system.
 Notes on Cygwin compatibility
 -----------------------------
 
-In order to use toolkit on cygwin make sure you have util-linux cygwin package
-installed. Please rememeber that files should have \n endingings only.
-Using git clone they can be changes automatically to \r\n so please use one
-of the following solutions:
+In order to use toolkit on cygwin make sure you have:
+* util-linux
+* curl
+cygwin packages installed.
+
+Please rememeber that files should have \n endingings only. Using git clone they
+can be changes automatically to \r\n so please use one of the following
+solutions:
 
 * Change git config option to core.autocrlf = false:
 
@@ -136,3 +152,20 @@ Above scripts don't require special installation. If you want these scripts to
 be visible system-wide you can invoke `install` script provided in repository
 that creates symbolic link in /usr/local/bin directory or you can change
 `INSTALL_DIR` variable in script if you want to something else.
+
+
+Contributors
+============
+
+I want to thank every person involved in development of this tools. Personally
+I want to thank:
+
+* Krzysztof Kamil Konopko (Quality Assurance - exploratory tests, usability
+  tests and improvements (against CQ5.5 & CQ5.6)
+* Bartek Szafko (project management)
+* Michał Leszczyński (infrastructure and development tools)
+* Artur Kłopotek (cygwin hints)
+* Robert Kapała
+
+Arkadiusz Kita [at] cognifide.com
+
