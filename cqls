@@ -18,11 +18,11 @@ _usage()
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 List all packages in CQ Package Manager using instance URL.
- 
+
 Examples:
   cqls -u admin                 # List packages for localinstance
   cqls -i http://localhost:5510 # List packages for localhost instance on tcp
-       -p secret                # port 5510 with password provided: secret 
+       -p secret                # port 5510 with password provided: secret
 
 Options:
 
@@ -33,7 +33,7 @@ Options:
   -l                    list all fields (dates) with summary
   -m                    list all fields without summary in machine-readable
                         format
-  -x                    output original raw response from CQ (portable and the 
+  -x                    output original raw response from CQ (portable and the
                         fastest one)
 
 EOT
@@ -60,7 +60,7 @@ _print_preformatted()
         tr -d '\n'|sed 's#<package>#\n<package>#g'|grep -E '<package>'`
     items_count=`echo "$items"|wc -l`
     idx=0
-    
+
     # Table header
     output_template="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
     case $mode in
@@ -68,29 +68,29 @@ _print_preformatted()
       1) output="";;
       2) output="";;
       3) dates="CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
-         output="${output_template}|${dates}\n";;      
+         output="${output_template}|${dates}\n";;
     esac
-    
+
     # Table rows
     while [ $idx -lt $items_count ]
     do
-        idx=$((idx+1))       
+        idx=$((idx+1))
         line=`echo "${items}"|head -n $idx|tail -n 1`
         name=`_extract_xml_field "$line" name`
         if [ $mode -ne 1 ]
         then
             group=`_extract_xml_field "$line" group`
             download=`_extract_xml_field "$line" downloadName`
-            version=`_extract_xml_field "$line" version`    
+            version=`_extract_xml_field "$line" version`
             size=`_extract_xml_field "$line" size`
         fi
-        if [ $mode -ge 2 ] 
-        then        
+        if [ $mode -ge 2 ]
+        then
             created=`_extract_xml_field "$line" created`
-            createdBy=`_extract_xml_field "$line" createdBy`  
+            createdBy=`_extract_xml_field "$line" createdBy`
             modified=`_extract_xml_field "$line" lastModified`
             modifiedBy=`_extract_xml_field "$line" lastModifiedBy`
-            installed=`_extract_xml_field "$line" lastUnpacked`    
+            installed=`_extract_xml_field "$line" lastUnpacked`
             installedBy=`_extract_xml_field "$line" lastUnpackedBy`
         fi
 
@@ -100,7 +100,7 @@ _print_preformatted()
         else
             sep="|"
         fi
-        
+
         dates=""
         if [ $mode -ge 2 ]
         then
@@ -108,35 +108,47 @@ _print_preformatted()
              modifiedCols="$modified${sep}$modifiedBy"
              installedCols="$installed${sep}$installedBy"
              dates="$createdCols${sep}$modifiedCols${sep}$installedCols"
-        fi     
-        
+        fi
+
         details=""
         if [ $mode -ne 1 ]
         then
              details="$group${sep}$version${sep}$size${sep}$download"
-        fi        
+        fi
 
         row="${name}${sep}${details}${sep}${dates}\n"
-        output="${output}${row}"        
+        output="${output}${row}"
     done
-    
-    # Output form    
+
+    # Output form
+    ECHO=`which echo`
+    if [ $? -ne 0 -o -z "$ECHO" ]
+    then
+        # fallback to echo
+        ECHO="echo"
+        exit 1
+    fi
     if [ $mode -eq 2 ]
     then
-        ECHO=`which echo`
         if [ $? -ne 0 ]
         then
-            echo "${output}"
+            $ECHO "${output}"
         else
             $ECHO -en "${output}"
         fi
     else
+        COLUMN=`which column`
+        if [ $? -ne 0 -o -z "$COLUMN" ]
+        then
+            $ECHO "Cannot find column utility"
+            exit 1
+        fi
         if [ $mode -ne 1 ]
         then
-            echo "$items_count packages total."
-            echo ""    
+            $ECHO "$items_count packages total."
+            $ECHO ""
         fi
-        echo "${output}"|column -xt -c 5 -s "${sep}"
+        $ECHO "${output}"|column -xt -c 5 -s "${sep}"
     fi
 }
 
@@ -241,6 +253,6 @@ then
     echo "${STATUS}"
 else
     _print_preformatted "${STATUS}" $listing_mode
-fi    
+fi
 exit 0
 
