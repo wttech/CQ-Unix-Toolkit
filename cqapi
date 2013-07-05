@@ -15,23 +15,27 @@
 # limitations under the License.
 _usage()
 {
+        DIR=`dirname $0`
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 CQ UNIX Toolkit API command.
- 
+Version `cat $DIR/VERSION`
+
 Examples:
   cqapi -u admin                 # Provides username to connect to CQ
   cqapi -i http://localhost:5510 # Provided instance URL to connect to CQ
                                  # on local machine  on port 5510
-  cqapi -p secret                # Provides password: secret to connect to 
+  cqapi -p secret                # Provides password: secret to connect to
                                  # CQ
   cqapi -c                       # Get curl binary path
   cqapi -P -u admin              # Enable parse mode for common arguments
   cqapi -C 2                     # Get curl error for exit code: 2
-  cqapi -H 401                   # Get HTTP textual error for HTTP 401 error 
+  cqapi -H 401                   # Get HTTP textual error for HTTP 401 error
                                  # code
   cqapi -E                       # Extract exception message from stdin
   cqapi -e                       # Detect if on stdin there is exception
+  cqapi -v                       # Returns toolkit version
+
 
 Options:
 
@@ -46,6 +50,7 @@ Options:
   -E                    Return on stdout only exception message skipping
                         stack trace at the same time
   -e                    Detect if on stdin thereis exception stacktrace
+  -v                    Provides toolkit version
 
 EOT
 exit 1
@@ -55,7 +60,7 @@ _curlpath()
 {
     WHEREIS=`whereis whereis 2>/dev/null|cut -f2 -d ' '`
     EXITCODE=$?
-    if [ $EXITCODE -ne 0 -o -z "$WHEREIS" ] 
+    if [ $EXITCODE -ne 0 -o -z "$WHEREIS" ]
     then
         CURLBIN=`which curl`
         EXITCODE=$?
@@ -70,7 +75,7 @@ _curlpath()
     fi
     CURLBIN=`${WHEREIS} -b curl|cut -f2 -d ' '`
     EXITCODE=$?
-    if [ -z "$CURLBIN" -o ${EXITCODE} -ne 0 ] 
+    if [ -z "$CURLBIN" -o ${EXITCODE} -ne 0 ]
     then
         echo "Cannot locate required command: curl." >&2
         exit 1
@@ -81,7 +86,7 @@ _curlpath()
 
 _curlcode()
 {
-	if [ -z "$1" -o "$1" -eq 0 ] 
+	if [ -z "$1" -o "$1" -eq 0 ]
 	then
             exit 0
 	fi
@@ -123,7 +128,7 @@ _curlcode()
 	43 Internal error. A function was called with a bad parameter.
 	45 Interface error. A specified outgoing interface could not be used.
 	47 Too many redirects. When following redirects, curl hit the maximum amount.
-	48 Unknown option specified to libcurl. This indicates that you passed a weird option to curl that was passed on to libcurl and rejected. Read up in the manual!  
+	48 Unknown option specified to libcurl. This indicates that you passed a weird option to curl that was passed on to libcurl and rejected. Read up in the manual!
 	49 Malformed telnet option.
 	51 The peer's SSL certificate or SSH MD5 fingerprint was not OK.
 	52 The server didn't reply anything, which here is considered an error.
@@ -169,7 +174,7 @@ _curlcode()
     if [ -z "$msg" ]
     then
         msg="Unknown code"
-    fi    
+    fi
     echo "CURL ERROR $1: ${msg}" >&2
     exit $EXITCODE
 }
@@ -186,9 +191,9 @@ _httpcode()
     400 HTTP Bad request
     401 Unauthorized properly: please check supplied username and password
     403 Forbidden resource: please check permissions
-    404 Not found or forbidden: please check permissions 
+    404 Not found or forbidden: please check permissions
     410 Gone: resource is not available anymore
-    500 Internal CQ error 
+    500 Internal CQ error
     501 Internal CQ error
     502 Internal CQ error
     503 Internal CQ error
@@ -242,11 +247,18 @@ _missing_argument()
     fi
 }
 
+_version()
+{
+    DIR=`dirname $0`
+    cat $DIR/VERSION
+    exit
+}
+
 instance="http://localhost:5410"
 username=admin
 password=admin
 
-OPTIONS=":Pu:p:i:cC:H:Ee-:"
+OPTIONS=":Pu:p:i:cC:H:Eve-:"
 PARSE_OPTIONS="u:p:i:"
 
 explicit_option=0
@@ -314,6 +326,7 @@ do
     else
         idle_pass=0
     fi
+
 done
 
 shift $((OPTIND-1))
@@ -332,6 +345,7 @@ case $mode in
   H) _httpcode $argument;;
   E) _java_exception;;
   e) _java_exception_detection;;
+  v) _version;;
 esac
 
 _usage
