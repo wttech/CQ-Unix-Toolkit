@@ -76,8 +76,33 @@ in your system.
 * dash (tested and fully supported)
 * bash on cygwin (line breaks problem, missing commands)
 
+Notes on Cygwin compatibility
+-----------------------------
+
 In order to use toolkit on cygwin make sure you have util-linux cygwin package
-installed.
+installed. Please rememeber that files should have \n endingings only.
+Using git clone they can be changes automatically to \r\n so please use one
+of the following solutions:
+
+* Change git config option to core.autocrlf = false:
+
+    $ git config --global core.autocrlf input
+
+* Prefix each call with bash -o igncr
+
+    $ ./cqapi
+    ./cqapi: line 16: syntax error `$'\r''
+    '/cqapi: line 16: `_usage()
+
+    $ bash -o igncr ./cqapi
+    Usage: cqapi [OPTION...]
+    ...
+
+  This requires changing cqapi line endings using
+
+      $ dos2unix cqapi
+
+
 
 CQ Compatibilty
 ---------------
