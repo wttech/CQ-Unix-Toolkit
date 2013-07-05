@@ -2,22 +2,22 @@ CQ-Unix-Toolkit
 ===============
 
 CQ Unix Toolkit is a set of POSIX shell tools that calls curl and other 3rd
-party commands to perform some different tasks such as:
+party commands to perform some different tasks on Adobe CQ platform such as:
 
 * Build, upload, list, download, install and deletion of CRX zip packages
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
+* Active workflow instances list
 
-Each separate action is wrapped to separate stand-alone script with additional
-usage output that allows to perform these tasks easily.
+Each action is wrapped in separate stand-alone script with additional usage
+output that allows to perform these tasks easily.
 
-At least every tool requires valid login to CQ instance using three basic
-parameters:
+Basically every tool requires authorized connection to CQ instance which
+is performed by toolkit using three basic options:
 
    * -u (username)
    * -p (password)
    * -i (URL to instance) i.e. https://localhost:5510
-
 
 Which for what?
 ===============
@@ -38,6 +38,7 @@ Below is list of separate tools and purpose of each other
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
 
+More information you can find in *GUIDE.md* file.
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
@@ -64,8 +65,22 @@ Each script can be executed *without parameters* from your terminal i.e.:
 
 so you can find out how to operate and specify required arguments.
 
-Compatibilty
-------------
+Supported shell environments 
+----------------------------
+
+Currently CQ Unix Toolkit supports only some subset of shell environments.
+Default shell will be used and it is indicated by /bin/sh symbolic link
+in your system.
+
+* bash (tested and fully supported)
+* dash (tested and fully supported)
+* bash on cygwin (line breaks problem, missing commands)
+
+In order to use toolkit on cygwin make sure you have util-linux cygwin package
+installed.
+
+CQ Compatibilty
+---------------
 
 *  Compatible with CRX 2.2 or higher
    * cqbld
