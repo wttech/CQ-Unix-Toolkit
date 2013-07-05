@@ -43,24 +43,24 @@ More information you can find in *GUIDE.md* file.
 Each script can be executed *without parameters* from your terminal i.e.:
 
 
-    $ ./cqbld
-    Usage: cqbld [OPTION...] package-name
-    Build (rebuild) already uploaded package by group id and name in CQ Package
-    Manager using instance URL.
+        $ ./cqbld
+        Usage: cqbld [OPTION...] package-name
+        Build (rebuild) already uploaded package by group id and name in CQ Package
+        Manager using instance URL.
 
-    Examples:
-      cqbld -u admin pack            # Build package named pack
-      cqbld -u admin -g GRP pack     # Build package named pack in group GRP
-      cqbld -i http://localhost:5510 # Build package for localhost instance on tcp
-            -g com.group stuff       # port 5510 named stuff in group:com.group
-            -p secret                # with password provided: secret
+        Examples:
+          cqbld -u admin pack            # Build package named pack
+          cqbld -u admin -g GRP pack     # Build package named pack in group GRP
+          cqbld -i http://localhost:5510 # Build package for localhost instance on tcp
+                -g com.group stuff       # port 5510 named stuff in group:com.group
+                -p secret                # with password provided: secret
 
-    Options:
+        Options:
 
-      -u                    use specified usernamed for connection
-      -p                    use provided password for authentication
-      -i                    use specified instance URL to connect
-      -g                    locate package by additional group ID
+          -u                    use specified usernamed for connection
+          -p                    use provided password for authentication
+          -i                    use specified instance URL to connect
+          -g                    locate package by additional group ID
 
 
 so you can find out how to operate and specify required arguments.
@@ -87,26 +87,26 @@ of the following solutions:
 * Change git config option to core.autocrlf = false:
 
 
-    $ git config --global core.autocrlf input
+        $ git config --global core.autocrlf input
 
 
 * Prefix each call with bash -o igncr
 
 
-    $ ./cqapi
-    ./cqapi: line 16: syntax error `$'\r''
-    '/cqapi: line 16: `_usage()
+        $ ./cqapi
+        ./cqapi: line 16: syntax error `$'\r''
+        '/cqapi: line 16: `_usage()
 
 
-    $ bash -o igncr ./cqapi
-    Usage: cqapi [OPTION...]
-    ...
+        $ bash -o igncr ./cqapi
+        Usage: cqapi [OPTION...]
+        ...
 
 
   This requires changing cqapi line endings using
 
 
-    $ dos2unix cqapi
+        $ dos2unix cqapi
 
 
 
