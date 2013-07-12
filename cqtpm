@@ -42,8 +42,8 @@ Options:
   -s                    sets delay in seconds between each status pooling 
                         request (default 10 seconds). Used only when -f 
                         parameter is specified.
-  -d                    sets delay in miliseconds between each compacted
-                        transaction
+  -d                    sets delay in miliseconds (default 1 ms) between each
+                        compacted transaction
 
 EOT
 exit 1
