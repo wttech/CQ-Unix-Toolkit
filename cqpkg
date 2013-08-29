@@ -1,0 +1,89 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [SPECIFICATION...] package-name
+Create empty CQ Vault ZIP package locally using provided specification that can
+be uploaded to CRX/CQ Package Manager and build or install.
+ 
+Examples:
+  TBD
+
+Options:
+
+  -g GROUP              provide group for package
+  -v VERSION            provide version for package 
+  -r                    define new filter root JCR path
+  -i                    define include regular expression (allowed many times)
+                        for current filter (indicated by -r) 
+  -e                    define exclude regular expression (allowed many times)
+                        for current filter (indicated by -r)
+
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# Custom arguments
+definition=""
+while getopts ":g:v:r:i:e:" opt; do
+  case $opt in
+     g)  
+      group="$OPTARG";;
+     v)
+      version="$OPTARG";;
+     r)
+      if [ "$definition" != "" ]
+      then
+          definition="${definition}\n"
+      fi
+      root=""
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+definition="${definition}\n"
+shift $((OPTIND-1))
+
+if [ $# -ne 1 -o $passed -eq 0 ];
+then
+	_usage
+fi
+name=$1
+
+
+
+echo "$definition"
