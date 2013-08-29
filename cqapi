@@ -15,7 +15,8 @@
 # limitations under the License.
 _usage()
 {
-        DIR=`dirname $0`
+        REALCMD=`readlink -f $0`
+        DIR=`dirname $REALCMD`
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 CQ UNIX Toolkit API command.
@@ -249,7 +250,8 @@ _missing_argument()
 
 _version()
 {
-    DIR=`dirname $0`
+    REALCMD=`readlink -f $0`
+    DIR=`dirname $REALCMD`
     cat $DIR/VERSION
     exit
 }
