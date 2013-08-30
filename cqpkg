@@ -27,7 +27,7 @@ Options:
 
   -g GROUP              provide group for package
   -v VERSION            provide version for package 
-  -r                    define new filter root JCR path
+  -r                    define new filter root JCR path (allowed many times)
   -i                    define include regular expression (allowed many times)
                         for current filter (indicated by -r) 
   -e                    define exclude regular expression (allowed many times)
@@ -56,7 +56,21 @@ fi
 
 
 # Custom arguments
-definition=""
+filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<workspaceFilter version=\"1.0\">"""
+toolkit_version=`$API -v`
+package_definition="""<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<comment>FileVault Package Properties</comment>
+<entry key=\"createdBy\">cq-unix-toolkit</entry>
+<entry key=\"buildCount\">1</entry>
+<entry key=\"dependencies\"/>
+<entry key=\"packageFormatVersion\">2</entry>
+<entry key=\"description\">Package genereated by CQ Unix Toolkit ${toolkit_version}</entry>
+"""
+in_filter_context=0
+version="1.0"
 while getopts ":g:v:r:i:e:" opt; do
   case $opt in
      g)  
@@ -64,26 +78,77 @@ while getopts ":g:v:r:i:e:" opt; do
      v)
       version="$OPTARG";;
      r)
-      if [ "$definition" != "" ]
+      if [ $in_filter_context -eq 1 ]
       then
-          definition="${definition}\n"
+        filter_definition="${filter_definition}\n</filter>"
       fi
-      root=""
+      in_filter_context=1
+      filter_definition="${filter_definition}\n<filter root=\"${OPTARG}\">"
+      ;;
+     i)
+      if [ $in_filter_context -eq 0 ]
+      then
+        echo "Include pattern (-i) should be included in scope of some filter root\
+ path (-r)." >&2
+        echo "Please add -r before adding -i/-e options." >&2
+        exit 1;
+      fi
+      filter_definition="${filter_definition}\n  <include pattern=\"${OPTARG}\"/>"
+      ;;
+     e)
+      if [ $in_filter_context -eq 0 ]
+      then
+        echo "Exclude pattern (-e) should be included in scope of some filter root\
+ path (-r)." >&2
+        echo "Please add -r before adding -i/-e options." >&2
+        exit 1;
+      fi
+      filter_definition="${filter_definition}\n  <exclude pattern=\"${OPTARG}\"/>"
+      ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
       echo "Option -$OPTARG requires an argument." >&2; _usage;;
   esac
 done
-definition="${definition}\n"
 shift $((OPTIND-1))
 
-if [ $# -ne 1 -o $passed -eq 0 ];
+if [ $# -ne 1 ];
 then
 	_usage
 fi
+group_entry=""
+if [ "$group" != "" ]
+then
+    group_entry="<entry key=\"group\">${group}</entry>"
+fi
 name=$1
+filter_definition="""${filter_definition}
+</filter>
+</workspaceFilter>"""
+package_definition="""${package_definition}${group_entry}
+<entry key=\"name\">${name}</entry>
+<entry key=\"version\">${version}</entry>
+</properties>"""
+tempdir=`mktemp -d`
+exitcode=$?
+if [ $exitcode -ne 0 ]
+then
+    echo "Cannot create temporary directory" >&2
+    exit 1
+fi
+vault=${tempdir}/META-INF/vault
+mkdir -p ${tempdir}/jcr_root
+mkdir -p ${vault}
+echo "$filter_definition" > $vault/filter.xml
+echo "$package_definition" > $vault/properties.xml
+dir=`pwd`
+cd ${tempdir}
+zip -r $dir/${name}.zip ./
+rm $vault/filter.xml
+rm $vault/properties.xml
+rmdir ${tempdir}/jcr_root
+rmdir ${tempdir}/META-INF/vault
+rmdir ${tempdir}/META-INF
+rmdir ${tempdir}
 
-
-
-echo "$definition"
