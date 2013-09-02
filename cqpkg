@@ -18,7 +18,7 @@ _usage()
 	cat << EOT
 Usage: `basename $0` [SPECIFICATION...] package-name
 Create empty CQ Vault ZIP package locally using provided specification that can
-be uploaded to CRX/CQ Package Manager and build or install.
+be uploaded to CRX/CQ Package Manager and built or installed.
  
 Examples:
   TBD
@@ -59,8 +59,8 @@ fi
 filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <workspaceFilter version=\"1.0\">"""
 toolkit_version=`$API -v`
-package_definition="""<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+package_definition="""<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>
+<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">
 <properties>
 <comment>FileVault Package Properties</comment>
 <entry key=\"createdBy\">cq-unix-toolkit</entry>
@@ -130,6 +130,12 @@ package_definition="""${package_definition}${group_entry}
 <entry key=\"name\">${name}</entry>
 <entry key=\"version\">${version}</entry>
 </properties>"""
+ZIP=`which zip`
+if [ $? -ne 0 -o "$ZIP" = "" ]
+then
+    echo "Cannot find zip packaging command-line tool." >&2
+    exit 2
+fi
 tempdir=`mktemp -d`
 exitcode=$?
 if [ $exitcode -ne 0 ]
@@ -144,7 +150,13 @@ echo "$filter_definition" > $vault/filter.xml
 echo "$package_definition" > $vault/properties.xml
 dir=`pwd`
 cd ${tempdir}
-zip -r $dir/${name}.zip ./
+zipfile=$dir/${name}.zip
+$ZIP -q -r $zipfile ./
+exitcode=$?
+if [ $exitcode -ne 0 ]
+then
+    echo "Cannot create zip package properly." >&2
+fi
 rm $vault/filter.xml
 rm $vault/properties.xml
 rmdir ${tempdir}/jcr_root
@@ -152,3 +164,9 @@ rmdir ${tempdir}/META-INF/vault
 rmdir ${tempdir}/META-INF
 rmdir ${tempdir}
 
+if [ $exitcode -eq 0 ]
+then
+    echo "Package: $zipfile created."
+else
+    exit 3
+fi
