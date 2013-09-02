@@ -20,7 +20,8 @@ Introduction
 CQ Unix Toolkit is a set of POSIX shell tools that calls curl and other 3rd
 party commands to perform some different tasks on Adobe CQ platform such as:
 
-* Build, upload, list, download, install and deletion of CRX zip packages
+* Create, Build, upload, list, download, install and deletion of CRX zip
+  packages
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
 * Active workflow instances list
@@ -28,7 +29,7 @@ party commands to perform some different tasks on Adobe CQ platform such as:
 Each action is wrapped in separate stand-alone script with additional usage
 output that allows to perform these tasks easily.
 
-Basically every tool requires authorized connection to CQ instance which
+Basically almost every tool requires authorized connection to CQ instance which
 is performed by toolkit using three basic options:
 
    * -u (username)
@@ -40,6 +41,9 @@ Which for what?
 
 Below is list of separate tools and purpose of each other
 
+* cqpkg -- Creates empty zip package on local filesystem using provided
+  specification (name, group, version, paths, filters) which is valid
+  and minimal CRX FileVault package. CQ connection not required.
 * cqbld -- Builds remotely uploaded CQ package using connection parameters
 * cqcp -- Makes a copy of remote CQ package to your local environment
 * cqget -- Makes a copy of CQ resource to your local environment
@@ -139,6 +143,7 @@ CQ Compatibilty
    * cqdel
    * cqput
    * cqls
+   * cqpkg
 *  Compatible with CQ 5.5 or higher
    * cqchk
    * cqgc
