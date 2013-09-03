@@ -22,7 +22,12 @@ be uploaded to CRX/CQ Package Manager and built or installed.
  
 Examples:
   cqpkg -r /content content           # Create package content-1.0.zip package
-                                      # named content that holds /content node
+                                      # in current working directory named
+                                      # 'content' that holds /content node
+                                      # and all subnodes under it.
+  cqpkg -r /content -o /tmp/pack.zip  # Create package /tmp/pack.zip package
+        content                       # in current working directory named
+                                      # 'content' that holds /content node
                                       # and all subnodes under it.
   cqpkg -r /content -g mypackages     # Create package content-2.0.zip package
         -v 2.0 content                # named content in version 2.0 in group
@@ -42,7 +47,7 @@ Options:
                         for current filter (indicated by -r) 
   -e REGEXP             define exclude regular expression (allowed many times)
                         for current filter (indicated by -r)
-
+  -o ZIPPATH            generates package in path specified by ZIPPATH
 
 EOT
 exit 1
@@ -80,12 +85,14 @@ package_definition="""<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"
 """
 in_filter_context=0
 version="1.0"
-while getopts ":g:v:r:i:e:" opt; do
+while getopts ":g:v:r:i:e:o:" opt; do
   case $opt in
      g)  
       group="$OPTARG";;
      v)
       version="$OPTARG";;
+     o)
+      zipfile=`readlink -f "$OPTARG"`;;
      r)
       if [ $in_filter_context -eq 1 ]
       then
@@ -132,6 +139,11 @@ then
     group_entry="<entry key=\"group\">${group}</entry>"
 fi
 name=$1
+dir=`pwd`
+if [ "$zipfile" = "" ]
+then
+    zipfile=$dir/${name}.zip
+fi
 filter_definition="""${filter_definition}
 </filter>
 </workspaceFilter>"""
@@ -157,11 +169,10 @@ mkdir -p ${tempdir}/jcr_root
 mkdir -p ${vault}
 echo "$filter_definition" > $vault/filter.xml
 echo "$package_definition" > $vault/properties.xml
-dir=`pwd`
 cd ${tempdir}
-zipfile=$dir/${name}.zip
-$ZIP -q -r $zipfile ./
+$ZIP -q -r - ./ > $zipfile
 exitcode=$?
+cd "$dir"
 if [ $exitcode -ne 0 ]
 then
     echo "Cannot create zip package properly." >&2
@@ -175,7 +186,7 @@ rmdir ${tempdir}
 
 if [ $exitcode -eq 0 ]
 then
-    echo "Package: $zipfile created."
+    echo "Package created: $zipfile"
 else
     exit 3
 fi
