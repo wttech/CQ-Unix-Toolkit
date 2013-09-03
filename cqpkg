@@ -21,16 +21,26 @@ Create empty CQ Vault ZIP package locally using provided specification that can
 be uploaded to CRX/CQ Package Manager and built or installed.
  
 Examples:
-  TBD
+  cqpkg -r /content content           # Create package content-1.0.zip package
+                                      # named content that holds /content node
+                                      # and all subnodes under it.
+  cqpkg -r /content -g mypackages     # Create package content-2.0.zip package
+        -v 2.0 content                # named content in version 2.0 in group
+                                      # mypackages (as namespace) that holds
+                                      # /content node and all subnodes under it
+  cqpkg -r /content/dam               # Create dam-jpeg package
+        -i '/content/dam(/[^/.]+)*(/[^/\.]+\.jpe?g(/.*)?)?$'
+        dam-jpeg                      # that holdes .jpeg or .jpg nodes
+                                      # from /content/dam node.
 
 Options:
 
   -g GROUP              provide group for package
   -v VERSION            provide version for package 
-  -r                    define new filter root JCR path (allowed many times)
-  -i                    define include regular expression (allowed many times)
+  -r JCRPATH            define new filter root JCR path (allowed many times)
+  -i REGEXP             define include regular expression (allowed many times)
                         for current filter (indicated by -r) 
-  -e                    define exclude regular expression (allowed many times)
+  -e REGEXP             define exclude regular expression (allowed many times)
                         for current filter (indicated by -r)
 
 
@@ -55,7 +65,6 @@ then
 fi
 
 
-# Custom arguments
 filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <workspaceFilter version=\"1.0\">"""
 toolkit_version=`$API -v`
@@ -88,9 +97,9 @@ while getopts ":g:v:r:i:e:" opt; do
      i)
       if [ $in_filter_context -eq 0 ]
       then
-        echo "Include pattern (-i) should be included in scope of some filter root\
+        echo "Include pattern (-i) should be nested in scope of filter root\
  path (-r)." >&2
-        echo "Please add -r before adding -i/-e options." >&2
+        echo "Please add -r JCRPATH before adding -i/-e options." >&2
         exit 1;
       fi
       filter_definition="${filter_definition}\n  <include pattern=\"${OPTARG}\"/>"
@@ -98,9 +107,9 @@ while getopts ":g:v:r:i:e:" opt; do
      e)
       if [ $in_filter_context -eq 0 ]
       then
-        echo "Exclude pattern (-e) should be included in scope of some filter root\
+        echo "Exclude pattern (-e) should be nested in scope of filter root\
  path (-r)." >&2
-        echo "Please add -r before adding -i/-e options." >&2
+        echo "Please add -r JCRPATH before adding -i/-e options." >&2
         exit 1;
       fi
       filter_definition="${filter_definition}\n  <exclude pattern=\"${OPTARG}\"/>"
