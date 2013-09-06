@@ -39,17 +39,6 @@ EOT
 exit 1
 }
 
-_extract_json()
-{
-    echo "$1"|grep -oE '"'$2'"[ ]*:[ ]*"[^"]+"'|cut -f2- -d ":"|
-        sed 's#"##g'
-}
-
-_extract_json_number()
-{
-    echo "$1"|grep -oE '"'$2'"[ ]*:[ ]*[0-9]+'|cut -f2- -d ":"|
-        sed 's#"##g'|grep -Eo '[0-9]+'
-}
 
 _print_preformatted()
 {
@@ -63,37 +52,17 @@ _print_preformatted()
     fi
     STATUS=$1
     machine_friendly=$2
-    total=`echo "$STATUS"|sed 's#{#\n{#g; s#\[#\n\[#g'|grep -Eo \
-        '\"results\":"?[0-9]+"?'|cut -f2 -d ':'`
-    items=`echo "$STATUS"|sed 's#{#\n{#g;'|grep -E \
-        '"item".+"state".+"initiator".+"startTime".+"model".+"payload".+'`
-    items_count=`echo "$items"|wc -l`
+    items=`$ECHO -e "$STATUS" | sed 's#{#\n{#g' | grep -E 'id.+name.+fragment.+stateRaw.+state.+version.+symbolicName.+category'`
+    items=`$ECHO -e "$items" | sed -E 's#.*"id":([0-9]+),"name":"([^"]+)","fragment":([A-Za-z]+).*,"stateRaw":[0-9]+,"state":"([A-Za-z ]+)","version":"([^"]+)","symbolicName":"([^"]+)","category":"([^"]*)".*#\1\t\6\t\4\t\5\t\2#'`
+    echo "$items"
+    items_count=`$ECHO "$items"|wc -l`
     if [ $machine_friendly -eq 0 ]
     then
-        $ECHO "$total active workflows."
+        $ECHO "$total bundles."
         $ECHO ""
-        output="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD\n"
+        output="ID|SYMBOL|STATUS|VERSION|NAME|FRAGMENT|CATEGORY\n"
     fi
-    idx=0
-    while [ $idx -lt $items_count ]
-    do
-        idx=$((idx+1))
-        line=`echo "${items}"|head -n $idx|tail -n 1`
-        item=`_extract_json "$line" item`
-        state=`_extract_json "$line" state`
-        initiator=`_extract_json "$line" initiator`
-        startTime=`_extract_json_number "$line" startTime`
-        model=`_extract_json "$line" model`
-        payload=`_extract_json "$line" payload`
-        if [ $machine_friendly -eq 1 ]
-        then
-            oneline="$startTime\t$state\t$initiator\t$model\t$item\t$payload\n"
-            output="${output}${oneline}"
-        else
-            oneline="$startTime|$state|$initiator|$model|$item|$payload\n"
-            output="${output}${oneline}"
-        fi
-    done
+    output="${output}${items}"
     if [ $machine_friendly -eq 1 ]
     then
         $ECHO -n "${output}"
@@ -104,7 +73,7 @@ _print_preformatted()
             echo "Cannot find column utility"
             exit 1
         fi
-        $ECHO "${output}"|column -xt -c 5 -s "|"
+        $ECHO "${output}"|tr '\t' '|'|column -xt -c 5 -s "|"
     fi
 }
 
