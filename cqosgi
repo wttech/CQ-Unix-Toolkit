@@ -18,7 +18,8 @@ _usage()
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 Returns CQ instance OSGI bundles and its states in pretty-printed form using
-instance URL. Use -j to return original JSON form. Use -m for machine
+instance URL. Use -j to return original JSON form. Use -m for machine.
+Run (start) or stop specified bundles using -r or -s options.
 
 Examples:
   cqosgi -u admin                 # Returns JSON data with active workflows
@@ -26,6 +27,12 @@ Examples:
   cqosgi -i http://localhost:5510 # Returns JSON data with active workflows for
          -p secret                # localhost instance on tcp port 5510 with
                                   # password provided: secret
+  cqosgi -u admin                 # Stop davex bundle on local instance
+         -s org.apache.sling.jcr.davex
+
+  cqosgi -u admin                 # Restart davex bundle on local instance
+         -s org.apache.sling.jcr.davex
+         -r org.apache.sling.jcr.davex
 
 Options:
 
@@ -35,6 +42,8 @@ Options:
   -j                    returns workflow report in original JSON form
   -m                    returns workflow report in machine-friendly form
                         (fields separated by tabs) without header
+  -r                    run (start) specified bundle (using bundle symbol)
+  -s                    stop specified bundle (using bundle symbol)
 EOT
 exit 1
 }
@@ -105,12 +114,17 @@ apigetopts=`echo "${cmdapi}" | cut -f5`
 # Custom arguments
 pretty=1
 machine_friendly=0
-while getopts ":jm${apigetopts}" opt; do
+operations=""
+while getopts ":jmr:s:${apigetopts}" opt; do
   case $opt in
      j)
       pretty=0;;
      m)
       machine_friendly=1;;
+     r)
+      operations="${operations} R${OPTARG}";;
+     s)
+      operations="${operations} S${OPTARG}";;
      \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
@@ -126,7 +140,7 @@ fi
 
 if [ $machine_friendly -eq 1 -a $pretty -eq 0 ]
 then
-    echo "Switches: -j and -m cannot be applied together."
+    echo "Switches: -j and -m cannot be applied together." >&2
     _usage
 fi
 
@@ -156,6 +170,31 @@ then
     exit $EXITCODE2
 fi
 STATUS=`echo "$STATUS"|sed -r 's#[0-9]{3}$##'`
+
+if [ "$operations" != "" -a \( $pretty -eq 0 -o $machine_friendly -eq 1 \) ]
+then
+    echo "View options -m or -j cannot be applied together with operations: -r/-s" >&2
+    exit 2
+fi
+
+if [ "$operations" != "" ]
+then
+    bundle_map=`_print_preformatted "$STATUS" 1 | cut -f 1,2`
+    for operation in $operations
+    do
+        action=`echo "$operation" | cut -c1`
+        bundle=`echo "$operation" | cut -c2-`
+        if [ "$action" != "R" -a "$action" != "S" ]
+        then
+            echo "Only run/stop operations are permitted for bundles"
+            exit 2
+        fi
+        bundle_escaped=`echo "${bundle}" | sed -r 's#\.#\\.#g' `
+        id=`echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}$" | cut -f1`
+        echo "ACTION=${action} BUNDLE=${bundle} ID=${id}"
+    done
+    exit 0
+fi
 
 if [ $pretty -eq 1 ]
 then
