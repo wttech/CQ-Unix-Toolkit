@@ -42,25 +42,24 @@ exit 1
 
 _print_preformatted()
 {
+    SEP='|'
     ECHO=`which echo`
-    if [ $? -ne 0 -o -z "$ECHO" ]
-    then
-        # fallback to echo
-        ECHO="echo"
-    else
-        ECHO="$ECHO -e "
-    fi
+    [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+    TAB=`$ECHO "\t"`
     STATUS=$1
     machine_friendly=$2
-    items=`$ECHO -e "$STATUS" | sed 's#{#\n{#g' | grep -E 'id.+name.+fragment.+stateRaw.+state.+version.+symbolicName.+category'`
-    items=`$ECHO -e "$items" | sed -E 's#.*"id":([0-9]+),"name":"([^"]+)","fragment":([A-Za-z]+).*,"stateRaw":[0-9]+,"state":"([A-Za-z ]+)","version":"([^"]+)","symbolicName":"([^"]+)","category":"([^"]*)".*#\1\t\6\t\4\t\5\t\2#'`
-    echo "$items"
-    items_count=`$ECHO "$items"|wc -l`
+    REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
+\"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
+symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
+    filtered_items=`$ECHO -e "$STATUS" | sed 's#{#\n{#g' | grep -E "${REGEXP}"`
+    items=`$ECHO -e "$filtered_items" | sed -E "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
+    | sort -nk1 -t "$TAB"`
+    total=`$ECHO -e "$items" | wc -l`
     if [ $machine_friendly -eq 0 ]
     then
         $ECHO "$total bundles."
         $ECHO ""
-        output="ID|SYMBOL|STATUS|VERSION|NAME|FRAGMENT|CATEGORY\n"
+        output="ID|SYMBOL|STATUS|VERSION|NAME\n"
     fi
     output="${output}${items}"
     if [ $machine_friendly -eq 1 ]
@@ -73,7 +72,7 @@ _print_preformatted()
             echo "Cannot find column utility"
             exit 1
         fi
-        $ECHO "${output}"|tr '\t' '|'|column -xt -c 5 -s "|"
+        $ECHO "${output}" | tr '\t' "$SEP" | column -xt -c 5 -s "$SEP"
     fi
 }
 
