@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
+    cat << EOT
 Usage: `basename $0` [OPTION...]
 Returns CQ instance OSGI bundles and its states in pretty-printed form using
 instance URL. Use -j to return original JSON form. Use -m for machine.
@@ -91,15 +91,15 @@ APITEST=`$API -P`
 
 if [ $? -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
 CURLBIN=`$API -c`
 if [ $? -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
 
 
@@ -135,7 +135,7 @@ shift $((OPTIND-1))
 
 if [ $# -gt 0 -o $passed -eq 0 ]
 then
-	_usage
+    _usage
 fi
 
 if [ $machine_friendly -eq 1 -a $pretty -eq 0 ]
@@ -150,11 +150,11 @@ AUTH="$username:$password"
 REFERERHEADER="Referer: $REFERER"
 
 STATUS=`$CURLBIN \
-	-s \
+    -s \
         --write-out "%{http_code}" \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-	"$instance${FILEPATH}"`
+    -u "$AUTH" \
+    -H "$REFERERHEADER" \
+    "$instance${FILEPATH}"`
 
 EXITCODE=$?
 $API -C $EXITCODE
@@ -180,18 +180,59 @@ fi
 if [ "$operations" != "" ]
 then
     bundle_map=`_print_preformatted "$STATUS" 1 | cut -f 1,2`
+    operations_by_id=""
     for operation in $operations
     do
         action=`echo "$operation" | cut -c1`
         bundle=`echo "$operation" | cut -c2-`
         if [ "$action" != "R" -a "$action" != "S" ]
         then
-            echo "Only run/stop operations are permitted for bundles"
+            echo "Only run/stop operations are permitted for bundles" >&2
             exit 2
         fi
         bundle_escaped=`echo "${bundle}" | sed -r 's#\.#\\.#g' `
         id=`echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}$" | cut -f1`
-        echo "ACTION=${action} BUNDLE=${bundle} ID=${id}"
+        if [ "$id" = "" ]
+        then
+            echo "Cannot find specified bundle: ${bundle}" >&2
+            exit 3
+        else
+            operations_by_id="${operations_by_id} ${action}${id}${bundle}"
+        fi
+    done
+    for op in $operations_by_id
+    do
+        action=` echo "$op" | cut -c1 `
+        bundle_spec=` echo "$op" | cut -c2- `
+        bundle_id=` echo "$bundle_spec" | sed -r 's/^([0-9]+).+$/\1/' `
+        bundle=` echo "$bundle_spec" | sed -r 's/^[0-9]+(.+)$/\1/' `
+
+        [ "$action" = "R" ] && activity="Running bundle: " || activity="Stopping bunle: "
+        [ "$action" = "R" ] && optype="start" || optype="stop"
+        post_param="action=${optype}"
+
+        echo "${activity}${bundle} (#${bundle_id})"
+        STATUS=`$CURLBIN \
+                -s \
+                --write-out "%{http_code}" \
+                -u "$AUTH" \
+                -H "$REFERERHEADER" \
+                -d "$post_param" \
+                "$instance${FILEPATH}/${bundle_id}"`
+
+        EXITCODE=$?
+        $API -C $EXITCODE
+        if [ $EXITCODE -ne 0 ]
+        then
+            exit $EXITCODE
+        fi
+        STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+        $API -H ${STATUSCODE}
+        EXITCODE2=$?
+        if [ $EXITCODE2 -ne 0 ]
+        then
+            exit $EXITCODE2
+        fi
     done
     exit 0
 fi
