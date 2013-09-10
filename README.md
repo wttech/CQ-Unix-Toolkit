@@ -24,6 +24,7 @@ party commands to perform some different tasks on Adobe CQ platform such as:
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
 * Active workflow instances list
+* Display OSGI bundles list and start/stop specified bundles
 
 Each action is wrapped in separate stand-alone script with additional usage
 output that allows to perform these tasks easily.
@@ -53,6 +54,7 @@ Below is list of separate tools and purpose of each other
 * cqmrg -- Merge CQ TarPM indexes
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
+* cqosgi -- Display bundles list and manage them by starting/stopping on demand
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
@@ -146,6 +148,7 @@ CQ Compatibilty
    * cqtpm
 *  Compatible with CQ 5.4 or higher
    * cqwfl
+   * cqosgi
 
 Installation
 ------------
