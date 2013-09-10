@@ -20,6 +20,7 @@ then
     exit 1
 fi
 
+
 dir=`dirname $0`
 basedir=`readlink -f $dir`
 echo "I assume that CQ UNIX tools are in: $basedir"
@@ -30,14 +31,48 @@ then
     exit 1
 fi
 
-read -p "Do you want to continue (Y/N) ?" REPLY
-if [ "${REPLY}" = "Y" ] 
+existing_tools=""
+warning=0
+cmds=""
+for cmd in `ls -1 cq*`
+do
+    if [ -f "$INSTALL_DIR/$cmd" ]
+    then
+        if [ -L "$INSTALL_DIR/$cmd" ]
+        then
+            target=`readlink -f $INSTALL_DIR/$cmd`
+            output="$INSTALL_DIR/$cmd is currently linking to: ${target}\n"
+        else
+            output="$INSTALL_DIR/$cmd is currently a binary file\n"
+        fi
+        existing_tools="${existing_tools}${output}"
+        warning=1
+    fi
+    cmds="${cmds} $cmd"
+done
+echo "${existing_tools}"
+
+options=""
+if [ $warning -eq 1 ]
 then
-    for cmd in `ls -1 cq*`
-    do
-        ln -vs "$basedir/$cmd" "$INSTALL_DIR/$cmd"
-    done
-    echo "Installation finished"
+    read -p "Do you want to replace (a)ll links, (i)ndividual ones or quit (A/I/Q) ?" REPLY
+    if [ "${REPLY}" != "A" -a "${REPLY}" != "a" -a "${REPLY}" != "i" -a "${REPLY}" != "I"  ]
+    then
+        echo "Aborted"
+        exit 1;
+    fi
+    [ "${REPLY}" = "A" -o "${REPLY}" = "a" ] && options="-f" || options="-i"
 else
-    echo "Aborted"
+    read -p "Do you want to continue (Y/N) ?" REPLY
+    if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
+    then
+        echo "Aborted"
+        exit 1;
+    fi
 fi
+
+for cmd in $cmds
+do
+    ln $options  -vs "$basedir/$cmd" "$INSTALL_DIR/$cmd"
+done
+echo "Installation finished."
