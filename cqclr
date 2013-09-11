@@ -1,0 +1,137 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+	cat << EOT
+Usage: `basename $0` [OPTION...]
+Clear cache for specified dispatcher (-i option). By default clear the whole
+cache / node or specified node provided by -r option. To match specific
+dispatcher flush cache server configuration use -v domain option to request
+with virtual host/domain.
+
+Examples:
+  cqclr -i http://192.168.1.50    # Clear the whole dispatcher cache for dispatcher
+                                  # available locally in LAN
+  cqclr -i http://192.168.1.50    # Clear the whole dispatcher cache for dispatcher
+        -v production.flush.local # available locally in LAN requesting to
+                                  # virtual host production.flush.local
+  cqclr -i http://192.168.1.50    # Clear only designs cache for dispatcher
+        -v production flush.local # available locally in LAN requesting to
+        -r /etc/design            # virtual host production.flush.local
+
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified dispatcher URL to flush
+  -v                    define HTTP request to other domain than provided in
+                        URL (for virtual hosting purposes)
+  -r                    clears only specified path and all its descendants
+                        (by default the whole cache so: '/' node)
+
+EOT
+exit 1
+}
+
+CWD=`dirname $0`
+API="$CWD/cqapi"
+APITEST=`$API -P`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find or test cqapi command" >&2
+	exit 1
+fi
+
+CURLBIN=`$API -c`
+if [ $? -ne 0 ]
+then
+	echo "Fatal: cannot find curl" >&2
+	exit 1
+fi
+
+
+# API common options
+cmdapi=`    $API -P $@`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+path="/"
+vhost=""
+while getopts ":r:v:${apigetopts}" opt; do
+  case $opt in
+     r)
+      path="$OPTARG";;
+     v)
+      vhost="$OPTARG";;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ge 1 -o $passed -eq 0 ]
+then
+	_usage
+fi
+
+
+URL="${instance}/dispatcher/invalidate.cache"
+REFERER=$URL
+AUTH="$username:$password"
+REFERERHEADER="Referer: $REFERER"
+VHOSTHEADER=""
+VHOSTOPTION=""
+echo "Clearing dispatcher cache:"
+echo "                     path: ${path}"
+
+if [ "$vhost" != "" ]
+then
+    VHOSTHEADER="Host: $vhost"
+    echo "           requested host: ${vhost}"
+fi
+
+echo "           connection URL: ${instance}"
+echo ""
+
+#        $VHOSTHEADER \
+STATUS=`$CURLBIN -s -X POST \
+        --output /dev/null \
+        --write-out %{http_code} \
+        -u "$AUTH" \
+        -H "CQ-Action: Delete" \
+        -H "CQ-Handle: $path" \
+        -H "Content-Length: 0" \
+        -H "$VHOSTHEADER" \
+        "${URL}"`
+EXITCODE=$?
+$API -C $EXITCODE
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+$API -H $STATUS
+EXITCODE=$?
+if [ $EXITCODE -ne 0 ]
+then
+    exit $EXITCODE
+fi
+
+echo "Clearing cache successful."
