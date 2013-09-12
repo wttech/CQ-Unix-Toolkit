@@ -13,15 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 Summary: CQ Unix Toolkit
-Name: cq-unix-toolkit
+Name: CQ-Unix-Toolkit
 Version: 1.0.0
-Release: 1
-Copyright: GPL
-Group: Applications/Sound
+Release: 0
+License: GPL
+Group: Tools/CQ
 Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.0.0.tar.gz
 URL: https://github.com/Cognifide/CQ-Unix-Toolkit
 Vendor: Cognifide Limited
 Packager: Arkadiusz Kita <arkadiusz.kita@cognifide.com>
+BuildArch: noarch
+
+# NOTE! Before building place v1.0.0.tar.gz file from above URL in SOURCES
+# rpmbuild directory.
 
 %description
 CQ Unix Toolkit is a set of POSIX shell tools
@@ -37,24 +41,26 @@ platform such as:
 - Active workflow instances list
 
 %prep
-%setup
+echo Building %{name}-%{version}-%{release}
+%setup -n CQ-Unix-Toolkit-1.0.0
 
 %build
-
-%install
+mkdir -p %buildroot/%{_bindir}/
+mv -v cq* %buildroot/%{_bindir}/
+rm -v *
 
 %files
-/usr/bin/cqapi
-/usr/bin/cqbld
-/usr/bin/cqchk
-/usr/bin/cqcp
-/usr/bin/cqdel
-/usr/bin/cqgc
-/usr/bin/cqget
-/usr/bin/cqls
-/usr/bin/cqmrg
-/usr/bin/cqput
-/usr/bin/cqrun
-/usr/bin/cqtpm
-/usr/bin/cqwfl
+%{_bindir}/cqapi
+%{_bindir}/cqbld
+%{_bindir}/cqchk
+%{_bindir}/cqcp
+%{_bindir}/cqdel
+%{_bindir}/cqgc
+%{_bindir}/cqget
+%{_bindir}/cqls
+%{_bindir}/cqmrg
+%{_bindir}/cqput
+%{_bindir}/cqrun
+%{_bindir}/cqtpm
+%{_bindir}/cqwfl
 
