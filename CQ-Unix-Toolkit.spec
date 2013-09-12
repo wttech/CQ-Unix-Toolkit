@@ -14,11 +14,11 @@
 # limitations under the License.
 Summary: CQ Unix Toolkit
 Name: cq-unix-toolkit
-Version: 1.1.0
-Release: 2
+Version: 1.0.0
+Release: 1
 Copyright: GPL
 Group: Applications/Sound
-Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.1.0.tar.gz
+Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.0.0.tar.gz
 URL: https://github.com/Cognifide/CQ-Unix-Toolkit
 Vendor: Cognifide Limited
 Packager: Arkadiusz Kita <arkadiusz.kita@cognifide.com>
@@ -37,14 +37,24 @@ platform such as:
 - Active workflow instances list
 
 %prep
-rm -rf $RPM_BUILD_DIR/
-zcat $RPM_SOURCE_DIR/v1.1.0.tgz | tar -xvf -
+%setup
 
 %build
 
 %install
 
 %files
+/usr/bin/cqapi
 /usr/bin/cqbld
-
+/usr/bin/cqchk
+/usr/bin/cqcp
+/usr/bin/cqdel
+/usr/bin/cqgc
+/usr/bin/cqget
+/usr/bin/cqls
+/usr/bin/cqmrg
+/usr/bin/cqput
+/usr/bin/cqrun
+/usr/bin/cqtpm
+/usr/bin/cqwfl
 
