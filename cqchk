@@ -29,7 +29,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -f                    force fixing erros when possible  
