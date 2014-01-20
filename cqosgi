@@ -39,8 +39,8 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -j                    returns workflow report in original JSON form
-  -m                    returns workflow report in machine-friendly form
+  -j                    returns bundles states report in original JSON form
+  -m                    returns bundles states report in machine-friendly form
                         (fields separated by tabs) without header
   -r                    run (start) specified bundle (using bundle symbol)
   -s                    stop specified bundle (using bundle symbol)
