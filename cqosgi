@@ -22,9 +22,9 @@ instance URL. Use -j to return original JSON form. Use -m for machine.
 Run (start) or stop specified bundles using -r or -s options.
 
 Examples:
-  cqosgi -u admin                 # Returns JSON data with active workflows
-                                  # from local instance
-  cqosgi -i http://localhost:5510 # Returns JSON data with active workflows for
+  cqosgi -u admin                 # Returns JSON data with bundle states from 
+                                  # the local instance
+  cqosgi -i http://localhost:5510 # Returns JSON data with bundle states for
          -p secret                # localhost instance on tcp port 5510 with
                                   # password provided: secret
   cqosgi -u admin                 # Stop davex bundle on local instance
@@ -36,7 +36,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -j                    returns bundles states report in original JSON form
