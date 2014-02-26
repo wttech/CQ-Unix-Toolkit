@@ -184,10 +184,17 @@ while getopts ":l1mx${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-listing=$((listing_long+listing_names+listing_machines+listing_original))
-if [ $listing -ge 2 ]
+validation1=$((listing_long+listing_names+listing_original))
+if [ ${validation1} -ge 2 ]
 then
-    echo "Listing options -l, -1, -m and -x cannot be used together. Choose one."
+    echo "Listing options -l, -1, and -x cannot be used together. Choose one."
+    _usage
+fi
+
+validation2=$((listing_original+listing_machine))
+if [ ${validation2} -eq 2 ]
+then
+    echo "Listing options -m and -x cannot be used together. Choose one."
     _usage
 fi
 
