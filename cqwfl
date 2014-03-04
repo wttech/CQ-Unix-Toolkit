@@ -32,6 +32,7 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
+  -l                    returns full set of fields
   -j                    returns workflow report in original JSON form
   -m                    returns workflow report in machine-friendly form
                         (fields separated by tabs) without header
@@ -135,9 +136,12 @@ apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
 pretty=1
+full=0
 machine_friendly=0
-while getopts ":jm${apigetopts}" opt; do
+while getopts ":ljm${apigetopts}" opt; do
   case $opt in
+     l)
+      full=1;;
      j)
       pretty=0;;
      m)
@@ -158,6 +162,12 @@ fi
 if [ $machine_friendly -eq 1 -a $pretty -eq 0 ]
 then
     echo "Switches: -j and -m cannot be applied together."
+    _usage
+fi
+
+if [ ${full} -eq 1 -a ${pretty} -eq 0 ]
+then
+    echo "Switches: -j and -l cannot be applied together."
     _usage
 fi
 
@@ -190,7 +200,7 @@ STATUS=`echo "$STATUS"|sed -r 's#[0-9]{3}$##'`
 
 if [ $pretty -eq 1 ]
 then
-    _print_preformatted "$STATUS" $machine_friendly 0
+    _print_preformatted "$STATUS" ${machine_friendly} ${full}
 else
     echo "$STATUS"
 fi
