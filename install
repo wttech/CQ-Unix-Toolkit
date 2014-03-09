@@ -20,50 +20,78 @@ then
     exit 1
 fi
 
-
-dir=`dirname $0`
-basedir=`readlink -f $dir`
-echo "I assume that CQ UNIX tools are in: $basedir"
-echo "Installing symbolic links in: $INSTALL_DIR"
+ECHO=`which echo`
+if [ ${?} -ne 0 ]
+then
+    ECHO="echo"
+else
+    ECHO="${ECHO} -e "
+fi
+dir=`dirname ${0}`
+basedir=`readlink -f ${dir}`
+${ECHO} "I assume that CQ UNIX toolkit are in: ${basedir}\n"
 if [ ! -d "$INSTALL_DIR" ] 
 then
-    echo "Cannot find $INSTALL_DIR directory" >&2
+    echo "Cannot find ${INSTALL_DIR} directory" >&2
     exit 1
 fi
 
 existing_tools=""
 warning=0
+count=0
+total=0
 cmds=""
 for cmd in `ls -1 cq*`
 do
+    total=$((total+1))
     if [ -f "$INSTALL_DIR/$cmd" ]
     then
         if [ -L "$INSTALL_DIR/$cmd" ]
         then
-            target=`readlink -f $INSTALL_DIR/$cmd`
-            output="$INSTALL_DIR/$cmd is currently linking to: ${target}\n"
+            target=`readlink -f "$INSTALL_DIR/$cmd"`
+            output="$INSTALL_DIR/$cmd --> ${target} (symbolic link)\n"
         else
-            output="$INSTALL_DIR/$cmd is currently a binary file\n"
+            output="$INSTALL_DIR/$cmd (binary file)\n"
         fi
+        count=$((count+1))
         existing_tools="${existing_tools}${output}"
         warning=1
     fi
     cmds="${cmds} $cmd"
 done
-echo "${existing_tools}"
+if [ ! -z "${existing_tools}" ]
+then
+    ${ECHO} "${count} currently existing commands will be overwritten:"
+    ${ECHO} "${existing_tools}"
+fi
 
 options=""
+${ECHO} "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
 if [ $warning -eq 1 ]
 then
-    read -p "Do you want to replace (a)ll links, (i)ndividual ones or quit (A/I/Q) ?" REPLY
-    if [ "${REPLY}" != "A" -a "${REPLY}" != "a" -a "${REPLY}" != "i" -a "${REPLY}" != "I"  ]
+    ${ECHO} "Would you like to:"
+    ${ECHO} "-- replace (a)ll ${count} links and install new files,"
+    ${ECHO} "-- replace (i)ndividual ones, install new files"
+    ${ECHO} "-- (s)kip existing ones, install new files"
+    ${ECHO} "-- (q)uit\n"
+    read -p "   (a/i/s/q) ? " REPLY
+    if [ "${REPLY}" != "A" -a "${REPLY}" != "a" -a "${REPLY}" != "i" \
+        -a "${REPLY}" != "I" -a "${REPLY}" != "s" -a "${REPLY}" != "S" ]
     then
         echo "Aborted"
         exit 1;
     fi
-    [ "${REPLY}" = "A" -o "${REPLY}" = "a" ] && options="-f" || options="-i"
+    ask=0
+    options=""
+    force=0
+    case "${REPLY}" in
+        A) force=1; options="-f" ;;
+        a) force=1; options="-f" ;;
+        I) ask=1; options="-f";;
+        i) ask=1; options="-f";;
+    esac
 else
-    read -p "Do you want to continue (Y/N) ?" REPLY
+    read -p "Do you want to continue (Y/N) ? " REPLY
     if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
     then
         echo "Aborted"
@@ -71,8 +99,24 @@ else
     fi
 fi
 
-for cmd in $cmds
+for cmd in ${cmds}
 do
-    ln $options  -vs "$basedir/$cmd" "$INSTALL_DIR/$cmd"
+    confirmed=1
+    if [ ${ask} -eq 1 ]
+    then
+        read -p "Would you like to replace '${INSTALL_DIR}/${cmd}' (Y/N) ? "\
+        REPLY
+        if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
+        then
+            confirmed=0
+        fi
+    fi
+    if [ ${confirmed} -eq 1 ]
+    then
+        if [ ${force} -eq 1 -o ! -f "${INSTALL_DIR}/${cmd}" ]
+        then
+            ln ${options} -s "${basedir}/$cmd" "${INSTALL_DIR}/${cmd}"
+        fi
+    fi
 done
-echo "Installation finished."
+${ECHO} "\nInstallation finished."
