@@ -142,7 +142,7 @@ name=$1
 dir=`pwd`
 if [ "$zipfile" = "" ]
 then
-    zipfile=$dir/${name}.zip
+    zipfile="${dir}/${name}.zip"
 fi
 filter_definition="""${filter_definition}
 </filter>
@@ -170,7 +170,7 @@ mkdir -p ${vault}
 echo "$filter_definition" > $vault/filter.xml
 echo "$package_definition" > $vault/properties.xml
 cd ${tempdir}
-$ZIP -q -r - ./ > $zipfile
+"${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=$?
 cd "$dir"
 if [ $exitcode -ne 0 ]
