@@ -91,14 +91,14 @@ if [ -z  "${group}" ]
 then
         group_arg=""
 else
-        group_arg="-F group=${group}"
+        group_arg="-F \"group=${group}\""
 fi
 
 if [ -z "$outfile" ]
 then
         outfile="${name}.zip"
 fi
-redirection="-o $outfile"
+redirection="-o \"$outfile\""
 
 REFERER="$instance/etc/packages"
 AUTH="$username:$password"
@@ -113,7 +113,7 @@ STATUS=`$CURLBIN \
     -F cmd=get \
     ${group_arg} \
     -o /dev/null \
-    -F name=${name} \
+    -F "name=${name}" \
     "${instance}${FILEPATH}"`
 EXITCODE=$?
 $API -C $EXITCODE

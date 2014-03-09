@@ -87,7 +87,7 @@ if [ -z  "${group}" ]
 then
         group_arg=""
 else
-        group_arg="-F group=${group}"
+        group_arg="-F \"group=${group}\""
 fi
 
 
@@ -102,8 +102,8 @@ STATUS=`$CURLBIN \
 	-u "$AUTH" \
 	-H "$REFERERHEADER" \
         -F cmd=inst \
-        ${group_arg} \
-        -F name=${name} \
+         ${group_arg} \
+        -F "name=${name}" \
 	"$instance${FILEPATH}"`
 
 EXITCODE=$?

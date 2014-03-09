@@ -89,10 +89,10 @@ REFERERHEADER="Referer: $REFERER"
 bad=0
 while [ $# -ne 0 ] 
 do
-        file=$1
-        if [ ! -f $file ]
+        file=${1}
+        if [ ! -f "${file}" ]
         then
-            echo "Cannot find file: $file" >&2 
+            echo "Cannot find file: ${file}" >&2
             bad=1
         else
             STATUS=`$CURLBIN \

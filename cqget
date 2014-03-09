@@ -87,9 +87,9 @@ REFERERHEADER="Referer: $REFERER"
 
 if [ -z "$outfile" ]
 then
-        outfile=`basename "$URL"`
+        outfile=`basename "${URL}"`
 fi
-redirection="-o $outfile"
+redirection="-o \"${outfile}\""
 
 STATUS=`$CURLBIN \
 	-s \
@@ -109,7 +109,7 @@ if [ ${EXITCODE} -eq 0 -a ${EXITCODE} -eq 0 ]
 then
     if [ ! -z "$outfile" ]
     then
-        fullfile=`readlink -f $outfile`
+        fullfile=`readlink -f \"${outfile}\"`
         echo "Resource copied to: $fullfile" 
     fi
 fi
