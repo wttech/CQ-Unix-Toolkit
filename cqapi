@@ -15,9 +15,9 @@
 # limitations under the License.
 _usage()
 {
-        DIR=`dirname $0`
+        DIR=`dirname "${0}"`
 	cat << EOT
-Usage: `basename $0` [OPTION...]
+Usage: `basename "${0}"` [OPTION...]
 CQ UNIX Toolkit API command.
 Version `cat $DIR/VERSION`
 
@@ -249,7 +249,7 @@ _missing_argument()
 
 _version()
 {
-    DIR=`dirname $0`
+    DIR=`dirname "${0}"`
     cat $DIR/VERSION
     exit
 }

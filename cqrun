@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...] package-name
+Usage: `basename "${0}"` [OPTION...] package-name
 Installs already uploaded CRX package by group id and name in CRX Package
 Manager using instance URL.
  
@@ -39,16 +39,16 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
+CWD=`dirname "${0}"`
 API="$CWD/cqapi"
-APITEST=`$API -P`
+APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find or test cqapi command" >&2
 	exit 1
 fi
 
-CURLBIN=`$API -c`
+CURLBIN=`"${API}" -c`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find curl" >&2
@@ -57,7 +57,7 @@ fi
 
 
 # API common options
-cmdapi=`    $API -P $@`
+cmdapi=`    "${API}" -P $@`
 username=`  echo "${cmdapi}" | cut -f1`
 password=`  echo "${cmdapi}" | cut -f2`
 instance=`  echo "${cmdapi}" | cut -f3`
@@ -107,9 +107,9 @@ STATUS=`$CURLBIN \
 	"$instance${FILEPATH}"`
 
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 STATUSCODE=`echo "$STATUS"|tail -n 1`
-$API -H ${STATUSCODE}
+"${API}" -H ${STATUSCODE}
 EXITCODE2=$?
 STATUS=`echo "$STATUS"|sed '$d'`
 echo "${STATUS}"

@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...] package-resource-name
+Usage: `basename "${0}"` [OPTION...] package-resource-name
 Makes local copy of already uploaded package by group id and name in CQ Package
 Manager using instance URL.
  
@@ -41,16 +41,16 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
+CWD=`dirname "${0}"`
 API="$CWD/cqapi"
-APITEST=`$API -P`
+APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find or test cqapi command" >&2
 	exit 1
 fi
 
-CURLBIN=`$API -c`
+CURLBIN=`"${API}" -c`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find curl" >&2
@@ -59,7 +59,7 @@ fi
 
 
 # API common options
-cmdapi=`    $API -P $@`
+cmdapi=`    "${API}" -P $@`
 username=`  echo "${cmdapi}" | cut -f1`
 password=`  echo "${cmdapi}" | cut -f2`
 instance=`  echo "${cmdapi}" | cut -f3`
@@ -116,11 +116,11 @@ STATUS=`$CURLBIN \
     -F name=${name} \
     "${instance}${FILEPATH}"`
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 STATUSFIELDS=`echo "$STATUS"|tail -n 1`
 STATUSCODE=`echo "$STATUSFIELDS"|cut -f2 -d ' '`
 CONTENTTYPE=`echo "$STATUSFIELDS"|cut -f1 -d ' '`
-$API -H ${STATUSCODE}
+"${API}" -H ${STATUSCODE}
 EXITCODE2=$?
 fullfile=`readlink -f $outfile`
 plain=0
@@ -150,11 +150,11 @@ STATUS=`$CURLBIN \
     ${redirection} \
     "${instance}${FILEPATH}"`
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 STATUSCODE=`echo "$STATUS"|tail -n 1|cut -f1 -d ' '`
 CONTENTTYPE=`echo "$STATUS"|tail -n 1|cut -f2 -d ' '`
 STATUS=`echo "$STATUS"|sed '$d'`
-$API -H ${STATUSCODE}
+"${API}" -H ${STATUSCODE}
 EXITCODE2=$?
 if [ ${EXITCODE2} -eq 0 -a ${EXITCODE} -eq 0 ]
 then

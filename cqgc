@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...]
+Usage: `basename "${0}"` [OPTION...]
 Invoke DataStore compaction/garbage collection operation for specified CQ
 instance by default with 15ms sleeping phase per each node (to not load CQ
 heavily).
@@ -43,16 +43,16 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
+CWD=`dirname "${0}"`
 API="$CWD/cqapi"
-APITEST=`$API -P`
+APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find or test cqapi command" >&2
 	exit 1
 fi
 
-CURLBIN=`$API -c`
+CURLBIN=`"${API}" -c`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find curl" >&2
@@ -61,7 +61,7 @@ fi
 
 
 # API common options
-cmdapi=`    $API -P $@`
+cmdapi=`    "${API}" -P $@`
 username=`  echo "${cmdapi}" | cut -f1`
 password=`  echo "${cmdapi}" | cut -f2`
 instance=`  echo "${cmdapi}" | cut -f3`
@@ -114,7 +114,7 @@ then
            "$instance${FILEPATH3}"`
 
     EXITCODE=$?
-    $API -C $EXITCODE
+    "${API}" -C $EXITCODE
 
     if [ $EXITCODE -ne 0 ]
     then
@@ -125,7 +125,7 @@ then
     STATUSCODE=`echo "$STATUS"|tail -n 1`
     STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/;'`
     echo "${STATUS}"
-    $API -H $STATUSCODE
+    "${API}" -H $STATUSCODE
     EXITCODE2=$?
     if [ $EXITCODE2 -ne 0 ]
     then
@@ -147,7 +147,7 @@ STATUS=`$CURLBIN \
 	"$instance${FILEPATH1}"`
 
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 
 if [ $EXITCODE -ne 0 ]
 then
@@ -158,7 +158,7 @@ fi
 STATUSCODE=`echo "$STATUS"|tail -n 1`
 STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/;'`
 echo "${STATUS}"
-$API -H $STATUSCODE
+"${API}" -H $STATUSCODE
 EXITCODE2=$?
 if [ $EXITCODE2 -ne 0 ]
 then
@@ -177,7 +177,7 @@ STATUS=`$CURLBIN \
 	"$instance${FILEPATH2}"`
 
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 
 if [ $EXITCODE -ne 0 ]
 then
@@ -187,13 +187,13 @@ fi
 
 STATUSCODE=`echo "$STATUS"|tail -n 1`
 STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/'`
-is_exception=`echo "$STATUS"|$API -e`
+is_exception=`echo "$STATUS"|"${API}" -e`
 if [ $is_exception -ge 0 ]
 then
-    STATUS=`echo "$STATUS"|$API -E`
+    STATUS=`echo "$STATUS"|"${API}" -E`
 fi
 echo "${STATUS}"
-$API -H $STATUSCODE
+"${API}" -H $STATUSCODE
 EXITCODE2=$?
 if [ $EXITCODE2 -ne 0 ]
 then
