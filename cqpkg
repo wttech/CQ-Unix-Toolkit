@@ -43,13 +43,13 @@ Examples:
 
 Options:
 
-  -g GROUP              provide group for package
-  -v VERSION            provide version for package 
+  -g GROUP              define Vault group/namespace for package
+  -v VERSION            define version for package
   -r JCRPATH            define new filter root JCR path (allowed many times)
   -i REGEXP             define include regular expression (allowed many times)
-                        for current filter (indicated by -r) 
+                        for current filter root path (indicated by -r)
   -e REGEXP             define exclude regular expression (allowed many times)
-                        for current filter (indicated by -r)
+                        for current filter root path (indicated by -r)
   -o ZIPPATH            generates package in path specified by ZIPPATH
 
 EOT
