@@ -65,17 +65,9 @@ then
 	exit 1
 fi
 
-CURLBIN=`$API -c`
-if [ $? -ne 0 ]
-then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
-fi
-
-
 filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <workspaceFilter version=\"1.0\">"""
-toolkit_version=`$API -v`
+toolkit_version=`"${API}" -v`
 package_definition="""<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>
 <!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">
 <properties>
@@ -167,29 +159,29 @@ then
     echo "Cannot create temporary directory" >&2
     exit 1
 fi
-vault=${tempdir}/META-INF/vault
-mkdir -p ${tempdir}/jcr_root
-mkdir -p ${vault}
-echo "$filter_definition" > $vault/filter.xml
-echo "$package_definition" > $vault/properties.xml
+vault="${tempdir}/META-INF/vault"
+mkdir -p "${tempdir}/jcr_root"
+mkdir -p "${vault}"
+echo "${filter_definition}" > "${vault}/filter.xml"
+echo "${package_definition}" > "${vault}/properties.xml"
 cd ${tempdir}
 "${ZIP}" -q -r - ./ > "${zipfile}"
-exitcode=$?
-cd "$dir"
-if [ $exitcode -ne 0 ]
+exitcode=${?}
+cd "${dir}"
+if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot create zip package properly." >&2
 fi
-rm $vault/filter.xml
-rm $vault/properties.xml
+rm ${vault}/filter.xml
+rm ${vault}/properties.xml
 rmdir ${tempdir}/jcr_root
 rmdir ${tempdir}/META-INF/vault
 rmdir ${tempdir}/META-INF
 rmdir ${tempdir}
 
-if [ $exitcode -eq 0 ]
+if [ ${exitcode} -eq 0 ]
 then
-    echo "Package created: $zipfile"
+    echo "Empty package created: $zipfile"
 else
     exit 3
 fi
