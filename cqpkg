@@ -24,18 +24,23 @@ Please note that all CQ-related files like 'nodetype.cnd' are added to package
 during it's building (see 'cqbld' command).
  
 Examples:
-  cqpkg -r /content content           # Create package content-1.0.zip package
+  cqpkg -r /content content           # Create package 'content-1.0.zip'
                                       # in current working directory named
-                                      # 'content' that holds /content node
+                                      # 'content' that holds '/content' node
                                       # and all subnodes under it.
-  cqpkg -r /content -o /tmp/pack.zip  # Create package 'pack.zip' package
+
+  cqpkg -r /content -o /tmp/pack.zip  # Create package 'pack.zip'
         content                       # in '/tmp' directory named
-                                      # 'content' that holds /content node
+                                      # 'content' that holds '/content' node
                                       # and all subnodes under it.
-  cqpkg -r /content -g mypackages     # Create package content-2.0.zip package
-        -v 2.0 content                # named content in version 2.0 in group
-                                      # mypackages (as namespace) that holds
-                                      # /content node and all subnodes under it
+
+  cqpkg -r /content -g mypackages     # Create package 'content-2.0.zip'
+        -v 2.0 -d 'My first package'  # named content with version 2.0,
+         content                      # with group 'mypackages' (as namespace)
+                                      # with 'My first package' description
+                                      # that holds /content node and all
+                                      # subnodes under it
+
   cqpkg -r /content/dam               # Create dam-jpeg package
         -i '/content/dam(/[^/.]+)*(/[^/\.]+\.jpe?g(/.*)?)?$'
         dam-jpeg                      # that holds .jpeg or .jpg nodes
@@ -85,16 +90,18 @@ package_definition="""<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"
 <entry key=\"buildCount\">1</entry>
 <entry key=\"dependencies\"/>
 <entry key=\"packageFormatVersion\">2</entry>
-<entry key=\"description\">Package genereated by CQ Unix Toolkit ${toolkit_version}</entry>
 """
 in_filter_context=0
 version="1.0"
-while getopts ":g:v:r:i:e:o:" opt; do
+description="Package genereated by CQ Unix Toolkit ${toolkit_version}"
+while getopts ":g:v:r:i:e:o:d:" opt; do
   case $opt in
      g)  
       group="$OPTARG";;
      v)
       version="$OPTARG";;
+     d)
+      description="$OPTARG";;
      o)
       zipfile=`readlink -f "$OPTARG"`;;
      r)
@@ -154,6 +161,7 @@ filter_definition="""${filter_definition}
 package_definition="""${package_definition}${group_entry}
 <entry key=\"name\">${name}</entry>
 <entry key=\"version\">${version}</entry>
+<entry key=\"description\">${description}</entry>
 </properties>"""
 ZIP=`which zip`
 if [ ${?} -ne 0 -o "${ZIP}" = "" ]
