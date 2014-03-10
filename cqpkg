@@ -158,14 +158,14 @@ package_definition="""${package_definition}${group_entry}
 ZIP=`which zip`
 if [ $? -ne 0 -o "$ZIP" = "" ]
 then
-    echo "Cannot find zip packaging command-line tool." >&2
+    echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
 tempdir=`mktemp -d`
 exitcode=$?
 if [ $exitcode -ne 0 ]
 then
-    echo "Cannot create temporary directory" >&2
+    echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
     exit 1
 fi
 vault="${tempdir}/META-INF/vault"
@@ -191,7 +191,7 @@ rmdir ${tempdir}
 
 if [ ${exitcode} -eq 0 ]
 then
-    echo "Empty package created: $zipfile"
+    echo "Empty package created: ${zipfile}"
 else
     exit 3
 fi
