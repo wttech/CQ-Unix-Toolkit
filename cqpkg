@@ -17,16 +17,19 @@ _usage()
 {
 	cat << EOT
 Usage: `basename $0` [SPECIFICATION...] package-name
-Create empty CQ Vault ZIP package locally using provided specification that can
-be uploaded to CRX/CQ Package Manager and built or installed.
+Create minimal empty CQ Vault ZIP package locally using provided specification
+that can be uploaded to CRX/CQ Package Manager and built or installed.
+
+Please note that all CQ-related files like 'nodetype.cnd' are added to package
+during it's building (see 'cqbld' command).
  
 Examples:
   cqpkg -r /content content           # Create package content-1.0.zip package
                                       # in current working directory named
                                       # 'content' that holds /content node
                                       # and all subnodes under it.
-  cqpkg -r /content -o /tmp/pack.zip  # Create package /tmp/pack.zip package
-        content                       # in current working directory named
+  cqpkg -r /content -o /tmp/pack.zip  # Create package 'pack.zip' package
+        content                       # in '/tmp' directory named
                                       # 'content' that holds /content node
                                       # and all subnodes under it.
   cqpkg -r /content -g mypackages     # Create package content-2.0.zip package
@@ -35,7 +38,7 @@ Examples:
                                       # /content node and all subnodes under it
   cqpkg -r /content/dam               # Create dam-jpeg package
         -i '/content/dam(/[^/.]+)*(/[^/\.]+\.jpe?g(/.*)?)?$'
-        dam-jpeg                      # that holdes .jpeg or .jpg nodes
+        dam-jpeg                      # that holds .jpeg or .jpg nodes
                                       # from /content/dam node.
 
 Options:
