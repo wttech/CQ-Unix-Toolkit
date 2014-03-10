@@ -142,7 +142,7 @@ name=$1
 dir=`pwd`
 if [ "$zipfile" = "" ]
 then
-    zipfile="${dir}/${name}.zip"
+    zipfile="${dir}/${name}-${version}.zip"
 fi
 filter_definition="""${filter_definition}
 </filter>
