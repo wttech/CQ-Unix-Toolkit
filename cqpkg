@@ -138,13 +138,13 @@ then
 	_usage
 fi
 group_entry=""
-if [ "$group" != "" ]
+if [ "${group}" != "" ]
 then
     group_entry="<entry key=\"group\">${group}</entry>"
 fi
 name=$1
 dir=`pwd`
-if [ "$zipfile" = "" ]
+if [ "${zipfile}" = "" ]
 then
     zipfile="${dir}/${name}-${version}.zip"
 fi
@@ -156,14 +156,14 @@ package_definition="""${package_definition}${group_entry}
 <entry key=\"version\">${version}</entry>
 </properties>"""
 ZIP=`which zip`
-if [ $? -ne 0 -o "$ZIP" = "" ]
+if [ ${?} -ne 0 -o "${ZIP}" = "" ]
 then
     echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
 tempdir=`mktemp -d`
 exitcode=$?
-if [ $exitcode -ne 0 ]
+if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
     exit 1
