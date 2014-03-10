@@ -65,6 +65,15 @@ then
 	exit 1
 fi
 
+ECHO=`which echo`
+if [ ${?} -ne 0 -o -z "${ECHO}" ]
+then
+    # fallback to echo
+    ECHO="echo"
+else
+    ECHO="${ECHO} -e "
+fi
+
 filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <workspaceFilter version=\"1.0\">"""
 toolkit_version=`"${API}" -v`
@@ -162,8 +171,9 @@ fi
 vault="${tempdir}/META-INF/vault"
 mkdir -p "${tempdir}/jcr_root"
 mkdir -p "${vault}"
-echo "${filter_definition}" > "${vault}/filter.xml"
-echo "${package_definition}" > "${vault}/properties.xml"
+
+${ECHO} "${filter_definition}" > "${vault}/filter.xml"
+${ECHO} "${package_definition}" > "${vault}/properties.xml"
 cd ${tempdir}
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}
