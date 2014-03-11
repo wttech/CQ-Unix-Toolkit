@@ -201,7 +201,7 @@ rmdir ${tempdir}
 
 if [ ${exitcode} -eq 0 ]
 then
-    echo "Empty package created: ${zipfile}"
+    echo "Empty package created: '${zipfile}'"
 else
     exit 3
 fi
