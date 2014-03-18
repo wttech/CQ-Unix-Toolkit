@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [SPECIFICATION...] package-name
+Usage: `basename "${0}"` [SPECIFICATION...] package-name
 Create minimal empty CQ Vault ZIP package locally using provided specification
 that can be uploaded to CRX/CQ Package Manager and built or installed.
 
@@ -65,7 +65,7 @@ exit 1
 
 CWD=`dirname $0`
 API="$CWD/cqapi"
-APITEST=`$API -P`
+APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find or test cqapi command" >&2
