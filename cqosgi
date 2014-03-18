@@ -17,14 +17,16 @@ _usage()
 {
     cat << EOT
 Usage: `basename "${0}"` [OPTION...]
-Returns CQ instance OSGI bundles and its states in pretty-printed form using
-instance URL. Use -j to return original JSON form. Use -m for machine.
+Returns CQ instance OSGI bundles list and its states in pretty-printed form
+using instance URL. Use -j to return original JSON form. Use -m for machine.
 Run (start) or stop specified bundles using -r or -s options.
 
+Both -s and -r options can be used multiple times.
+
 Examples:
-  cqosgi -u admin                 # Returns JSON data with bundle states from 
+  cqosgi -u admin                 # Returns bundle list with its states from
                                   # the local instance
-  cqosgi -i http://localhost:5510 # Returns JSON data with bundle states for
+  cqosgi -i http://localhost:5510 # Returns bundle list with its states for
          -p secret                # localhost instance on tcp port 5510 with
                                   # password provided: secret
   cqosgi -u admin                 # Stop davex bundle on local instance
