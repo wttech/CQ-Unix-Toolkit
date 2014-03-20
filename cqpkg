@@ -63,7 +63,7 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
+CWD=`dirname "${0}"`
 API="$CWD/cqapi"
 APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
