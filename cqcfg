@@ -1,0 +1,372 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat << EOT
+Usage: `basename "${0}"` [OPTION...] [configuration-id]
+Return CQ instance OSGI configurations in pretty-printed form using instance 
+URL. For specified configuration return details and parametrs.
+
+TBD:
+Examples:
+  cqosgi -u admin                 # Returns JSON data with bundle states from 
+                                  # the local instance
+  cqosgi -i http://localhost:5510 # Returns JSON data with bundle states for
+         -p secret                # localhost instance on tcp port 5510 with
+                                  # password provided: secret
+  cqosgi -u admin                 # Stop davex bundle on local instance
+         -s org.apache.sling.jcr.davex
+
+  cqosgi -u admin                 # Restart davex bundle on local instance
+         -s org.apache.sling.jcr.davex
+         -r org.apache.sling.jcr.davex
+
+TBD:
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -j                    returns bundles states report in original JSON form
+  -m                    returns bundles states report in machine-friendly form
+                        (fields separated by tabs) without header
+  -r                    run (start) specified bundle (using bundle symbol)
+  -s                    stop specified bundle (using bundle symbol)
+EOT
+exit 1
+}
+
+
+_print_preformatted()
+{
+    SEP='|'
+    ECHO=`which echo`
+    [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+    TAB=`$ECHO "\t"`
+    STATUS=$1
+    machine_friendly=$2
+    REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
+\"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
+symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
+    filtered_items=`$ECHO -e "$STATUS" | sed 's#{#\n{#g' | grep -E "${REGEXP}"`
+    items=`$ECHO -e "$filtered_items" | sed -E "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
+    | sort -nk1 -t "$TAB"`
+    total=`$ECHO -e "$items" | wc -l`
+    if [ $machine_friendly -eq 0 ]
+    then
+        $ECHO "$total bundles."
+        $ECHO ""
+        output="ID|SYMBOL|STATUS|VERSION|NAME\n"
+    fi
+    output="${output}${items}"
+    if [ $machine_friendly -eq 1 ]
+    then
+        $ECHO -n "${output}"
+    else
+        COLUMN=`which column`
+        if [ $? -ne 0 -o -z "$COLUMN" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        $ECHO "${output}" | tr '\t' "$SEP" | column -xt -c 5 -s "$SEP"
+    fi
+}
+
+CWD=`dirname "${0}"`
+API="$CWD/cqapi"
+APITEST=`"${API}" -P`
+
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=`${API} -c`
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+
+# API common options
+cmdapi=`    "${API}" -P ${@}`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+# Custom arguments
+pretty=1
+machine_friendly=0
+operations=""
+long=0
+while getopts ":ljmr:s:${apigetopts}" opt; do
+  case $opt in
+     j)
+      pretty=0;;
+     m)
+      machine_friendly=1;;
+     l)
+      long=1;;
+     r)
+      operations="${operations} R${OPTARG}";;
+     s)
+      operations="${operations} S${OPTARG}";;
+     \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -gt 1 -o ${passed} -eq 0 ]
+then
+    _usage
+fi
+
+config_id="${1}"
+if [ ${machine_friendly} -eq 1 -a ${pretty} -eq 0 ]
+then
+    echo "Switches: -j and -m cannot be applied together." >&2
+    _usage
+fi
+
+AUTH="${username}:${password}"
+
+if [ -z "${config_id}" ]
+then
+    FILEPATH="/system/console/components.json"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    CONFIG_REGEXP='"configurable":"([^"]+)"'
+    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+    CLEARED_STATUS=`echo "${STATUS}" | sed -r 's#\{#\n{#g' | \
+        grep -E -o "${CONFIG_REGEXP}" | sed -r "s#${CONFIG_REGEXP}#\1#"`
+    echo "${CLEARED_STATUS}"
+    exit 0
+else 
+    config_id=`echo "${config_id}" | sed 's# #%20#g'`
+    FILEPATH="/system/console/configMgr/${config_id}"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "$AUTH" \
+        -H "$REFERERHEADER" \
+        -X POST \
+        "$instance${FILEPATH}"`
+
+    EXITCODE=${?}
+    "${API}" -C $EXITCODE
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "${STATUS}"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    
+    SEP='|'
+    ECHO=`which echo`
+    [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+    TAB=`$ECHO "\t"`
+
+    STATUS=`echo "${STATUS}" | sed -r 's#[0-9]{3}$##'`
+    PROP_REGEXP='(.*)"properties":\{(.+})}(.*)'
+    PROPERTIES=`echo "${STATUS}" | sed -r "s#${PROP_REGEXP}#\2#"`
+    DETAILS=`echo "${STATUS}" | sed -r "s#${PROP_REGEXP}#\1\3#"`
+    D1='"pid":"([^"]*)"'
+    D2='"title":"([^"]*)"'
+    D3='"description":"([^"]*)"'
+    D4='"bundleLocation":"([^"]*)"'
+    PID=`echo "${DETAILS}" | grep -E -o "${D1}" | sed -r "s#.*${D1}.*#\1#"`
+    TITLE=`echo "${DETAILS}" | grep -E -o "${D2}" | sed -r "s#.*${D2}.*#\1#"`
+    DESCRIPTION=`echo "${DETAILS}" | grep -E -o "${D3}" \
+        | sed -r "s#.*${D3}.*#\1#"`
+    BUNDLE=`echo "${DETAILS}" | grep -E -o "${D4}" | sed -r "s#.*${D4}.*#\1#"`
+    output="PID\t${PID}\n"
+    output="${output}TITLE\t${TITLE}\n"
+    output="${output}DESCRIPTION\t${DESCRIPTION}\n"
+    output="${output}BUNDLE\t${BUNDLE}\n"
+    if [ ${machine_friendly} -eq 1 ]
+    then
+        ${ECHO} "${output}"
+    else
+        COLUMN=`which column`
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+    fi
+
+    
+    echo ""
+    echo ""
+    PROP_ENTRY_REGEXP='("[^"]+":\{"name":)'
+    PROP_ENTRIES=`echo "${PROPERTIES}" | sed -r "s#${PROP_ENTRY_REGEXP}#\n\1#g"`
+    
+    PR1='"([^"]+)":\{"name":"([^"]*)",'
+    PR2='"type":(.*),'
+    PR2S='"type":([0-9]+),'
+    PR2A='"type":(1),'
+    PR3='"value":"([^"]*)",'
+    PR3N='"value":([^,"]*),'
+    PR3A='"values":(\[[^\x5D]*\]),'
+    PR4='"description":"(.*)"}'
+    
+    VALUES_RG='\{"labels":\[.*\],"values":(\[.*\])\},'
+    SWAPRG='(.*)\t(.*)\t(.*)\t(.*)\t(.*)}?'
+    TYPE_ID_RG='(.*)\t(.*)\t(.*)\t(.*)\t([0-9]+,?).*'
+    PROPS_BASIC_ROWS=`echo "${PROP_ENTRIES}" | \
+        sed -r "s#${PR1}${PR2S}${PR3}${PR4}#\1\t\4\t\2\t\5\t\3#" \
+        | sed -r "s#${PR1}${PR2}${PR3N}${PR4}#\1\t\4\t\2\t\5\t\3#" \
+        | sed -r "s#${PR1}${PR2A}${PR3A}${PR4}#\1\t\4\t\2\t\5\t\3#" \
+        | sed -r "s#${PR1}${PR2}${PR3}${PR4}#\1\t\4\t\2\t\5\t\3#" \
+        | sed -r "s#${VALUES_RG}#\1#" \
+        | sed -r "s#${TYPE_ID_RG}#\1\t\2\t\3\t\4\t#" \
+        | sed -r "s#${SWAPRG}#\1\t\2\t\3\t\5\t\4#"`
+    output="ID\tVALUE\tNAME\tVALUES\tDESCRIPTION\n${PROPS_BASIC_ROWS}"
+    if [ ${long} -eq 0 ]
+    then
+        output=`${ECHO} "${output}" | cut -f1-4`
+    fi
+    
+    if [ ${machine_friendly} -eq 1 ]
+    then
+        ${ECHO} "${output}"
+    else
+        COLUMN=`which column`
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+    fi
+
+fi
+
+#"format":{"name":"Format","type":1,"value":"Basic","description":"Indication of the format in which the user ID is provided. Use \"Basic\" if the user ID is encoded in the HTTP Basic Authentication format, \"AsIs\" if the user ID is provided in plain text or any regular expression applied value should be used as is or any regular expression. (format)"},
+
+# http://localhost:5410/system/console/configMgr/com.day.crx.security.token.impl.TokenCleanupTask?apply=true&action=ajaxConfigManager&scheduler.expression=23+16+*+*+*+%3F&propertylist=scheduler.expression
+
+if [ "$operations" != "" -a \( $pretty -eq 0 -o $machine_friendly -eq 1 \) ]
+then
+    echo "View options -m or -j cannot be applied together with operations: -r/-s" >&2
+    exit 2
+fi
+
+if [ "$operations" != "" ]
+then
+    bundle_map=`_print_preformatted "$STATUS" 1 | cut -f 1,2`
+    operations_by_id=""
+    for operation in $operations
+    do
+        action=`echo "$operation" | cut -c1`
+        bundle=`echo "$operation" | cut -c2-`
+        if [ "$action" != "R" -a "$action" != "S" ]
+        then
+            echo "Only run/stop operations are permitted for bundles" >&2
+            exit 2
+        fi
+        bundle_escaped=`echo "${bundle}" | sed -r 's#\.#\\.#g' `
+        id=`echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}$" | cut -f1`
+        if [ "$id" = "" ]
+        then
+            echo "Cannot find specified bundle: ${bundle}" >&2
+            exit 3
+        else
+            operations_by_id="${operations_by_id} ${action}${id}${bundle}"
+        fi
+    done
+    for op in $operations_by_id
+    do
+        action=` echo "$op" | cut -c1 `
+        bundle_spec=` echo "$op" | cut -c2- `
+        bundle_id=` echo "$bundle_spec" | sed -r 's/^([0-9]+).+$/\1/' `
+        bundle=` echo "$bundle_spec" | sed -r 's/^[0-9]+(.+)$/\1/' `
+
+        [ "$action" = "R" ] && activity="Running bundle: " || activity="Stopping bunle: "
+        [ "$action" = "R" ] && optype="start" || optype="stop"
+        post_param="action=${optype}"
+
+        echo "${activity}${bundle} (#${bundle_id})"
+        STATUS=`$CURLBIN \
+                -s \
+                --write-out "%{http_code}" \
+                -u "$AUTH" \
+                -H "$REFERERHEADER" \
+                -d "$post_param" \
+                "$instance${FILEPATH}/${bundle_id}"`
+
+        EXITCODE=$?
+        $API -C $EXITCODE
+        if [ $EXITCODE -ne 0 ]
+        then
+            exit $EXITCODE
+        fi
+        STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+        $API -H ${STATUSCODE}
+        EXITCODE2=$?
+        if [ $EXITCODE2 -ne 0 ]
+        then
+            exit $EXITCODE2
+        fi
+    done
+    exit 0
+fi
+
+#if [ $pretty -eq 1 ]
+#then
+#    _print_preformatted "$STATUS" $machine_friendly
+#else
+#    echo "$STATUS"
+#fi
+
