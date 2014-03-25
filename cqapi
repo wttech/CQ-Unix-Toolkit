@@ -42,7 +42,10 @@ Examples:
                                  # extended printing purposes (interpreting
                                  # escape sequences) to be compatible
                                  # with BSD/Mac OS X.
-
+  echo " " | cqapi -f            # Convert space into URL-encoded format
+  echo "Col1\tCol2" | cqapi -F 0 # Format tab-separated columns into
+  echo "Col1\tCol2" | cqapi -F 1 # fully-aligned output (0)
+                                 # or tab separated output (1)
 
 Options:
 
@@ -61,6 +64,9 @@ Options:
   -v                    Provides toolkit version
   -w                    Print echo command line or path with escaped sequences
                         turned on
+  -f                    Encode text into URL-friendly format (percent enc)
+  -F                    Preformatting of columns (filled with tabs for
+                        machine-readable format)
 
 EOT
 exit 1
@@ -316,8 +322,62 @@ _version()
     exit
 }
 
+_urlencode()
+{
+    output=$(cat -)
+    output=$(echo "${output}"  \
+        | sed 's#%20# #g'      \
+        | sed 's#%#%25#g'      \
+        | sed 's# #%20#g'      \
+        | sed 's#!#%21#g'      \
+        | sed -r 's#\\#%23#g'  \
+        | sed -r 's#\$#%24#g' \
+        | sed 's#&#%26#g'      \
+        | sed "s#'#%27#g"      \
+        | sed 's#(#%28#g'      \
+        | sed 's#)#%29#g'      \
+        | sed 's#\*#%2A#g'     \
+        | sed 's#\+#%2B#g'     \
+        | sed 's#,#%2C#g'      \
+        | sed 's#\/#%2F#g'     \
+        | sed 's#:#%3A#g'      \
+        | sed 's#\;#%3B#g'     \
+        | sed 's#=#%3D#g'      \
+        | sed 's#\?#%3F#g'     \
+        | sed 's#@#%40#g'      \
+        | sed 's#\[#%5B#g'     \
+        | sed 's#\]#%5D#g'     \
+    )
+    echo "${output}"
+    exit
+}
 
-OPTIONS=":Pu:p:i:csC:H:Evwe-:"
+
+_format_output()
+{
+    ECHO=$(which echo)
+    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
+    SEP='|'
+    machine_friendly=${1}
+    output=$(cat -)
+    if [ "${machine_friendly}" -eq 1 ]
+    then
+        ${ECHO} "${output}"
+    else
+        COLUMN=$(which column)
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -s "${SEP}"
+    fi
+    exit
+}
+
+
+
+OPTIONS=":Pu:p:i:csC:H:fF:Evwe-:"
 PARSE_OPTIONS="u:p:i:"
 
 sed --version >/dev/null 2>/dev/null
@@ -343,6 +403,7 @@ do
            explicit_option=1;;
         C) argument=${OPTARG};;
         H) argument=${OPTARG};;
+        F) argument=${OPTARG};;
         \?) _invalid_option ${parse_mode} "${OPTARG}";;
         :) _missing_argument ${parse_mode} "${OPTARG}";;
     esac
@@ -360,7 +421,9 @@ case "${mode}" in
   E) _java_exception;;
   e) _java_exception_detection;;
   v) _version;;
-  w) _echopath;;
+  w) _echopath;;  
+  f) _urlencode;;
+  F) _format_output "${argument}";;
 esac
 
 _usage
