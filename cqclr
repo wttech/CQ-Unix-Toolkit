@@ -21,6 +21,10 @@ Clear cache for specified dispatcher (-i option). By default clear the whole
 cache / node or specified node provided by -r option. To match specific
 dispatcher flush cache server configuration use -v domain option to request
 with virtual host/domain.
+Please note that by default when you specify individual path and it is deleted,
+special .stat files are touched according to /statfileslevel directive so the
+whole subtree specified by the level of the deepest .stat file location is
+effectively invalidated (but not deleted immediately).
 
 Examples:
   cqclr -i http://192.168.1.50    # Clear the whole dispatcher cache for dispatcher
@@ -111,7 +115,6 @@ fi
 echo "           connection URL: ${instance}"
 echo ""
 
-#        $VHOSTHEADER \
 STATUS=`$CURLBIN -s -X POST \
         --output /dev/null \
         --write-out %{http_code} \
