@@ -37,11 +37,7 @@ Examples:
   cqapi -v                       # Returns toolkit version
   cqapi -s                       # Returns command and parameter required for
                                  # sed extended mode (extended regexp) to
-                                 # be compatible with BSD/Mac OS X.
-  cqapi -w                       # Returns command and parameter required for
-                                 # extended printing purposes (interpreting
-                                 # escape sequences) to be compatible
-                                 # with BSD/Mac OS X.
+                                 # be compatible with BSD/Mac OS X
   echo " " | cqapi -f            # Convert space into URL-encoded format
   echo "Col1\tCol2" | cqapi -F 0 # Format tab-separated columns into
   echo "Col1\tCol2" | cqapi -F 1 # fully-aligned output (0)
@@ -62,8 +58,6 @@ Options:
                         stack trace at the same time
   -e                    Detect if on stdin thereis exception stacktrace
   -v                    Provides toolkit version
-  -w                    Print echo command line or path with escaped sequences
-                        turned on
   -f                    Encode text into URL-friendly format (percent enc)
   -F                    Preformatting of columns (filled with tabs for
                         machine-readable format)
@@ -78,11 +72,6 @@ _sedpath()
     exit
 }
 
-_echopath()
-{
-    echo "printf"
-    exit
-}
 
 _curlpath()
 {
@@ -379,7 +368,32 @@ _format_output()
 
 
 
-OPTIONS=":Pu:p:i:csC:H:fF:Evwe-:"
+
+_format_output()
+{
+    ECHO=$(which echo)
+    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
+    SEP='|'
+    machine_friendly=${1}
+    output=$(cat -)
+    if [ "${machine_friendly}" -eq 1 ]
+    then
+        ${ECHO} "${output}"
+    else
+        COLUMN=$(which column)
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+        then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -s "${SEP}"
+    fi
+    exit
+}
+
+
+
+OPTIONS=":Pu:p:i:csC:H:fF:Eve-:"
 PARSE_OPTIONS="u:p:i:"
 
 sed --version >/dev/null 2>/dev/null
@@ -423,7 +437,6 @@ case "${mode}" in
   E) _java_exception;;
   e) _java_exception_detection;;
   v) _version;;
-  w) _echopath;;  
   f) _urlencode;;
   F) _format_output "${argument}";;
 esac
