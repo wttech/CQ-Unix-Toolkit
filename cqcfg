@@ -17,71 +17,62 @@ _usage()
 {
     cat << EOT
 Usage: `basename "${0}"` [OPTION...] [configuration-id]
-Return CQ instance OSGI configurations in pretty-printed form using instance 
-URL. For specified configuration return details and parametrs.
+Return details of specified OSGI configuration in pretty-printed form or
+machine-friendly form (-m/-n) using instance URL. Allows to modify OSGI
+configuration (-s/-v) or even create a new configuration based on factory (-f).
+You should rather use already existing configuration-id otherwise configuration
+won't be bound. To get list of configuraton IDs, use cqcfgls tool.
 
-TBD:
 Examples:
-  cqosgi -u admin                 # Returns JSON data with bundle states from 
-                                  # the local instance
-  cqosgi -i http://localhost:5510 # Returns JSON data with bundle states for
-         -p secret                # localhost instance on tcp port 5510 with
-                                  # password provided: secret
-  cqosgi -u admin                 # Stop davex bundle on local instance
-         -s org.apache.sling.jcr.davex
+  cqcfg -u admin                 # Show metadata and properties for CRXDEServlet
+    com.day.crx.ide.CRXDEServlet # configuration
 
-  cqosgi -u admin                 # Restart davex bundle on local instance
-         -s org.apache.sling.jcr.davex
-         -r org.apache.sling.jcr.davex
+  cqcfg -u admin -j              # Return original response for CRXDEServlet
+    com.day.crx.ide.CRXDEServlet # configuration (for custom processing
+                                 # purposes)
 
-TBD:
+  cqcfg -u admin -m              # Return a parsable list of properties for
+    com.day.crx.ide.CRXDEServlet # CRXDEServlet configuration
+
+  cqcfg -u admin -m -l           # Return a parsable list of properties for
+    com.day.crx.ide.CRXDEServlet # CRXDEServlet configuration with additional
+                                 # description column
+
+  cqcfg -u admin -m -n           # Return a parsable list of config metadata for
+    com.day.crx.ide.CRXDEServlet # CRXDEServlet configuration
+
+  cqcfg -u admin -s prop -v val  # Set value 'val' for property 'prop' for
+    com.day.crx.ide.CRXDEServlet # local instance and CRXDEServlet configuration
+
+  cqcfg -u admin -f -s prop      # Create a new configuration based on
+    -v val                       # factory configuration LogManager for local
+    org.apache.sling.commons.log # instance with property 'prop' set to 'val'
+    .LogManager                  # value.
+
+
+
 Options:
 
   -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -j                    returns bundles states report in original JSON form
-  -m                    returns bundles states report in machine-friendly form
-                        (fields separated by tabs) without header
-  -r                    run (start) specified bundle (using bundle symbol)
-  -s                    stop specified bundle (using bundle symbol)
+  -j                    returns configuration details in original JSON form
+  -m                    returns configuration properties in machine-friendly
+                        form (fields separated by tabs) without header
+  -l                    add additional column (description) to output which
+                        often makes output a little less readable (wrapped
+                        lines)
+  -n                    in conjuction with -m display configuration general
+                        details (name/description)
+  -f                    instead of modification/creation, use factory config
+                        to create new config
+  -s PROP               set property called 'PROP' (multiple times allowed)
+  -v VAL                in conjuction with -s, sets value 'VAL' for property
+                        specified by -s (multiple times allowed)
 EOT
 exit 1
 }
 
-_list_configurations()
-{
-    FILEPATH="/system/console/components.json"
-    URL="${instance}${FILEPATH}"
-    REFERERHEADER="Referer: ${URL}"
-
-    STATUS=`${CURLBIN} \
-        -s \
-        --write-out "%{http_code}" \
-        -u "${AUTH}" \
-        -H "${REFERERHEADER}" \
-        "${URL}"`
-
-    EXITCODE=${?}
-    "${API}" -C ${EXITCODE}
-    if [ ${EXITCODE} -ne 0 ]
-    then
-        exit ${EXITCODE}
-    fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
-    EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
-        exit ${EXITCODE2}
-    fi
-    CONFIG_REGEXP='"configurable":"([^"]+)"'
-    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
-    CLEARED_STATUS=`echo "${STATUS}" | sed -r 's#\{#\n{#g' | \
-        grep -E -o "${CONFIG_REGEXP}" | sed -r "s#${CONFIG_REGEXP}#\1#"`
-    echo "${CLEARED_STATUS}"
-    exit 0
-}
 
 _print_general_info()
 {
@@ -102,7 +93,7 @@ _print_general_info()
 
     if [ ${machine_friendly} -eq 0 -o ${info} -eq 1 ]
     then 
-        echo "${output}" | _format_output ${machine_friendly}
+        echo "${output}" | "${API}" -F ${machine_friendly}
     fi
 }
 
@@ -146,7 +137,7 @@ _print_properties()
     fi
     if [ ${machine_friendly} -eq 0 -o ${info} -eq 0 ]
     then 
-        echo "${output}" | _format_output ${machine_friendly}
+        echo "${output}" | "${API}" -F ${machine_friendly}
     fi
 }
 
@@ -177,49 +168,100 @@ _print_configuration()
     then
         exit ${EXITCODE2}
     fi
-    
-    ECHO=`which echo`
-    [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
-    TAB=`$ECHO "\t"`
+    TAB=`${ECHO} "\t"`
+    STATUS=`echo "${STATUS}" | sed -r 's#[0-9]{3}$##'`
 
-    STATUS=`echo "${STATUS}" | sed -r 's#[0-9]{3}$##; s#\\\"#%22#g'`
+    if [ ${original} -eq 1 ]
+    then
+        echo "${STATUS}"
+        exit
+    fi
+
     PROP_REGEXP='(.*)"properties":\{(.+})}(.*)'
-    PROPERTIES=`echo "${STATUS}" | grep -E -o "${PROP_REGEXP}" | \
-        sed -r "s#${PROP_REGEXP}#\2#" `
-    
-    _print_general_info
+    PROPERTIES=`echo "${STATUS}" | sed -r 's#\\\"#%22#g' | \
+        grep -E -o "${PROP_REGEXP}" | sed -r "s#${PROP_REGEXP}#\2#" `
 
+    _print_general_info
     if [ ${machine_friendly} -eq 0 ]
     then
        ${ECHO} -e "\n\n"
     fi
-
     _print_properties
+    exit
 }
 
 _modify_configuration()
 {
-    echo "modify"
-    # http://localhost:5410/system/console/configMgr/com.day.crx.security.token.impl.TokenCleanupTask?apply=true&action=ajaxConfigManager&scheduler.expression=23+16+*+*+*+%3F&propertylist=scheduler.expression
-}
+    CONFIGMGR="/system/console/configMgr/"
+    original_config_id=`echo "${config_id}" | sed 's#%20# #g'`
 
-_format_output() 
-{
-    SEP='|'
-    machine_friendly=${1}
-    output=`cat -`
-    if [ ${machine_friendly} -eq 1 ]
+    if [ ${factory} -eq 1 ]
     then
-        ${ECHO} "${output}"
+        echo "Using factory: '${original_config_id}'."
+        temp_pid=`echo "[Temporary PID replaced by real PID upon save]" | \
+            "${API}" -f`
+        FACTORY="factoryPid=${config_id}&"
+        FILEPATH="${CONFIGMGR}${temp_pid}"
     else
-        COLUMN=`which column`
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
-            echo "Cannot find column utility"
-            exit 1
-        fi
-        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+        echo "Modifying '${original_config_id}'."
+        FACTORY=""
+        FILEPATH="${CONFIGMGR}${config_id}"
     fi
+    CONST_PARAMS="?apply=true&action=ajaxConfigManager&${FACTORY}"
+    PROPERTIES="&propertylist="
+    REFERERHEADER="Referer: ${instance}${FILEPATH}"
+    first=1
+    for operation in ${operations}
+    do
+            propname=`echo "${operation}" | cut -f1 -d '='`
+            propvalue=`echo "${operation}" | cut -f2- -d '=' |\
+                sed 's# #%20#g' | "${API}" -f`
+
+            prop_original_value=`echo "${operation}" | cut -f2- -d '=' |\
+                sed 's#%20# #g'`
+            ${ECHO} "  Setting '${propname}' to: '${prop_original_value}' "
+
+            [ ${first} -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
+            REQ_ACTION="${REQ_ACTION}${propname}=${propvalue}"
+            [ ${first} -eq 0 ] && PROPERTIES="${PROPERTIES}%2C"
+            PROPERTIES="${PROPERTIES}${propname}"
+            first=0
+    done
+    QUERYSTRING="${CONST_PARAMS}${REQ_ACTION}${PROPERTIES}"
+    URL="${instance}${FILEPATH}${QUERYSTRING}"
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}\n%{redirect_url}" \
+        -u "$AUTH" \
+        -H "$REFERERHEADER" \
+        -X POST \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C $EXITCODE
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1`
+    NEW_CONFIG_ID=`echo "${STATUS}" | tail -n 1 | \
+        sed -r "s#.*(${config_id}.*)#\1#"`
+
+    TEMPORARY_REDIRECT="302"
+    if [ ! "${STATUSCODE}" = "${TEMPORARY_REDIRECT}" ]
+    then
+        "${API}" -H ${STATUSCODE}
+        EXITCODE2=$?
+        if [ ${EXITCODE2} -ne 0 ]
+        then
+            exit ${EXITCODE2}
+        fi
+    fi
+    if [ ${factory} -eq 1 ]
+    then
+        echo "New configuration created: ${NEW_CONFIG_ID}"
+    fi
+    exit
 }
 
 CWD=`dirname "${0}"`
@@ -232,7 +274,7 @@ then
     exit 1
 fi
 
-CURLBIN=`${API} -c`
+CURLBIN=`"${API}" -c`
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
@@ -249,7 +291,6 @@ passed=`    echo "${cmdapi}" | cut -f4`
 apigetopts=`echo "${cmdapi}" | cut -f5`
 
 # Custom arguments
-pretty=1
 machine_friendly=0
 operations=""
 long=0
@@ -257,7 +298,10 @@ original=0
 info=0
 modify=0
 propery_id=
-while getopts ":ljmns:v:${apigetopts}" opt; do
+factory=0
+v_counter=0
+s_counter=0
+while getopts ":lfjmns:v:${apigetopts}" opt; do
   case $opt in
      j)
       original=1;;
@@ -267,19 +311,24 @@ while getopts ":ljmns:v:${apigetopts}" opt; do
       info=1;;
      l)
       long=1;;
+     f)
+      factory=1;;
      v)
+      v_counter=$((v_counter+1))
       modify=1
       if [ ! -z "${property_id}" ]
       then
-          operations="${operations} ${property_id}=${OPTARG}"
+          propvalue=`echo "${OPTARG}" | sed 's# #%20#g'`
+          operations="${operations} ${property_id}=${propvalue}"
           property_id=""
       else
           echo "For each -v option there must be -s preceeding"\
-            "option specified " >&2
+            "option specified" >&2
           echo ""
           _usage
       fi;;
      s)
+      s_counter=$((s_counter+1))
       modify=1;
       property_id="${OPTARG}";;
      \?)
@@ -290,8 +339,16 @@ while getopts ":ljmns:v:${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ ${#} -gt 1 -o ${passed} -eq 0 ]
+if [ ${#} -ne 1 -o ${passed} -eq 0 ]
 then
+    _usage
+fi
+
+if [ ${s_counter} -ne ${v_counter} ]
+then
+    echo "Options: -s and -v are connected together. You need to specify" \
+     "matching pairs of such options (property/value)." >&2
+    echo ""
     _usage
 fi
 
@@ -302,26 +359,36 @@ then
     echo ""
     _usage
 fi
+if [ ${machine_friendly} -eq 0 -a ${info} -eq 1 ]
+then
+    echo "Option: -n is dedicated for -m (machine-friendly output)." >&2
+    echo ""
+    _usage
+fi
 
 AUTH="${username}:${password}"
 config_id=`echo "${config_id}" | sed 's# #%20#g'`
-
-view_options=$((pretty+info+machine_friendly))
-if [ "${operations}" != "" -a ${view_options} -ge 1 ]
+view_options=$((original+info+machine_friendly))
+if [ -z "${operations}" -a ${factory} -eq 1 ]
 then
-    echo "View options -m, -j or -n cannot be applied together " \
-        "with modify operations: -s/-v" >&2
+    echo "New configuration from factory -f option must be applied" \
+        "together with modify operations: -s/-v" >&2
+    echo "See what properties are supported. Call this command with factory" \
+        " id but without -f/-s/-v options" >&2
+    echo ""
+    _usage
     exit 2
 fi
 
-if [ -z "${config_id}" ]
+if [ "${operations}" != "" -a ${view_options} -ge 1 ]
 then
-    _list_configurations
-elif [ ${modify} -eq 0 ]
-then
-    _print_configuration
-else
-    _modify_configuration
+    echo "View options -m, -j, -n or -l cannot be applied together " \
+        "with modify operations: -s/-v. Choose only one functionality." >&2
+    exit 2
 fi
 
+ECHO=`which echo`
+[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+[ ${modify} -eq 0 ] && _print_configuration
+[ ${modify} -eq 1 ] && _modify_configuration
 

@@ -1,0 +1,150 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat << EOT
+Usage: `basename "${0}"` [OPTION...]
+Return CQ instance list of OSGI configurations using instance URL.
+
+Examples:
+  cqcfgls -u admin                 # Return list of configurations existing on
+                                   # the local instance
+  cqcfgls -i http://localhost:5510 # Return list of configurations for
+          -p secret                # localhost instance on tcp port 5510 with
+                                   # password provided: secret
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+
+EOT
+exit 1
+}
+
+_list_configurations()
+{
+    FILEPATH="/system/console/components.json"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    CONFIG_REGEXP='"configurable":"([^"]+)"'
+    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+
+    CLEARED_STATUS=`echo "${STATUS}" | sed -r 's#\{#\n{#g' | \
+        grep -E -o "${CONFIG_REGEXP}" | sed -r "s#${CONFIG_REGEXP}#\1#"`
+
+    FILEPATH="/system/console/config/Configurations.nfo"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+
+    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+    CLEARED_STATUS2=`echo "${STATUS}" | grep '^PID' | sed -r 's#&nbsp;# #g' | \
+        sed -r 's#<br/>##g' | cut -f2- -d '=' | sed -r 's#^[ ]+##; s#[ ]+$##'`
+
+    ${ECHO} "${CLEARED_STATUS}\n${CLEARED_STATUS2}" | sort | uniq
+    exit 0
+}
+
+
+CWD=`dirname "${0}"`
+API="$CWD/cqapi"
+APITEST=`"${API}" -P`
+
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=`"${API}" -c`
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+
+# API common options
+cmdapi=`    "${API}" -P ${@}`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+while getopts ":${apigetopts}" opt; do
+  case $opt in
+     \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -gt 0 -o ${passed} -eq 0 ]
+then
+    _usage
+fi
+
+AUTH="${username}:${password}"
+
+ECHO=`which echo`
+[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+_list_configurations
+
