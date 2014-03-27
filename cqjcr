@@ -1,0 +1,322 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat << EOT
+Usage: `basename "${0}"` [OPTION...]
+Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
+touch and mkdir commands
+
+Examples:
+  cqjcr -u admin                   # Return list of configurations existing on
+                                   # the local instance
+  cqjcr -i http://localhost:5510   # Return list of configurations for
+          -p secret                # localhost instance on tcp port 5510 with
+                                   # password provided: secret
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+
+EOT
+exit 1
+}
+
+_list_children()
+{
+    FILEPATH="${root}.1.json"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+
+    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+    NEW_NODE=':\{'
+    NODE_NAME='[^"]+'
+    STR_SEP='"'
+    NODE_REGEXP_FULL_EXTRACT="(${STR_SEP}${NODE_NAME}${STR_SEP}${NEW_NODE})"
+    NODE_REGEXP_EXTRACT="${STR_SEP}(${NODE_NAME})${STR_SEP}${NEW_NODE}"
+    FULL_NODE_REGEXP=".*${NODE_REGEXP_EXTRACT}.*"
+    CLEARED_STATUS=`echo "${STATUS}" \
+        | sed -r "s#${NODE_REGEXP_FULL_EXTRACT}#\n\1#g" \
+        | grep -E "${FULL_NODE_REGEXP}" \
+        | sed -r "s#${FULL_NODE_REGEXP}#\1#"`
+    if [ ! -z "${CLEARED_STATUS}" ]
+    then
+        ${ECHO} "${CLEARED_STATUS}"
+    fi
+    exit 0
+}
+
+_list_properties()
+{
+    FILEPATH="${root}.json"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+    STATUS=`${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+
+    NODE_NAME='[^"]+'
+    NUMBER='-?[0-9\.]+'
+    STRING='[^"]*'
+    ARR='\[("[^"]*",?)*\]'
+    QT='"'
+    PROP_ARR="(${QT}${NODE_NAME}${QT}:${ARR},?)"
+    PROP_STR="(${QT}${NODE_NAME}${QT}:${QT}${STRING}${QT},?)"
+    PROP_NUM="(${QT}${NODE_NAME}${QT}:${NUMBER},?)"
+    TOKENS_ARR="${QT}(${NODE_NAME})${QT}:(${ARR}),?"
+    TOKENS_STR="${QT}(${NODE_NAME})${QT}:${QT}(${STRING})${QT},?"
+    TOKENS_NUM="${QT}(${NODE_NAME})${QT}:(${NUMBER}),?"
+
+
+    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+    STATUS=`echo "${STATUS}" | sed -r 's#\\\"#%9999%#' \
+        | sed -r "s#${PROP_NUM}#\n\1\n#g" \
+        | sed -r "s#${PROP_STR}#\n\1\n#g" \
+        | sed -r "s#${PROP_ARR}#\n\1\n#g" \
+        | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR})" \
+        | sed -r "s#.*${TOKENS_NUM}.*#\1\t\2#" \
+        | sed -r "s#.*${TOKENS_STR}.*#\1\t\2#" \
+        | sed -r "s#.*${TOKENS_ARR}.*#\1\t\2#" \
+        | sed -r 's#%9999%#"#g'`
+    SEP='|'
+    COLUMN=`which column`
+    if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+    then
+        ${ECHO} "Cannot find column utility"
+        exit 1
+    fi
+    ${ECHO} "NAME\tVALUE\n${STATUS}" | tr '\t' "${SEP}" \
+        | column -xt -c 2 -s "${SEP}"
+    exit 0
+}
+
+_modify_properties()
+{
+    ${ECHO} "Creating/modyfing ${root}"
+    first=1
+    actions=""
+    for operation in ${operations}
+    do
+            propname=`echo "${operation}" | cut -f1 -d '='`
+            propvalue=`echo "${operation}" | cut -f2- -d '='`
+
+            prop_original_value=`echo "${operation}" | cut -f2- -d '='`
+            ${ECHO} "  Setting '${propname}' to: '${prop_original_value}' "
+
+            [ ${first} -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
+            actions="${actions} -F${propname}=${propvalue}"
+            first=0
+    done
+
+
+    FILEPATH="${root}"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+    STATUS=`${CURLBIN} \
+        -s \
+        -X POST \
+        ${actions} \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+}
+
+_create_node()
+{
+    [ -z "${type}" ] && type="nt:unstructured"
+    FILEPATH="${root}"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+    STATUS=`${CURLBIN} \
+        -s \
+        -X POST \
+        -F"jcr:primaryType=${type}" \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    echo "Created/modified: ${root}"
+}
+
+
+CWD=`dirname "${0}"`
+API="$CWD/cqapi"
+APITEST=`"${API}" -P`
+
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=`"${API}" -c`
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+
+# API common options
+cmdapi=`    "${API}" -P ${@}`
+username=`  echo "${cmdapi}" | cut -f1`
+password=`  echo "${cmdapi}" | cut -f2`
+instance=`  echo "${cmdapi}" | cut -f3`
+passed=`    echo "${cmdapi}" | cut -f4`
+apigetopts=`echo "${cmdapi}" | cut -f5`
+
+root=""
+list=0
+modify=0
+properties=0
+create=0
+type=""
+operations=""
+property_id=""
+n_counter=0
+v_counter=0
+while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
+  case $opt in
+     l)
+      list=1
+      root="${OPTARG}";;
+     s)
+      properties=1
+      root="${OPTARG}";;
+     a)
+      modify=1
+      root="${OPTARG}";;
+     c)
+      create=1
+      root="${OPTARG}";;
+     t)
+      type="${OPTARG}";;
+     v)
+      v_counter=$((v_counter+1))
+      modify=1
+      if [ ! -z "${property_id}" ]
+      then
+          propvalue=`echo "${OPTARG}" | sed 's# #%20#g'`
+          operations="${operations} ${property_id}=${propvalue}"
+          property_id=""
+      else
+          echo "For each -v option there must be -n preceeding"\
+            "option specified" >&2
+          echo ""
+          _usage
+      fi;;
+     n)
+      n_counter=$((n_counter+1))
+      modify=1;
+      property_id="${OPTARG}";;      
+     \?)
+      echo "Invalid option: -$OPTARG" >&2; _usage;;
+     :)
+      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -gt 0 -o ${passed} -eq 0 ]
+then
+    echo "You need to choose operation: -l" >&2
+    _usage
+fi
+
+if [ ${n_counter} -ne ${v_counter} ]
+then
+    echo "Options: -n and -v are connected together. You need to specify" \
+     "matching pairs of such options (name/value)." >&2
+    echo ""
+    _usage
+fi
+
+AUTH="${username}:${password}"
+
+ECHO=`which echo`
+[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+[ ${list} -eq 1 ] && _list_children
+[ ${properties} -eq 1 ] && _list_properties
+[ ${modify} -eq 1 ] && _modify_properties
+[ ${create} -eq 1 ] && _create_node
+
