@@ -15,6 +15,7 @@
 # limitations under the License.
 _usage()
 {
+# TODO examples
     cat << EOT
 Usage: `basename "${0}"` [OPTION...]
 Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
@@ -26,12 +27,24 @@ Examples:
   cqjcr -i http://localhost:5510   # Return list of configurations for
           -p secret                # localhost instance on tcp port 5510 with
                                    # password provided: secret
+
+
 Options:
 
   -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-
+  -s PATHSPEC           show properties for specified JCR nodes 'PATHSPEC'
+  -m                    machine-friendly mode for -s option
+  -l PATHSPEC           show JCR children nodes for specified 'PATHSPEC' node
+                        Each non-exising element from path will be created
+  -c PATHSPEC           create empty node specified by 'PATHSPEC'
+  -t JCRTYPE            in conjuction with -c allows to specify jcr:PrimaryType
+  -a PATHSPEC           create/modify node specified by PATHSPEC
+  -n NAME               in conjuction with -a allows to specify property name
+                        (can be used many times but in pairs with -v)
+  -v VALUE              in conjuction with -a allows to specify property value
+                        (can be used many times but in pairs with -n)
 EOT
 exit 1
 }
@@ -141,6 +154,14 @@ _list_properties()
     exit 0
 }
 
+call_curl()
+{
+    ${CURLBIN} "${@}"
+    CURL_EXITCODE=${?}
+    exit 0
+}
+
+
 _modify_properties()
 {
     ${ECHO} "Creating/modyfing ${root}"
@@ -148,14 +169,10 @@ _modify_properties()
     actions=""
     for operation in ${operations}
     do
-            propname=`echo "${operation}" | cut -f1 -d '='`
-            propvalue=`echo "${operation}" | cut -f2- -d '='`
-
-            prop_original_value=`echo "${operation}" | cut -f2- -d '='`
-            ${ECHO} "  Setting '${propname}' to: '${prop_original_value}' "
-
-            [ ${first} -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
-            actions="${actions} -F${propname}=${propvalue}"
+            propname=`echo "${operation}" | cut -f1 -d '=' | sed -r 's#%20# #g'`
+            propvalue=`echo "${operation}" | cut -f2- -d '=' | sed -r 's#%20# #g'`
+            ${ECHO} "  Setting '${propname}' to: '${propvalue}' "
+            actions="${actions}-F\000${propname}=${propvalue}\000"
             first=0
     done
 
@@ -163,19 +180,19 @@ _modify_properties()
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-    STATUS=`${CURLBIN} \
-        -s \
-        -X POST \
-        ${actions} \
+
+    args="${actions}${URL}"
+
+    STATUS=`${ECHO} -ne "${args}" |
+        xargs -0 ${CURLBIN} \
+        -s -X POST \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
-        -H "${REFERERHEADER}" \
-        "${URL}"`
-
+        -H "${REFERERHEADER}"`
     EXITCODE=${?}
-    "${API}" -C ${EXITCODE}
     if [ ${EXITCODE} -ne 0 ]
     then
+        echo "There was a problem calling: xargs + curl" >&2
         exit ${EXITCODE}
     fi
     STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
@@ -288,7 +305,7 @@ while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
      n)
       n_counter=$((n_counter+1))
       modify=1;
-      property_id="${OPTARG}";;      
+      property_id=`echo "${OPTARG}" | sed 's# #%20#g'`;;
      \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
@@ -296,7 +313,7 @@ while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
   esac
 done
 shift $((OPTIND-1))
-
+# TODO validation
 if [ ${#} -gt 0 -o ${passed} -eq 0 ]
 then
     echo "You need to choose operation: -l" >&2
