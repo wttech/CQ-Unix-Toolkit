@@ -15,19 +15,33 @@
 # limitations under the License.
 _usage()
 {
-# TODO examples
     cat << EOT
 Usage: `basename "${0}"` [OPTION...]
 Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
 touch and mkdir commands
 
 Examples:
-  cqjcr -u admin                   # Return list of configurations existing on
+  cqjcr -u admin -l /              # Return JCR child nodes for '/' existing on
                                    # the local instance
-  cqjcr -i http://localhost:5510   # Return list of configurations for
-          -p secret                # localhost instance on tcp port 5510 with
-                                   # password provided: secret
-
+  cqjcr -i http://localhost:5510   # Return JCR child nodes for '/content' for
+        -l /conten -p secret       # localhost instance on tcp port 5510 with
+                                   # password provided: 'secret'
+  cqjcr -u admin -s /              # Show JCR properties for '/' node in pretty
+                                   # format
+  cqjcr -u admin -s /content -m    # Show JCR properties for '/content' node in
+                                   # machine-readable format
+  cqjcr -u admin -c /content/new   # Create (or modify) JCR node 'new' under
+                                   # '/content' node with default
+                                   # 'nt:unstructured' primary type
+  cqjcr -u admin -c /content/new   # Create (or modift) JCR node 'new' under
+        -t cq:Page                 # '/content' node with 'cq:Page' primary
+                                   # type
+  cqjcr -u admin -a /content/www   # Create or modify JCR node 'www' under
+        -n name1 -v val1           # '/content' node with 2 properties: one
+        -n name2 -v val2           # with name: 'name1' and value 'val1', second
+                                   # with name: 'name2' and value 'val2'
+  cqjcr -u admin -d /content/trash # Delete node 'trash' under '/content' for
+                                   # local instance
 
 Options:
 
@@ -40,11 +54,12 @@ Options:
                         Each non-exising element from path will be created
   -c PATHSPEC           create empty node specified by 'PATHSPEC'
   -t JCRTYPE            in conjuction with -c allows to specify jcr:PrimaryType
-  -a PATHSPEC           create/modify node specified by PATHSPEC
+  -a PATHSPEC           create/modify node specified by 'PATHSPEC'
   -n NAME               in conjuction with -a allows to specify property name
                         (can be used many times but in pairs with -v)
   -v VALUE              in conjuction with -a allows to specify property value
                         (can be used many times but in pairs with -n)
+  -d PATHSPEC           delete node specified by path 'PATHSPEC'
 EOT
 exit 1
 }
@@ -142,25 +157,23 @@ _list_properties()
         | sed -r "s#.*${TOKENS_STR}.*#\1\t\2#" \
         | sed -r "s#.*${TOKENS_ARR}.*#\1\t\2#" \
         | sed -r 's#%9999%#"#g'`
-    SEP='|'
-    COLUMN=`which column`
-    if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+
+    if [ ${machine_friendly} -eq 0 ]
     then
-        ${ECHO} "Cannot find column utility"
-        exit 1
+        SEP='|'
+        COLUMN=`which column`
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
+        then
+            ${ECHO} "Cannot find column utility"
+            exit 1
+        fi
+        ${ECHO} "NAME\tVALUE\n${STATUS}" | tr '\t' "${SEP}" \
+            | column -xt -c 2 -s "${SEP}"
+    else
+        ${ECHO} "${STATUS}"
     fi
-    ${ECHO} "NAME\tVALUE\n${STATUS}" | tr '\t' "${SEP}" \
-        | column -xt -c 2 -s "${SEP}"
     exit 0
 }
-
-call_curl()
-{
-    ${CURLBIN} "${@}"
-    CURL_EXITCODE=${?}
-    exit 0
-}
-
 
 _modify_properties()
 {
@@ -169,18 +182,16 @@ _modify_properties()
     actions=""
     for operation in ${operations}
     do
-            propname=`echo "${operation}" | cut -f1 -d '=' | sed -r 's#%20# #g'`
-            propvalue=`echo "${operation}" | cut -f2- -d '=' | sed -r 's#%20# #g'`
-            ${ECHO} "  Setting '${propname}' to: '${propvalue}' "
-            actions="${actions}-F\000${propname}=${propvalue}\000"
-            first=0
+        propname=`echo "${operation}" | cut -f1 -d '=' | sed -r 's#%20# #g'`
+        propvalue=`echo "${operation}" | cut -f2- -d '=' | sed -r 's#%20# #g'`
+        ${ECHO} "  Setting '${propname}' to: '${propvalue}' "
+        actions="${actions}-F\000${propname}=${propvalue}\000"
+        first=0
     done
-
 
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-
     args="${actions}${URL}"
 
     STATUS=`${ECHO} -ne "${args}" |
@@ -202,6 +213,7 @@ _modify_properties()
     then
         exit ${EXITCODE2}
     fi
+    echo "Successfully created/modified: ${root}"
 }
 
 _create_node()
@@ -235,11 +247,39 @@ _create_node()
     echo "Created/modified: ${root}"
 }
 
+_delete_node()
+{
+    FILEPATH="${root}"
+    URL="${instance}${FILEPATH}"
+    REFERERHEADER="Referer: ${URL}"
+    STATUS=`${CURLBIN} \
+        -s \
+        -X DELETE \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${URL}"`
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
+    "${API}" -H ${STATUSCODE}
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    echo "Deleted: ${root}"
+}
+
 
 CWD=`dirname "${0}"`
 API="$CWD/cqapi"
 APITEST=`"${API}" -P`
-
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
@@ -252,7 +292,6 @@ then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
-
 
 # API common options
 cmdapi=`    "${API}" -P ${@}`
@@ -272,7 +311,9 @@ operations=""
 property_id=""
 n_counter=0
 v_counter=0
-while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
+machine_friendly=0
+delete=0
+while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
   case $opt in
      l)
       list=1
@@ -286,6 +327,11 @@ while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
      c)
       create=1
       root="${OPTARG}";;
+     d)
+      delete=1
+      root="${OPTARG}";;
+     m)
+      machine_friendly=1;;
      t)
       type="${OPTARG}";;
      v)
@@ -313,13 +359,13 @@ while getopts ":l:s:a:c:t:n:v:${apigetopts}" opt; do
   esac
 done
 shift $((OPTIND-1))
-# TODO validation
+
 if [ ${#} -gt 0 -o ${passed} -eq 0 ]
 then
-    echo "You need to choose operation: -l" >&2
+    echo "You need to choose one of the following operation:" >&2
+    echo " -l / -s / -c / -a" >&2
     _usage
 fi
-
 if [ ${n_counter} -ne ${v_counter} ]
 then
     echo "Options: -n and -v are connected together. You need to specify" \
@@ -327,13 +373,31 @@ then
     echo ""
     _usage
 fi
+if [ ${machine_friendly} -eq 1 -a ${properties} -eq 0 ]
+then
+    echo "Option: -m can be used only in conjuction with -s" >&2
+    echo ""
+    _usage
+fi
+if [ ${create} -eq 0 -a ! -z "${type}" ]
+then
+    echo "Option: -t can be used only in conjuction with -c" >&2
+    echo ""
+    _usage
+fi
+if [ ${modify} -eq 0 -a ${n_counter} -gt 0 ]
+then
+    echo "Options: -n/-v can be used only in conjuction with -a" >&2
+    echo ""
+    _usage
+fi
 
 AUTH="${username}:${password}"
-
 ECHO=`which echo`
 [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
 [ ${list} -eq 1 ] && _list_children
 [ ${properties} -eq 1 ] && _list_properties
 [ ${modify} -eq 1 ] && _modify_properties
 [ ${create} -eq 1 ] && _create_node
+[ ${delete} -eq 1 ] && _delete_node
 
