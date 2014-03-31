@@ -146,11 +146,7 @@ if [ $# -ne 1 ];
 then
 	_usage
 fi
-group_entry=""
-if [ "${group}" != "" ]
-then
-    group_entry="<entry key=\"group\">${group}</entry>"
-fi
+group_entry="<entry key=\"group\">${group}</entry>"
 name=$1
 dir=`pwd`
 if [ "${zipfile}" = "" ]
