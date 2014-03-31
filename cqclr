@@ -33,7 +33,7 @@ Examples:
         -v production.flush.local # available locally in LAN requesting to
                                   # virtual host production.flush.local
   cqclr -i http://192.168.1.50    # Clear only designs cache for dispatcher
-        -v production flush.local # available locally in LAN requesting to
+        -v production.flush.local # available locally in LAN requesting to
         -r /etc/design            # virtual host production.flush.local
 
 Options:
