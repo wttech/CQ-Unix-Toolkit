@@ -86,13 +86,19 @@ _print_general_info()
     DESCRIPTION=`echo "${DETAILS}" | grep -E -o "${D3}" \
         | sed -r "s#.*${D3}.*#\1#"`
     BUNDLE=`echo "${DETAILS}" | grep -E -o "${D4}" | sed -r "s#.*${D4}.*#\1#"`
-    output="PID\t${PID}\n"
-    output="${output}TITLE\t${TITLE}\n"
-    output="${output}DESCRIPTION\t${DESCRIPTION}\n"
-    output="${output}BUNDLE\t${BUNDLE}\n"
+
+    if [ ${machine_friendly} -eq 0 ]
+    then
+        output="PID\t${PID}\n"
+        output="${output}TITLE\t${TITLE}\n"
+        output="${output}DESCRIPTION\t${DESCRIPTION}\n"
+        output="${output}BUNDLE\t${BUNDLE}\n"
+    else
+        output="${PID}\n${TITLE}\n${DESCRIPTION}\n${BUNDLE}"
+    fi
 
     if [ ${machine_friendly} -eq 0 -o ${info} -eq 1 ]
-    then 
+    then
         echo "${output}" | "${API}" -F ${machine_friendly}
     fi
 }
@@ -101,7 +107,7 @@ _print_properties()
 {
     PROP_ENTRY_REGEXP='("[^"]+":\{"name":)'
     PROP_ENTRIES=`echo "${PROPERTIES}" | sed -r "s#${PROP_ENTRY_REGEXP}#\n\1#g"`
-    
+
     PR12='"([^"]+)":\{"name":"([^"]*)",'
     PR3='"type":(.*),'
     PR3S='"type":([0-9]+),'
@@ -110,7 +116,7 @@ _print_properties()
     PR4N='"value":([^,"]*)'
     PR4A='"values":(\[[^\x5D]*\])'
     PR5=',"description":"([^"]*)"}'
-    
+
     VALUES_RG='\{"labels":\[.*\],"values":(\[.*\])\},?'
     SWAPRG='(.*)\t(.*)\t(.*)\t(.*)\t(.*)}?'
     TYPE_ID_RG='(.*)\t(.*)\t(.*)\t(.*)\t([0-9]+,?).*'
@@ -130,13 +136,18 @@ _print_properties()
         | sed -r "s#${TYPE_ID_RG}#\1\t\2\t\3\t\4\t#" \
         | sed -r "s#${SWAPRG}#\1\t\2\t\3\t\5\t\4#" \
         | sed -r 's#%22#"#g'`
-    output="ID\tVALUE\tNAME\tVALUES\tDESCRIPTION\n${PROPS_BASIC_ROWS}"
+
+    output="${PROPS_BASIC_ROWS}"
+    if [ ${machine_friendly} -eq 0 ]
+    then
+        output="ID\tVALUE\tNAME\tVALUES\tDESCRIPTION\n${output}"
+    fi
     if [ ${long} -eq 0 ]
     then
         output=`${ECHO} "${output}" | cut -f1-4`
     fi
     if [ ${machine_friendly} -eq 0 -o ${info} -eq 0 ]
-    then 
+    then
         echo "${output}" | "${API}" -F ${machine_friendly}
     fi
 }
@@ -307,7 +318,7 @@ while getopts ":lfjmns:v:${apigetopts}" opt; do
       original=1;;
      m)
       machine_friendly=1;;
-     n) 
+     n)
       info=1;;
      l)
       long=1;;
