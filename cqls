@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...]
+Usage: `basename "${0}"` [OPTION...]
 List all packages in CQ Package Manager using instance URL.
 
 Examples:
@@ -154,16 +154,16 @@ _print_preformatted()
     fi
 }
 
-CWD=`dirname $0`
+CWD=`dirname "${0}"`
 API="$CWD/cqapi"
-APITEST=`$API -P`
+APITEST=`"${API}" -P`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find or test cqapi command" >&2
 	exit 1
 fi
 
-CURLBIN=`$API -c`
+CURLBIN=`"${API}" -c`
 if [ $? -ne 0 ]
 then
 	echo "Fatal: cannot find curl" >&2
@@ -172,7 +172,7 @@ fi
 
 
 # API common options
-cmdapi=`    $API -P $@`
+cmdapi=`    "${API}" -P $@`
 username=`  echo "${cmdapi}" | cut -f1`
 password=`  echo "${cmdapi}" | cut -f2`
 instance=`  echo "${cmdapi}" | cut -f3`
@@ -233,7 +233,7 @@ STATUS=`$CURLBIN \
 	"$instance${FILEPATH}"`
 
 EXITCODE=$?
-$API -C $EXITCODE
+"${API}" -C $EXITCODE
 if [ $EXITCODE -ne 0 ]
 then
     echo "Couldn't get packages list"
@@ -241,7 +241,7 @@ then
 fi
 
 STATUSCODE=`echo "$STATUS"|tail -n 1`
-$API -H ${STATUSCODE}
+"${API}" -H ${STATUSCODE}
 EXITCODE2=$?
 if [ $EXITCODE2 -ne 0 ]
 then

@@ -17,7 +17,7 @@ VERSION=1.1.0
 _usage()
 {
 	cat << EOT
-Usage: `basename $0` [OPTION...]
+Usage: `basename "${0}"` [OPTION...]
 CQ UNIX Toolkit API command.
 Version ${VERSION}
 
