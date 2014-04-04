@@ -40,117 +40,95 @@ EOT
 exit 1
 }
 
-_extract_xml_field()
-{
-    field=`echo "$1"|grep -oE "<$2>.+</$2>"|sed -r "s#<$2>(.+)</$2>#\1#"|\
-        tr -d '\n'`
-    if [ -z "$field" ]
-    then
-        echo "null"
-    else
-        echo "$field"
-    fi
-}
 
 _print_preformatted()
 {
-    OUTPUT=$1
-    mode=$2
-    items=`echo $OUTPUT|sed -r 's#^[ ]+##g; s#[ ]+$##g;'|\
-        tr -d '\n'|sed 's#<package>#\n<package>#g'|grep -E '<package>'`
-    items_count=`echo "$items"|wc -l`
-    idx=0
-
-    # Table header
-    output_template="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
-    case $mode in
-      0) output="${output_template}\n";;
-      1) output="";;
-      2) output="";;
-      3) dates="CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
-         output="${output_template}|${dates}\n";;
-    esac
-
-    # Table rows
-    while [ $idx -lt $items_count ]
-    do
-        idx=$((idx+1))
-        line=`echo "${items}"|head -n $idx|tail -n 1`
-        name=`_extract_xml_field "$line" name`
-        if [ $mode -ne 1 ]
-        then
-            group=`_extract_xml_field "$line" group`
-            download=`_extract_xml_field "$line" downloadName`
-            version=`_extract_xml_field "$line" version`
-            size=`_extract_xml_field "$line" size`
-        fi
-        if [ $mode -ge 2 ]
-        then
-            created=`_extract_xml_field "$line" created`
-            createdBy=`_extract_xml_field "$line" createdBy`
-            modified=`_extract_xml_field "$line" lastModified`
-            modifiedBy=`_extract_xml_field "$line" lastModifiedBy`
-            installed=`_extract_xml_field "$line" lastUnpacked`
-            installedBy=`_extract_xml_field "$line" lastUnpackedBy`
-        fi
-
-        if [ $mode -eq 2 ]
-        then
-            sep="\t"
-        else
-            sep="|"
-        fi
-
-        dates=""
-        if [ $mode -ge 2 ]
-        then
-             createdCols="$created${sep}$createdBy"
-             modifiedCols="$modified${sep}$modifiedBy"
-             installedCols="$installed${sep}$installedBy"
-             dates="$createdCols${sep}$modifiedCols${sep}$installedCols"
-        fi
-
-        details=""
-        if [ $mode -ne 1 ]
-        then
-             details="$group${sep}$version${sep}$size${sep}$download"
-        fi
-
-        row="${name}${sep}${details}${sep}${dates}\n"
-        output="${output}${row}"
-    done
-
-    # Output form
+    SEP='|'
     ECHO=`which echo`
-    if [ $? -ne 0 -o -z "$ECHO" ]
+    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
+    TAB=`$ECHO "\t"`
+    STATUS=${1}
+    mode=${2}
+    machine=${3}
+    fields_num=11
+    case ${mode} in
+        1)
+            fields_num=1;;
+        2)
+            fields_num=5;;
+        3)
+            fields_num=11;;
+    esac
+    PLACEHOLDER=">([^\<]*)</"
+    NONPLACEHOLDER=">[^\<]*</"
+    KEY1="group"
+    KEY2="name"
+    KEY3="version"
+    KEY4="downloadName"
+    KEY5="size"
+    KEY6="created"
+    KEY7="createdBy"
+    KEY8="lastModified"
+    KEY9="lastModifiedBy"
+    KEY10="lastUnpacked"
+    KEY11="lastUnpackedBy"
+
+    G1="<${KEY1}${PLACEHOLDER}${KEY1}>"
+    G2="<${KEY2}${PLACEHOLDER}${KEY2}>"
+    G3="<${KEY3}${PLACEHOLDER}${KEY3}>"
+    G4="<${KEY4}${PLACEHOLDER}${KEY4}>"
+    G5="<${KEY5}${PLACEHOLDER}${KEY5}>"
+
+    X6="<${KEY6}${NONPLACEHOLDER}${KEY6}>"
+    X7="<${KEY7}${NONPLACEHOLDER}${KEY7}>"
+    X8="<${KEY8}${NONPLACEHOLDER}${KEY8}>"
+    X9="<${KEY9}${NONPLACEHOLDER}${KEY9}>"
+    X10="<${KEY10}${NONPLACEHOLDER}${KEY10}>"
+    X11="<${KEY11}${NONPLACEHOLDER}${KEY11}>"
+
+    REGEXP1=".*${G1}${G2}${G3}${G4}${G5}(${X6}${X7}${X8}${X9}${X10}${X11}).*"
+    ORDERING1="\2\t\1\t\3\t\5\t\4\t\6"
+
+    G2="<${KEY6}${PLACEHOLDER}${KEY6}>"
+    G3="<${KEY7}${PLACEHOLDER}${KEY7}>"
+    G4="<${KEY8}${PLACEHOLDER}${KEY8}>"
+    G5="<${KEY9}${PLACEHOLDER}${KEY9}>"
+    G6="<${KEY10}${PLACEHOLDER}${KEY10}>"
+    G7="<${KEY11}${PLACEHOLDER}${KEY11}>"
+
+    REGEXP2="(.*)${G2}${G3}${G4}${G5}${G6}${G7}.*"
+    ORDERING2="\1\2\t\3\t\4\t\5\t\6\t\7"
+
+    filtered_items=`${ECHO} -e "${STATUS}" | tr -d '\n' | \
+        sed 's/<package>/\n<package>/g' | \
+        sed -r 's/>\s+</></g' | grep -E "${REGEXP1}"`
+    items=`${ECHO} -e "${filtered_items}" | sed -E "s#${REGEXP1}#${ORDERING1}#"\
+        | sed -E "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
+        | cut -f1-${fields_num}`
+    total=`${ECHO} -e "${items}" | wc -l`
+    if [ ${machine} -eq 0 ]
     then
-        # fallback to echo
-        ECHO="echo"
-        exit 1
-    else
-        ECHO="$ECHO -e "
+        ${ECHO} "${total} packages."
+        ${ECHO} ""
+        H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
+        H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
+        header="${H1}${H2}"
+        output=`${ECHO} -e "${header}" | cut -f1-${fields_num} -d '|'`
+        output="${output}\n"
     fi
-    if [ $mode -eq 2 ]
+    output="${output}${items}"
+    if [ ${machine} -eq 1 ]
     then
-        if [ $ECHO == "echo" ]
-        then
-            $ECHO "${output}"
-        else
-            $ECHO -en "${output}"
-        fi
+        ${ECHO} -n "${output}"
     else
         COLUMN=`which column`
-        if [ $? -ne 0 -o -z "$COLUMN" ]
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
-            $ECHO "Cannot find column utility"
+            ${ECHO} "Cannot find column utility"
             exit 1
         fi
-        if [ $mode -ne 1 ]
-        then
-            $ECHO "$items_count packages total."
-            $ECHO ""
-        fi
-        $ECHO "${output}"|column -xt -c 5 -s "${sep}"
+        ${ECHO} "${output}" | tr '\t' "${SEP}" \
+            | column -xt -c ${fields_num} -s "${SEP}"
     fi
 }
 
@@ -183,7 +161,7 @@ apigetopts=`echo "${cmdapi}" | cut -f5`
 listing_long=0
 listing_names=0
 listing_machine=0
-listing_mode=0
+listing_mode=2
 listing_original=0
 while getopts ":l1mx${apigetopts}" opt; do
   case $opt in
@@ -194,8 +172,7 @@ while getopts ":l1mx${apigetopts}" opt; do
       listing_names=1
       listing_mode=1;;
     m)
-      listing_machine=1
-      listing_mode=2;;
+      listing_machine=1;;
     x)
       listing_original=1;;
     \?)
@@ -206,10 +183,17 @@ while getopts ":l1mx${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-listing=$((listing_long+listing_names+listing_machines+listing_original))
-if [ $listing -ge 2 ]
+validation1=$((listing_long+listing_names+listing_original))
+if [ ${validation1} -ge 2 ]
 then
-    echo "Listing options -l, -1, -m and -x cannot be used together. Choose one."
+    echo "Listing options -l, -1, and -x cannot be used together. Choose one."
+    _usage
+fi
+
+validation2=$((listing_original+listing_machine))
+if [ ${validation2} -eq 2 ]
+then
+    echo "Listing options -m and -x cannot be used together. Choose one."
     _usage
 fi
 
@@ -254,7 +238,7 @@ if [ $listing_original -eq 1 ]
 then
     echo "${STATUS}"
 else
-    _print_preformatted "${STATUS}" $listing_mode
+    _print_preformatted "${STATUS}" $listing_mode $listing_machine
 fi
 exit 0
 
