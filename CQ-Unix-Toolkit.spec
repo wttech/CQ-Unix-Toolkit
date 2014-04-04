@@ -14,11 +14,11 @@
 # limitations under the License.
 Summary: CQ Unix Toolkit
 Name: CQ-Unix-Toolkit
-Version: 1.0.0
+Version: 1.1.0
 Release: 0
 License: GPL
 Group: Tools/CQ
-Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.0.0.tar.gz
+Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.1.0.tar.gz
 URL: https://github.com/Cognifide/CQ-Unix-Toolkit
 Vendor: Cognifide Limited
 Packager: Arkadiusz Kita <arkadiusz.kita@cognifide.com>
@@ -53,12 +53,14 @@ rm -v *
 %{_bindir}/cqapi
 %{_bindir}/cqbld
 %{_bindir}/cqchk
+%{_bindir}/cqclr
 %{_bindir}/cqcp
 %{_bindir}/cqdel
 %{_bindir}/cqgc
 %{_bindir}/cqget
 %{_bindir}/cqls
 %{_bindir}/cqmrg
+%{_bindir}/cqosgi
 %{_bindir}/cqput
 %{_bindir}/cqrun
 %{_bindir}/cqtpm
