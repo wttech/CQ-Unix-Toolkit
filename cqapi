@@ -13,13 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+VERSION=1.1.0
 _usage()
 {
-        DIR=`dirname $0`
 	cat << EOT
 Usage: `basename $0` [OPTION...]
 CQ UNIX Toolkit API command.
-Version `cat $DIR/VERSION`
+Version ${VERSION}
 
 Examples:
   cqapi -u admin                 # Provides username to connect to CQ
@@ -249,8 +249,7 @@ _missing_argument()
 
 _version()
 {
-    DIR=`dirname $0`
-    cat $DIR/VERSION
+    echo ${VERSION}
     exit
 }
 
