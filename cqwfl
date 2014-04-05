@@ -15,8 +15,8 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename "${0}"` [OPTION...]
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...]
 Returns CQ instance active workflows status in pretty-printed form using
 instance URL. Use -j to return original JSON form. Use -m for machine
 
@@ -52,7 +52,7 @@ _generate_regexp_number() {
 _print_preformatted()
 {
     SEP='|'
-    ECHO=`which echo`
+    ECHO=$(which echo)
     if [ ${?} -ne 0 -o -z "${ECHO}" ]
     then
         # fallback to echo
@@ -64,28 +64,28 @@ _print_preformatted()
     machine_friendly=${2}
     full=${3}
 
-    G1=`_generate_regexp "item"`
-    G2=`_generate_regexp "state"`
-    G3=`_generate_regexp "initiator"`
-    G4=`_generate_regexp_number "startTime"`
-    G5=`_generate_regexp "model"`
-    G6=`_generate_regexp "modelVersion"`
-    G7=`_generate_regexp "payload"`
-    G8=`_generate_regexp "comment"`
-    G9=`_generate_regexp "title"`
+    G1=$(_generate_regexp "item")
+    G2=$(_generate_regexp "state")
+    G3=$(_generate_regexp "initiator")
+    G4=$(_generate_regexp_number "startTime")
+    G5=$(_generate_regexp "model")
+    G6=$(_generate_regexp "modelVersion")
+    G7=$(_generate_regexp "payload")
+    G8=$(_generate_regexp "comment")
+    G9=$(_generate_regexp "title")
 
     REGEXP=".*${G1},${G2},${G3},${G4},${G5},${G6},${G7},${G8},${G9}.*"
     [ "${full}" -eq 1 ] && fields_num=9 || fields_num=6
-    items=`echo "${STATUS}" | sed 's#{#\n{#g;' | grep -E \
-        "${REGEXP}" \
+    items=$(echo "${STATUS}" | sed 's#{#\n{#g;' \
+        | grep -E "${REGEXP}" \
         | sed -E "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
-        | cut -f 1-${fields_num}`
-    total=`$ECHO -e "${items}" | wc -l`
+        | cut -f 1-${fields_num})
+    total=$(${ECHO} -e "${items}" | wc -l)
 
-    if [ $machine_friendly -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 ]
     then
-        $ECHO "${total} workflows."
-        $ECHO ""
+        ${ECHO} "${total} workflows."
+        ${ECHO} ""
         h1="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD"
         h2="|MODEL VERSION|TITLE|COMMENT"
         [ "${full}" -eq 1 ] && output="${h1}${h2}" || output="${h1}"
@@ -93,11 +93,11 @@ _print_preformatted()
     fi
     output="${output}${items}"
 
-    if [ $machine_friendly -eq 1 ]
+    if [ "${machine_friendly}" -eq 1 ]
     then
         ${ECHO} -n "${output}"
     else
-        COLUMN=`which column`
+        COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
             echo "Cannot find column utility"
@@ -108,58 +108,58 @@ _print_preformatted()
     fi
 }
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
-
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`"${API}" -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
 
 
 # API common options
-cmdapi=`    "${API}" -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 pretty=1
 full=0
 machine_friendly=0
-while getopts ":ljm${apigetopts}" opt; do
-  case $opt in
-     l)
-      full=1;;
-     j)
-      pretty=0;;
-     m)
-      machine_friendly=1;;
-     \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":ljm${apigetopts}" opt
+do
+    case ${opt} in
+        l)
+            full=1;;
+        j)
+            pretty=0;;
+        m)
+            machine_friendly=1;;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -gt 0 -o $passed -eq 0 ]
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
 then
-	_usage
+    _usage
 fi
 
-if [ $machine_friendly -eq 1 -a $pretty -eq 0 ]
+if [ ${machine_friendly} -eq 1 -a ${pretty} -eq 0 ]
 then
     echo "Switches: -j and -m cannot be applied together."
     _usage
@@ -171,34 +171,35 @@ then
     _usage
 fi
 
-REFERER="$instance/libs/cq/workflow/content/console/instances.html"
-AUTH="$username:$password"
-FILEPATH="/libs/cq/workflow/content/console/instances.json"
-REFERERHEADER="Referer: $REFERER"
+WORKFLOW="/libs/cq/workflow/content/console/instances"
+REFERER="${instance}${WORKFLOW}.html"
+AUTH="${username}:${password}"
+FILEPATH="${WORKFLOW}.json"
+REFERERHEADER="Referer: ${REFERER}"
 
-STATUS=`$CURLBIN \
-	-s \
+STATUS=$(${CURLBIN} \
+    -s \
     --write-out "%{http_code}" \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-	"$instance${FILEPATH}"`
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
+    "${instance}${FILEPATH}")
 
-EXITCODE=$?
-"${API}" -C $EXITCODE
-if [ $EXITCODE -ne 0 ]
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+if [ ${EXITCODE} -ne 0 ]
 then
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
-STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-"${API}" -H ${STATUSCODE}
-EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+if [ ${EXITCODE2} -ne 0 ]
 then
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
-STATUS=`echo "$STATUS"|sed -r 's#[0-9]{3}$##'`
+STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
 
-if [ $pretty -eq 1 ]
+if [ ${pretty} -eq 1 ]
 then
     _print_preformatted "$STATUS" ${machine_friendly} ${full}
 else

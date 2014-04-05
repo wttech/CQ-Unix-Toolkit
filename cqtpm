@@ -15,8 +15,8 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename "${0}"` [OPTION...]
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...]
 Invoke TAR PersistenceManager optimization/compaction process for specified CQ
 instance in the background by default with 1 ms sleeping phase between each
 TarPM transaction. There is possibility to invoke compaction in the background
@@ -49,127 +49,130 @@ EOT
 exit 1
 }
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`"${API}" -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
 
 
 # API common options
-cmdapi=`    "${API}" -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 background=true
 pooling=10
 pooling_set=0
 delayms=1
-while getopts ":fs:d:${apigetopts}" opt; do
-  case $opt in
+while getopts ":fs:d:${apigetopts}" opt
+do
+  case ${opt} in
      f)  
       background=false;;
      s)
-      pooling=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-4`; pooling_set=1;;
+      pooling=$(echo "${OPTARG}" | tr -cd '0-9' | cut -c1-4); pooling_set=1;;
      d)
-      delayms=`echo "$OPTARG"|tr -cd '0-9'|cut -c1-3`;;
+      delayms=$(echo "${OPTARG}" | tr -cd '0-9' | cut -c1-3);;
     \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
+      echo "Invalid option: -${OPTARG}" >&2; _usage;;
      :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
   esac
 done
 shift $((OPTIND-1))
 
-if [ $pooling_set -eq 1 -a "$background" = "true" ]
+if [ ${pooling_set} -eq 1 -a "${background}" = "true" ]
 then
     _usage
 fi
 
-if [ $# -ge 1 -o $passed -eq 0 ];
+if [ ${#} -ge 1 -o "${passed}" -eq 0 ];
 then
     _usage
 fi
 
 
-REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
-AUTH="$username:$password"
-REFERERHEADER="Referer: $REFERER"
+REFERER="${instance}/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
+AUTH="${username}:${password}"
+REFERERHEADER="Referer: ${REFERER}"
 
-echo -n "Stopping current TarPM compaction (if started)..."
+ECHON=$(which echo)
+[ ${?} -ne 0 -o -z "${ECHON}" ] && ECHON="echo" || ECHON="${ECHON} -n "
+${ECHON} "Stopping current TarPM compaction (if started)..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/stopTar\
 Optimization/"
-STATUS=`$CURLBIN \
-	-s  \
-	-u "$AUTH" \
+STATUS=$(${CURLBIN} \
+    -s  \
+    -u "${AUTH}" \
         --write-out "%{http_code}" \
-	-H "$REFERERHEADER" \
-	-X POST \
-	"$instance${FILEPATH}"`
+    -H "${REFERERHEADER}" \
+    -X POST \
+    "${instance}${FILEPATH}")
 
 
-EXITCODE=$?
-"${API}" -C $EXITCODE
-if [ $EXITCODE -ne 0 ]
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+if [ ${EXITCODE} -ne 0 ]
 then
     echo "Cannot stop TarPM optimization." >&2
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//')
 echo "${STATUS}"
-"${API}" -H $STATUSCODE
-EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+if [ ${EXITCODE2} -ne 0 ]
 then
     echo "Cannot stop TarPM optimization." >&2
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
 
 
-echo -n "Setting TarPM compaction sleeping phase..."
+${ECHON} "Setting TarPM compaction sleeping phase..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/a/TarOptimi\
 zationDelay"
-STATUS=`$CURLBIN \
-	-s \
-	-u "$AUTH" \
-        --write-out "%{http_code}" \
-	-H "$REFERERHEADER" \
-        -X POST --data value=$delayms \
-	"$instance${FILEPATH}"`
+STATUS=$(${CURLBIN} \
+    -s \
+    -u "${AUTH}" \
+     --write-out "%{http_code}" \
+    -H "${REFERERHEADER}" \
+    -X POST --data "value=${delayms}" \
+    "${instance}${FILEPATH}")
 
-EXITCODE=$?
-"${API}" -C $EXITCODE
-if [ $EXITCODE -ne 0 ]
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+if [ ${EXITCODE} -ne 0 ]
 then
     echo "Cannot set compaction delay to ${delay} ms." >&2
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//')
 echo "${STATUS}"
-"${API}" -H $STATUSCODE
+"${API}" -H "${STATUSCODE}"
 EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+if [ ${EXITCODE2} -ne 0 ]
 then
     echo "Cannot set compaction delay to ${delay} ms."
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
 
 
@@ -180,35 +183,35 @@ else
     background_text="background"
 fi
 
-echo -n "Running TarPM compaction in the ${background_text}..."
+${ECHON} "Running TarPM compaction in the ${background_text}..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/startTar\
 Optimization/"
-STATUS=`$CURLBIN \
-	-s \
-	-u "$AUTH" \
-        --write-out "%{http_code}" \
-	-H "$REFERERHEADER" \
-	-X POST  \
-	"$instance${FILEPATH}"`
+STATUS=$(${CURLBIN} \
+    -s \
+    -u "${AUTH}" \
+    --write-out "%{http_code}" \
+    -H "${REFERERHEADER}" \
+    -X POST  \
+    "${instance}${FILEPATH}")
 
-EXITCODE=$?
-"${API}" -C $EXITCODE
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
 
-if [ $EXITCODE -ne 0 ]
+if [ ${EXITCODE} -ne 0 ]
 then
     echo "Cannot start TarPM compaction." >&2
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d;s/(null)//'`
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//')
 echo "${STATUS}"
-"${API}" -H $STATUSCODE
-EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+if [ ${EXITCODE2} -ne 0 ]
 then
     echo "Cannot start TarPM compaction." >&2
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
 
 
@@ -220,24 +223,24 @@ then
     
     while [ "${tarpm_status}" != "0" ]
     do
-        sleep ${pooling}s
-        STATUS=`$CURLBIN \
+        sleep "${pooling}s"
+        STATUS=$(${CURLBIN} \
                     -s \
-                    -u "$AUTH" \
+                    -u "${AUTH}" \
                     --write-out "%{http_code}" \
-                    -H "$REFERERHEADER" \
-                    "${instance}${FILEPATH}"`
-        STATUSCODE=`echo "$STATUS"|tail -n 1`
-        "${API}" -H $STATUSCODE
-        if [ $EXITCODE -ne 0 ]
+                    -H "${REFERERHEADER}" \
+                    "${instance}${FILEPATH}")
+        STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+        "${API}" -H "${STATUSCODE}"
+        if [ ${EXITCODE} -ne 0 ]
         then
             echo "Cannot pool properly TarPM compaction status" >&2
-            exit $EXITCODE
+            exit ${EXITCODE}
         fi
 
 
-        tarpm_status=`echo "$STATUS"|grep TarOptimizationRunningSince\
-                        |tr -cd '0-9 '|tr -s ' '|sed 's#^ *##'|cut -f2 -d ' '`
+        tarpm_status=$(echo "${STATUS}" | grep TarOptimizationRunningSince\
+            | tr -cd '0-9 ' | tr -s ' ' | sed 's#^ *##' | cut -f2 -d ' ')
         if [ -z "${tarpm_status}" ]
         then
             tarpm_status=0
@@ -245,3 +248,4 @@ then
     done
     echo "DONE"
 fi
+

@@ -20,19 +20,19 @@ then
     exit 1
 fi
 
-ECHO=`which echo`
+ECHO=$(which echo)
 if [ ${?} -ne 0 ]
 then
     ECHO="echo"
 else
     ECHO="${ECHO} -e "
 fi
-dir=`dirname ${0}`
-basedir=`readlink -f ${dir}`
-${ECHO} "I assume that CQ UNIX toolkit are in: ${basedir}\n"
-if [ ! -d "$INSTALL_DIR" ] 
+dir=$(dirname "${0}")
+basedir=$(readlink -f "${dir}")
+${ECHO} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
+if [ ! -d "${INSTALL_DIR}" ] 
 then
-    echo "Cannot find ${INSTALL_DIR} directory" >&2
+    echo "Cannot find '${INSTALL_DIR}' directory" >&2
     exit 1
 fi
 
@@ -41,23 +41,23 @@ warning=0
 count=0
 total=0
 cmds=""
-for cmd in `ls -1 cq*`
+for cmd in cq*
 do
     total=$((total+1))
-    if [ -f "$INSTALL_DIR/$cmd" ]
+    if [ -f "${INSTALL_DIR}/${cmd}" ]
     then
-        if [ -L "$INSTALL_DIR/$cmd" ]
+        if [ -L "${INSTALL_DIR}/${cmd}" ]
         then
-            target=`readlink -f "$INSTALL_DIR/$cmd"`
-            output="$INSTALL_DIR/$cmd --> ${target} (symbolic link)\n"
+            target=$(readlink -f "${INSTALL_DIR}/${cmd}")
+            output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
         else
-            output="$INSTALL_DIR/$cmd (binary file)\n"
+            output="${INSTALL_DIR}/${cmd} (binary file)\n"
         fi
         count=$((count+1))
         existing_tools="${existing_tools}${output}"
         warning=1
     fi
-    cmds="${cmds} $cmd"
+    cmds="${cmds} ${cmd}"
 done
 if [ ! -z "${existing_tools}" ]
 then
@@ -66,7 +66,8 @@ then
 fi
 
 options=""
-${ECHO} "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
+${ECHO} \
+    "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
 if [ $warning -eq 1 ]
 then
     ${ECHO} "Would you like to:"
@@ -115,8 +116,9 @@ do
     then
         if [ ${force} -eq 1 -o ! -f "${INSTALL_DIR}/${cmd}" ]
         then
-            ln ${options} -s "${basedir}/$cmd" "${INSTALL_DIR}/${cmd}"
+            ln ${options} -s "${basedir}/${cmd}" "${INSTALL_DIR}/${cmd}"
         fi
     fi
 done
 ${ECHO} "\nInstallation finished."
+

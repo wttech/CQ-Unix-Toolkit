@@ -15,8 +15,8 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename "${0}"` [OPTION...] package-resource-name
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...] package-resource-name
 Makes local copy of already uploaded package by group id and name in CQ Package
 Manager using instance URL.
  
@@ -41,128 +41,133 @@ EOT
 exit 1
 }
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
 if [ $? -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ $? -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
-
 
 # API common options
-cmdapi=`    "${API}" -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
-while getopts ":o:g:${apigetopts}" opt; do
-  case $opt in
-     g)  
-      group="$OPTARG";;
-     o)  
-      outfile="$OPTARG";;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":o:g:${apigetopts}" opt
+do
+    case ${opt} in
+        g)  
+            group="${OPTARG}";;
+        o)  
+            outfile="${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -ne 1 -o $passed -eq 0 ];
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ];
 then
-	_usage
+    _usage
 fi
-name=$1
+name=${1}
 
 if [ -z  "${group}" ]
 then
-        group_arg=""
+    group_switch=""
+    group_arg=""
 else
-        group_arg="-F \"group=${group}\""
+    group_switch="-F"
+    group_arg="group=${group}"
 fi
 
-if [ -z "$outfile" ]
+if [ -z "${outfile}" ]
 then
-        outfile="${name}.zip"
+    outfile="${name}.zip"
 fi
-redirection="-o \"$outfile\""
+redirection="${outfile}"
 
-REFERER="$instance/etc/packages"
-AUTH="$username:$password"
+REFERER="${instance}/etc/packages"
+AUTH="${username}:${password}"
 FILEPATH="/crx/packmgr/service.jsp"
-REFERERHEADER="Referer: $REFERER"
+REFERERHEADER="Referer: ${REFERER}"
 
-STATUS=`$CURLBIN \
+STATUS=$($CURLBIN \
     -s \
     --write-out "%{content_type} %{http_code}" \
-    -u "$AUTH" \
-    -H "$REFERERHEADER" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
     -F cmd=get \
-    ${group_arg} \
+    ${group_switch} "${group_arg}" \
     -o /dev/null \
     -F "name=${name}" \
-    "${instance}${FILEPATH}"`
-EXITCODE=$?
-"${API}" -C $EXITCODE
-STATUSFIELDS=`echo "$STATUS"|tail -n 1`
-STATUSCODE=`echo "$STATUSFIELDS"|cut -f2 -d ' '`
-CONTENTTYPE=`echo "$STATUSFIELDS"|cut -f1 -d ' '`
-"${API}" -H ${STATUSCODE}
+    "${instance}${FILEPATH}")
+
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+STATUSFIELDS=$(echo "${STATUS}" | tail -n 1)
+STATUSCODE=$(echo "${STATUSFIELDS}" | cut -f2 -d ' ')
+CONTENTTYPE=$(echo "${STATUSFIELDS}" | cut -f1 -d ' ')
+"${API}" -H "${STATUSCODE}"
 EXITCODE2=$?
-fullfile=`readlink -f $outfile`
+fullfile=$(readlink -f "${outfile}")
 plain=0
 if [ "${EXITCODE2}" -eq 0 -a ${EXITCODE} -eq 0 ]
 then
-    plain=`echo "$CONTENTTYPE"|grep -c 'plain'`
+    plain=$(echo "${CONTENTTYPE}" | grep -c 'plain')
 fi
+
 EXITCODE=$((EXITCODE + EXITCODE2))
-if [ $EXITCODE -ne 0 ]
+if [ ${EXITCODE} -ne 0 ]
 then
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-if [ $plain -eq 1 ]
+if [ "${plain}" -eq 1 ]
 then
-    redirection="-o -"
+    redirection="-"
 fi
 
-STATUS=`$CURLBIN \
+STATUS=$(${CURLBIN} \
     -s \
     --write-out "%{http_code}" \
-    -u "$AUTH" \
-    -H "$REFERERHEADER" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
     -F cmd=get \
-    ${group_arg} \
-    -F name=${name} \
-    ${redirection} \
-    "${instance}${FILEPATH}"`
-EXITCODE=$?
-"${API}" -C $EXITCODE
-STATUSCODE=`echo "$STATUS"|tail -n 1|cut -f1 -d ' '`
-CONTENTTYPE=`echo "$STATUS"|tail -n 1|cut -f2 -d ' '`
-STATUS=`echo "$STATUS"|sed '$d'`
-"${API}" -H ${STATUSCODE}
+    ${group_switch} "${group_arg}" \
+    -F "name=${name}" \
+    -o "${redirection}" \
+    "${instance}${FILEPATH}")
+
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+STATUSCODE=$(echo "${STATUS}" | tail -n 1 | cut -f1 -d ' ')
+CONTENTTYPE=$(echo "${STATUS}" | tail -n 1 | cut -f2 -d ' ')
+STATUS=$(echo "$STATUS" | sed '$d')
+"${API}" -H "${STATUSCODE}"
 EXITCODE2=$?
 if [ ${EXITCODE2} -eq 0 -a ${EXITCODE} -eq 0 ]
 then
-    if [ $plain -eq 0 ]
+    if [ "${plain}" -eq 0 ]
     then
-        echo "Package copied to: $fullfile"
+        echo "Package copied to: '${fullfile}'"
     else
-        echo "$STATUS"
+        echo "${STATUS}"
     fi
 fi
 exit $((EXITCODE + EXITCODE2))

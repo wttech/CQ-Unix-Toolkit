@@ -16,8 +16,8 @@
 VERSION=1.1.0
 _usage()
 {
-	cat << EOT
-Usage: `basename "${0}"` [OPTION...]
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...]
 CQ UNIX Toolkit API command.
 Version ${VERSION}
 
@@ -58,136 +58,137 @@ exit 1
 
 _curlpath()
 {
-    WHEREIS=`whereis whereis 2>/dev/null|cut -f2 -d ' '`
-    EXITCODE=$?
-    if [ $EXITCODE -ne 0 -o -z "$WHEREIS" ]
+    WHEREIS=$(whereis whereis 2>/dev/null | cut -f2 -d ' ')
+    EXITCODE=${?}
+    if [ ${EXITCODE} -ne 0 -o -z "${WHEREIS}" ]
     then
-        CURLBIN=`which curl`
-        EXITCODE=$?
-        if [ $EXITCODE -ne 0 -o -z "${CURLBIN}" ]
+        CURLBIN=$(which curl)
+        EXITCODE=${?}
+        if [ ${EXITCODE} -ne 0 -o -z "${CURLBIN}" ]
         then
             echo "Cannot locate required command: curl (using which/whereis\
              method)." >&2
             exit 1
         fi
-        echo "$CURLBIN"
+        echo "${CURLBIN}"
         exit 0
     fi
-    CURLBIN=`${WHEREIS} -b curl|cut -f2 -d ' '`
-    EXITCODE=$?
-    if [ -z "$CURLBIN" -o ${EXITCODE} -ne 0 ]
+    CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ')
+    EXITCODE=${?}
+    if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]
     then
         echo "Cannot locate required command: curl." >&2
         exit 1
     fi
-    echo "$CURLBIN"
+    echo "${CURLBIN}"
     exit
 }
 
 _curlcode()
 {
-	if [ -z "$1" -o "$1" -eq 0 ]
-	then
+    if [ -z "${1}" -o "${1}" -eq 0 ]
+    then
             exit 0
-	fi
-	codes=$(cat <<-'EOF'
-	1 Unsupported protocol. This build of curl has no support for this protocol.
-	2 Failed to initialize.
-	3 URL malformed. The syntax was not correct.
-	4 A feature or option that was needed to perform the desired request was not enabled or was explicitly disabled at build-time. To make curl able to do this, you probably need another build of libcurl!
-	5 Couldn't resolve proxy. The given proxy host could not be resolved.
-	6 Couldn't resolve host. The given remote host was not resolved.
-	7 Failed to connect to host.
-	8 FTP weird server reply. The server sent data curl couldn't parse.
-	9 FTP access denied. The server denied login or denied access to the particular resource or directory you wanted to reach. Most often you tried to change to a directory that doesn't exist on the server.
-	11 FTP weird PASS reply. Curl couldn't parse the reply sent to the PASS request.
-	13 FTP weird PASV reply, Curl couldn't parse the reply sent to the PASV request.
-	14 FTP weird 227 format. Curl couldn't parse the 227-line the server sent.
-	15 FTP can't get host. Couldn't resolve the host IP we got in the 227-line.
-	17 FTP couldn't set binary. Couldn't change transfer method to binary.
-	18 Partial file. Only a part of the file was transferred.
-	19 FTP couldn't download/access the given file, the RETR (or similar) command failed.
-	21 FTP quote error. A quote command returned error from the server.
-	22 HTTP page not retrieved. The requested url was not found or returned another error with the HTTP error code being 400 or above. This return code only appears if -f, --fail is used.
-	23 Write error. Curl couldn't write data to a local filesystem or similar.
-	25 FTP couldn't STOR file. The server denied the STOR operation, used for FTP uploading.
-	26 Read error. Various reading problems.
-	27 Out of memory. A memory allocation request failed.
-	28 Operation timeout. The specified time-out period was reached according to the condi‐ tions.
-	30 FTP PORT failed. The PORT command failed. Not all FTP servers support the PORT command, try doing a transfer using PASV instead!
-	31 FTP couldn't use REST. The REST command failed. This command is used for resumed FTP transfers.
-	33 HTTP range error. The range "command" didn't work.
-	34 HTTP post error. Internal post-request generation error.
-	35 SSL connect error. The SSL handshaking failed.
-	36 FTP bad download resume. Couldn't continue an earlier aborted download.
-	37 FILE couldn't read file. Failed to open the file. Permissions?
-	38 LDAP cannot bind. LDAP bind operation failed.
-	39 LDAP search failed.
-	41 Function not found. A required LDAP function was not found.
-	42 Aborted by callback. An application told curl to abort the operation.
-	43 Internal error. A function was called with a bad parameter.
-	45 Interface error. A specified outgoing interface could not be used.
-	47 Too many redirects. When following redirects, curl hit the maximum amount.
-	48 Unknown option specified to libcurl. This indicates that you passed a weird option to curl that was passed on to libcurl and rejected. Read up in the manual!
-	49 Malformed telnet option.
-	51 The peer's SSL certificate or SSH MD5 fingerprint was not OK.
-	52 The server didn't reply anything, which here is considered an error.
-	53 SSL crypto engine not found.
-	54 Cannot set SSL crypto engine as default.
-	55 Failed sending network data.
-	56 Failure in receiving network data.
-	58 Problem with the local certificate.
-	59 Couldn't use specified SSL cipher.
-	60 Peer certificate cannot be authenticated with known CA certificates.
-	61 Unrecognized transfer encoding.
-	62 Invalid LDAP URL.
-	63 Maximum file size exceeded.
-	64 Requested FTP SSL level failed.
-	65 Sending the data requires a rewind that failed.
-	66 Failed to initialise SSL Engine.
-	67 The user name, password, or similar was not accepted and curl failed to log in.
-	68 File not found on TFTP server.
-	69 Permission problem on TFTP server.
-	70 Out of disk space on TFTP server.
-	71 Illegal TFTP operation.
-	72 Unknown TFTP transfer ID.
-	73 File already exists (TFTP).
-	74 No such user (TFTP).
-	75 Character conversion failed.
-	76 Character conversion functions required.
-	77 Problem with reading the SSL CA cert (path? access rights?).
-	78 The resource referenced in the URL does not exist.
-	79 An unspecified error occurred during the SSH session.
-	80 Failed to shut down the SSL connection.
-	82 Could not load CRL file, missing or wrong format (added in 7.19.0).
-	83 Issuer check failed (added in 7.19.0).
-	84 The FTP PRET command failed
-	85 RTSP: mismatch of CSeq numbers
-	86 RTSP: mismatch of Session Identifiers
-	87 unable to parse FTP file list
-	88 FTP chunk callback reported error
-	127 Unknown error
+    fi
+    codes=$(cat <<-'EOF'
+    1 Unsupported protocol. This build of curl has no support for this protocol.
+    2 Failed to initialize.
+    3 URL malformed. The syntax was not correct.
+    4 A feature or option that was needed to perform the desired request was not enabled or was explicitly disabled at build-time. To make curl able to do this, you probably need another build of libcurl!
+    5 Couldn't resolve proxy. The given proxy host could not be resolved.
+    6 Couldn't resolve host. The given remote host was not resolved.
+    7 Failed to connect to host.
+    8 FTP weird server reply. The server sent data curl couldn't parse.
+    9 FTP access denied. The server denied login or denied access to the particular resource or directory you wanted to reach. Most often you tried to change to a directory that doesn't exist on the server.
+    11 FTP weird PASS reply. Curl couldn't parse the reply sent to the PASS request.
+    13 FTP weird PASV reply, Curl couldn't parse the reply sent to the PASV request.
+    14 FTP weird 227 format. Curl couldn't parse the 227-line the server sent.
+    15 FTP can't get host. Couldn't resolve the host IP we got in the 227-line.
+    17 FTP couldn't set binary. Couldn't change transfer method to binary.
+    18 Partial file. Only a part of the file was transferred.
+    19 FTP couldn't download/access the given file, the RETR (or similar) command failed.
+    21 FTP quote error. A quote command returned error from the server.
+    22 HTTP page not retrieved. The requested url was not found or returned another error with the HTTP error code being 400 or above. This return code only appears if -f, --fail is used.
+    23 Write error. Curl couldn't write data to a local filesystem or similar.
+    25 FTP couldn't STOR file. The server denied the STOR operation, used for FTP uploading.
+    26 Read error. Various reading problems.
+    27 Out of memory. A memory allocation request failed.
+    28 Operation timeout. The specified time-out period was reached according to the condi‐ tions.
+    30 FTP PORT failed. The PORT command failed. Not all FTP servers support the PORT command, try doing a transfer using PASV instead!
+    31 FTP couldn't use REST. The REST command failed. This command is used for resumed FTP transfers.
+    33 HTTP range error. The range "command" didn't work.
+    34 HTTP post error. Internal post-request generation error.
+    35 SSL connect error. The SSL handshaking failed.
+    36 FTP bad download resume. Couldn't continue an earlier aborted download.
+    37 FILE couldn't read file. Failed to open the file. Permissions?
+    38 LDAP cannot bind. LDAP bind operation failed.
+    39 LDAP search failed.
+    41 Function not found. A required LDAP function was not found.
+    42 Aborted by callback. An application told curl to abort the operation.
+    43 Internal error. A function was called with a bad parameter.
+    45 Interface error. A specified outgoing interface could not be used.
+    47 Too many redirects. When following redirects, curl hit the maximum amount.
+    48 Unknown option specified to libcurl. This indicates that you passed a weird option to curl that was passed on to libcurl and rejected. Read up in the manual!
+    49 Malformed telnet option.
+    51 The peer's SSL certificate or SSH MD5 fingerprint was not OK.
+    52 The server didn't reply anything, which here is considered an error.
+    53 SSL crypto engine not found.
+    54 Cannot set SSL crypto engine as default.
+    55 Failed sending network data.
+    56 Failure in receiving network data.
+    58 Problem with the local certificate.
+    59 Couldn't use specified SSL cipher.
+    60 Peer certificate cannot be authenticated with known CA certificates.
+    61 Unrecognized transfer encoding.
+    62 Invalid LDAP URL.
+    63 Maximum file size exceeded.
+    64 Requested FTP SSL level failed.
+    65 Sending the data requires a rewind that failed.
+    66 Failed to initialise SSL Engine.
+    67 The user name, password, or similar was not accepted and curl failed to log in.
+    68 File not found on TFTP server.
+    69 Permission problem on TFTP server.
+    70 Out of disk space on TFTP server.
+    71 Illegal TFTP operation.
+    72 Unknown TFTP transfer ID.
+    73 File already exists (TFTP).
+    74 No such user (TFTP).
+    75 Character conversion failed.
+    76 Character conversion functions required.
+    77 Problem with reading the SSL CA cert (path? access rights?).
+    78 The resource referenced in the URL does not exist.
+    79 An unspecified error occurred during the SSH session.
+    80 Failed to shut down the SSL connection.
+    82 Could not load CRL file, missing or wrong format (added in 7.19.0).
+    83 Issuer check failed (added in 7.19.0).
+    84 The FTP PRET command failed
+    85 RTSP: mismatch of CSeq numbers
+    86 RTSP: mismatch of Session Identifiers
+    87 unable to parse FTP file list
+    88 FTP chunk callback reported error
+    127 Unknown error
         '
-	EOF
-	)
-    msg=`echo "$codes"|sed -r 's#^[ \t]+##'|grep "^$1 "|cut -f2- -d ' '`
-    if [ -z "$msg" ]
+EOF
+    )
+    msg=$(echo "${codes}" | sed -r 's#^[ \t]+##' | grep "^${1} " \
+        | cut -f2- -d ' ')
+    if [ -z "${msg}" ]
     then
         msg="Unknown code"
     fi
-    echo "CURL ERROR $1: ${msg}" >&2
-    exit $EXITCODE
+    echo "CURL ERROR ${1}: ${msg}" >&2
+    exit ${EXITCODE}
 }
 
 _httpcode()
 {
-	if [ -z "$1" -o "$1" = "200" ]
-	then
+    if [ -z "${1}" -o "${1}" = "200" ]
+    then
             exit 0
-	fi
-	codes=$(cat <<-'EOF'
-	301 Resource has been moved permanently
-	302 Resource has been moved temporarily
+    fi
+    codes=$(cat <<-'EOF'
+    301 Resource has been moved permanently
+    302 Resource has been moved temporarily
     400 HTTP Bad request
     401 Unauthorized properly: please check supplied username and password
     403 Forbidden resource: please check permissions
@@ -197,14 +198,15 @@ _httpcode()
     501 Internal CQ error
     502 Internal CQ error
     503 Internal CQ error
-	EOF
-	)
-    msg=`echo "$codes"|sed -r 's#^[ \t]+##'|grep "^$1 "|cut -f2- -d ' '`
-    if [ -z "$msg" ]
+EOF
+    )
+    msg=$(echo "${codes}" | sed -r 's#^[ \t]+##' | grep "^${1} " \
+        | cut -f2- -d ' ')
+    if [ -z "${msg}" ]
     then
         msg="Unknown response"
     fi
-    echo "HTTP RESPONSE $1: ${msg}" >&2
+    echo "HTTP RESPONSE ${1}: ${msg}" >&2
     exit 1
 }
 
@@ -217,32 +219,32 @@ _java_exception()
 
 _java_exception_detection()
 {
-    grep -Ec "(^[\.[:alnum:]]+Exception:.*$|^[[:space:]]+at[[:space:]][\.\
+    grep -Ec "(^[\.[:alnum:]]+Exception:.*\$|^[[:space:]]+at[[:space:]][\.\
         [:alnum:]]+(\(.+\))?)"
     exit
 }
 
 _parse()
 {
-    ECHO=`which echo`
-    $ECHO -e "$1\t$2\t$3\t$4\t$5"
+    ECHO=$(which echo)
+    ${ECHO} -e "${1}\t${2}\t${3}\t${4}\t${5}"
     exit
 }
 
 _invalid_option()
 {
-    if [ $1 -ne 1 ]
+    if [ "${1}" -ne 1 ]
     then
-       echo "Invalid option: -$2" >&2
+       echo "Invalid option: -${2}" >&2
       _usage
     fi
 }
 
 _missing_argument()
 {
-    if [ $1 -eq 0 ]
+    if [ "${1}" -eq 0 ]
     then
-      echo "Option -$2 requires an argument." >&2
+      echo "Option -${2} requires an argument." >&2
       _usage
     fi
 }
@@ -269,55 +271,63 @@ argument=?
 
 while getopts "${OPTIONS}" option
 do
-    mode=$option
-    case $option in
+    mode=${option}
+    case ${option} in
         P) parse_mode=1; OPTIONS=":P${PARSE_OPTIONS}";;
-        u) username=$OPTARG; explicit_option=1;;
-        p) password=$OPTARG; explicit_option=1;;
-        i) instance=`echo "$OPTARG"|sed -r 's#[/]+$##'`; explicit_option=1;;
-        C) argument=$OPTARG;;
-        H) argument=$OPTARG;;
-        \?) _invalid_option $parse_mode $OPTARG;;
-        :) _missing_argument $parse_mode $OPTARG;;
+        u) username=${OPTARG}; explicit_option=1;;
+        p) password=${OPTARG}; explicit_option=1;;
+        i) instance=$(echo "${OPTARG}" | sed -r 's#[/]+$##'); 
+           explicit_option=1;;
+        C) argument=${OPTARG};;
+        H) argument=${OPTARG};;
+        \?) _invalid_option ${parse_mode} "${OPTARG}";;
+        :) _missing_argument ${parse_mode} "${OPTARG}";;
     esac
 
     continue=1
-    last_optind=$OPTIND
+    last_optind=${OPTIND}
     total_shift=0
     delta=0
-    while [ $continue -eq 1 ]; do
-        optind_before=$OPTIND
+    while [ ${continue} -eq 1 ]; do
+        optind_before=${OPTIND}
         getopts "${OPTIONS}" vopt
-        getopts_status=$?
+        getopts_status=${?}
         total_shift=$((total_shift+delta))
         delta=$((OPTIND-optind_before))
 
-        if [ $getopts_status -ne 0 ]; then
-            if [ $# -le $OPTIND ]; then
+        if [ ${getopts_status} -ne 0 ]
+        then
+            if [ ${#} -le ${OPTIND} ]
+            then
                 # Parse break - EOL reached
                 continue=0
-            elif [ $delta -ge 0 ]; then
+            elif [ ${delta} -ge 0 ]
+            then
                 # Skip broken argument
                 OPTIND=$((OPTIND+1))
                 continue=1
             fi
-        elif [ "$vopt" = "?" -o "$vopt" = ":" ]; then
+        elif [ "${vopt}" = "?" -o "${vopt}" = ":" ]
+        then
             # Invalid option - continue readahed
             continue=1
         else
             # Valid option - calculate shift
             continue=0
             valid_option_shift=$((optind_before-last_optind))
-            if [ $valid_option_shift -ge 0  ]; then
-                total_shift=$valid_option_shift
+            if [ $valid_option_shift -ge 0  ]
+            then
+                total_shift=${valid_option_shift}
             fi
         fi
     done
 
     OPTIND=$((last_optind+total_shift))
     # Check for infinitive parsing of the same argument twice by getopts
-    if [ $OPTIND -eq $last_optind ]; then
-        if [ $idle_pass -gt 2 ]; then
+    if [ $OPTIND -eq ${last_optind} ]
+    then
+        if [ ${idle_pass} -gt 2 ]
+        then
             # Skip in case of infinitive loop
             OPTIND=$((OPTIND+1))
         fi
@@ -331,22 +341,22 @@ done
 shift $((OPTIND-1))
 
 # cqapi Parse mode for -u -p -i parameters
-if [ $parse_mode -eq 1 ]
+if [ ${parse_mode} -eq 1 ]
 then
-    _parse $username $password $instance $explicit_option $PARSE_OPTIONS
+    _parse "${username}" "${password}" "${instance}" "${explicit_option}" \
+        "${PARSE_OPTIONS}"
     exit 0
 fi
 
 # cqapi normal modes
-case $mode in
+case "${mode}" in
   c) _curlpath;;
-  C) _curlcode $argument;;
-  H) _httpcode $argument;;
+  C) _curlcode "${argument}";;
+  H) _httpcode "${argument}";;
   E) _java_exception;;
   e) _java_exception_detection;;
   v) _version;;
 esac
 
 _usage
-
 

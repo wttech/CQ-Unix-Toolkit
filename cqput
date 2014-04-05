@@ -15,8 +15,8 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename "${0}"` [OPTION...] file1 file2 ... 
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...] file1 file2 ... 
 Upload CRX ZIP packages to CRX Package Manager using instance URL.
  
 Examples:
@@ -37,84 +37,83 @@ EOT
 exit 1
 }
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`"${API}" -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
 
 
 # API common options
-cmdapi=`    "${API}" -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
-while getopts ":f${apigetopts}" opt; do
-  case $opt in
-     g)  
-      group="$OPTARG";;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":${apigetopts}" opt
+do
+    case ${opt} in
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -eq 0 -o $passed -eq 0 ];
+if [ ${#} -eq 0 -o "${passed}" -eq 0 ];
 then
-	_usage
+    _usage
 fi
 
 
-REFERER="$instance/crx/packmgr"
-AUTH="$username:$password"
+REFERER="${instance}/crx/packmgr"
+AUTH="${username}:${password}"
 FILEPATH="/crx/packmgr/service.jsp"
-REFERERHEADER="Referer: $REFERER"
+REFERERHEADER="Referer: ${REFERER}"
 
 bad=0
-while [ $# -ne 0 ] 
+while [ ${#} -ne 0 ] 
 do
         file=${1}
         if [ ! -f "${file}" ]
         then
-            echo "Cannot find file: ${file}" >&2
+            echo "Cannot find file: '${file}'" >&2
             bad=1
         else
-            STATUS=`$CURLBIN \
-            	-s \
+            STATUS=$(${CURLBIN} \
+                -s \
                 --write-out "%{http_code}" \
-            	-u "$AUTH" \
-            	-H "$REFERERHEADER" \
-                -F file=@"$file" \
+                -u "${AUTH}" \
+                -H "${REFERERHEADER}" \
+                -F file=@"${file}" \
                 -F force=true \
                 -F install=false \
-            	"${instance}${FILEPATH}"`
-            EXITCODE=$?
+                "${instance}${FILEPATH}")
+            EXITCODE=${?}
             "${API}" -C $EXITCODE
-            STATUSCODE=`echo "$STATUS"|tail -n 1`
-            STATUS=`echo "$STATUS"|sed '$d'`
-            "${API}" -H $STATUSCODE
-            EXITCODE2=$?
-            if [ "$EXITCODE" -ne 0 -o "$EXITCODE2" -ne 0 ]
+            STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+            STATUS=$(echo "$STATUS" | sed '$d')
+            "${API}" -H "${STATUSCODE}"
+            EXITCODE2=${?}
+            if [ "${EXITCODE}" -ne 0 -o "${EXITCODE2}" -ne 0 ]
             then
                 bad=1
             else
-                echo "$STATUS"
+                echo "${STATUS}"
                 echo "OK" >&2
             fi
         fi

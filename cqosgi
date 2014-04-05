@@ -16,7 +16,7 @@
 _usage()
 {
     cat << EOT
-Usage: `basename "${0}"` [OPTION...]
+Usage: $(basename "${0}") [OPTION...]
 Returns CQ instance OSGI bundles list and its states in pretty-printed form
 using instance URL. Use -j to return original JSON form. Use -m for machine.
 Run (start) or stop specified bundles using -r or -s options.
@@ -54,32 +54,32 @@ exit 1
 _print_preformatted()
 {
     SEP='|'
-    ECHO=`which echo`
+    ECHO=$(which echo)
     [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
-    TAB=`${ECHO} "\t"`
+    TAB=$(${ECHO} "\t")
     STATUS=${1}
     machine_friendly=${2}
     REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
 \"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
 symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
-    filtered_items=`${ECHO} -e "${STATUS}" | sed 's#{#\n{#g' \
-        | grep -E "${REGEXP}"`
-    items=`${ECHO} -e "${filtered_items}" | \
-        sed -E "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
-        | sort -nk1 -t "${TAB}"`
-    total=`${ECHO} -e "${items}" | wc -l`
-    if [ ${machine_friendly} -eq 0 ]
+    filtered_items=$(${ECHO} -e "${STATUS}" | sed 's#{#\n{#g' \
+        | grep -E "${REGEXP}")
+    items=$(${ECHO} -e "${filtered_items}" \
+        | sed -E "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
+        | sort -nk1 -t "${TAB}")
+    total=$(${ECHO} -e "${items}" | wc -l)
+    if [ "${machine_friendly}" -eq 0 ]
     then
         ${ECHO} "${total} bundles."
         ${ECHO} ""
         output="ID|SYMBOL|STATUS|VERSION|NAME\n"
     fi
     output="${output}${items}"
-    if [ ${machine_friendly} -eq 1 ]
+    if [ "${machine_friendly}" -eq 1 ]
     then
         ${ECHO} "${output}"
     else
-        COLUMN=`which column`
+        COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
             echo "Cannot find column utility"
@@ -89,9 +89,9 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
     fi
 }
 
-CWD=`dirname "${0}"`
+CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
-APITEST=`"${API}" -P`
+"${API}" -P >/dev/null
 
 if [ ${?} -ne 0 ]
 then
@@ -99,7 +99,7 @@ then
     exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
@@ -108,36 +108,37 @@ fi
 
 
 # API common options
-cmdapi=`    "${API}" -P ${@}`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 pretty=1
 machine_friendly=0
 operations=""
-while getopts ":jmr:s:${apigetopts}" opt; do
-  case $opt in
-     j)
-      pretty=0;;
-     m)
-      machine_friendly=1;;
-     r)
-      operations="${operations} R${OPTARG}";;
-     s)
-      operations="${operations} S${OPTARG}";;
-     \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":jmr:s:${apigetopts}" opt
+do
+    case ${opt} in
+        j)
+            pretty=0;;
+        m)
+            machine_friendly=1;;
+        r)
+            operations="${operations} R${OPTARG}";;
+        s)
+            operations="${operations} S${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ ${#} -gt 0 -o ${passed} -eq 0 ]
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
 then
     _usage
 fi
@@ -148,17 +149,24 @@ then
     _usage
 fi
 
+if [ "${operations}" != "" -a \( ${pretty} -eq 0 -o ${machine_friendly} -eq 1 \) ]
+then
+    echo "View options -m or -j cannot be applied together with operations:" \
+        "-r/-s" >&2
+    exit 2
+fi
+
 FILEPATH="/system/console/bundles/.json"
 REFERER="${instance}${FILEPATH}"
 AUTH="${username}:${password}"
 REFERERHEADER="Referer: ${REFERER}"
 
-STATUS=`${CURLBIN} \
+STATUS=$(${CURLBIN} \
     -s \
     --write-out "%{http_code}" \
     -u "${AUTH}" \
     -H "${REFERERHEADER}" \
-    "${instance}${FILEPATH}"`
+    "${instance}${FILEPATH}")
 
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
@@ -166,36 +174,32 @@ if [ ${EXITCODE} -ne 0 ]
 then
     exit ${EXITCODE}
 fi
-STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-"${API}" -H ${STATUSCODE}
-EXITCODE2=$?
+STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
 if [ ${EXITCODE2} -ne 0 ]
 then
     exit ${EXITCODE2}
 fi
-STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
 
-if [ "${operations}" != "" -a \( ${pretty} -eq 0 -o ${machine_friendly} -eq 1 \) ]
-then
-    echo "View options -m or -j cannot be applied together with operations: -r/-s" >&2
-    exit 2
-fi
+STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
 
 if [ "${operations}" != "" ]
 then
-    bundle_map=`_print_preformatted "${STATUS}" 1 | cut -f 1,2`
+    bundle_map=$(_print_preformatted "${STATUS}" 1 | cut -f 1,2)
     operations_by_id=""
     for operation in ${operations}
     do
-        action=`echo "${operation}" | cut -c1`
-        bundle=`echo "${operation}" | cut -c2-`
+        action=$(echo "${operation}" | cut -c1)
+        bundle=$(echo "${operation}" | cut -c2-)
         if [ "${action}" != "R" -a "${action}" != "S" ]
         then
             echo "Only run/stop operations are permitted for bundles" >&2
             exit 2
         fi
-        bundle_escaped=`echo "${bundle}" | sed -r 's#\.#\\.#g' `
-        id=`echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}$" | cut -f1`
+        bundle_escaped=$(echo "${bundle}" | sed -r 's#\.#\\.#g')
+        id=$(echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}\$" \
+            | cut -f1)
         if [ "$id" = "" ]
         then
             echo "Cannot find specified bundle: ${bundle}" >&2
@@ -206,10 +210,10 @@ then
     done
     for op in ${operations_by_id}
     do
-        action=` echo "${op}" | cut -c1 `
-        bundle_spec=` echo "${op}" | cut -c2- `
-        bundle_id=` echo "${bundle_spec}" | sed -r 's/^([0-9]+).+$/\1/' `
-        bundle=` echo "${bundle_spec}" | sed -r 's/^[0-9]+(.+)$/\1/' `
+        action=$(echo "${op}" | cut -c1)
+        bundle_spec=$(echo "${op}" | cut -c2-)
+        bundle_id=$(echo "${bundle_spec}" | sed -r 's/^([0-9]+).+$/\1/')
+        bundle=$(echo "${bundle_spec}" | sed -r 's/^[0-9]+(.+)$/\1/')
 
         [ "${action}" = "R" ] && activity="Running bundle: " \
             || activity="Stopping bunle: "
@@ -218,13 +222,13 @@ then
         post_param="action=${optype}"
 
         echo "${activity}${bundle} (#${bundle_id})"
-        STATUS=`${CURLBIN} \
-                -s \
-                --write-out "%{http_code}" \
-                -u "${AUTH}" \
-                -H "${REFERERHEADER}" \
-                -d "${post_param}" \
-                "${instance}${FILEPATH}/${bundle_id}"`
+        STATUS=$(${CURLBIN} \
+            -s \
+            --write-out "%{http_code}" \
+            -u "${AUTH}" \
+            -H "${REFERERHEADER}" \
+            -d "${post_param}" \
+            "${instance}${FILEPATH}/${bundle_id}")
 
         EXITCODE=${?}
         "${API}" -C ${EXITCODE}
@@ -232,8 +236,8 @@ then
         then
             exit ${EXITCODE}
         fi
-        STATUSCODE=`echo "${STATUS}"|grep -o -E '[0-9]{3}'|tail -n 1`
-        "${API}" -H ${STATUSCODE}
+        STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+        "${API}" -H "${STATUSCODE}"
         EXITCODE2=${?}
         if [ ${EXITCODE2} -ne 0 ]
         then
@@ -245,7 +249,7 @@ fi
 
 if [ ${pretty} -eq 1 ]
 then
-    _print_preformatted "${STATUS}" ${machine_friendly}
+    _print_preformatted "${STATUS}" "${machine_friendly}"
 else
     echo "${STATUS}"
 fi
