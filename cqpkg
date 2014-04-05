@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename "${0}"` [SPECIFICATION...] package-name
+Usage: $(basename "${0}") [SPECIFICATION...] package-name
 Create minimal empty CQ Vault ZIP package locally using provided specification
 that can be uploaded to CRX/CQ Package Manager and built or installed.
 
@@ -63,16 +63,44 @@ EOT
 exit 1
 }
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
-if [ $? -ne 0 ]
+_add_filter()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+<filter root="${1}">
+EOF
+    )
+}
+
+_add_include_entry()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+  <include pattern="${1}"/>
+EOF
+    )
+}
+
+_add_exclude_entry()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+  <exclude pattern="${1}"/>
+EOF
+    )
+}
+
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-ECHO=`which echo`
+ECHO=$(which echo)
 if [ ${?} -ne 0 -o -z "${ECHO}" ]
 then
     # fallback to echo
@@ -81,94 +109,109 @@ else
     ECHO="${ECHO} -e "
 fi
 
-filter_definition="""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<workspaceFilter version=\"1.0\">"""
-toolkit_version=`"${API}" -v`
-package_definition="""<?xml version=\"1.0\" encoding=\"utf-8\" standalone=\"no\"?>
-<!DOCTYPE properties SYSTEM \"http://java.sun.com/dtd/properties.dtd\">
+filter_definition=$(cat << EOT
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+EOT
+)
+toolkit_version=$("${API}" -v)
+package_definition=$(cat << EOT
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
 <comment>FileVault Package Properties</comment>
-<entry key=\"createdBy\">cq-unix-toolkit</entry>
-<entry key=\"buildCount\">1</entry>
-<entry key=\"dependencies\"/>
-<entry key=\"packageFormatVersion\">2</entry>
-"""
+<entry key="createdBy">cq-unix-toolkit</entry>
+<entry key="buildCount">1</entry>
+<entry key="dependencies"/>
+<entry key="packageFormatVersion">2</entry>
+EOT
+)
+
+description="Package genereated by CQ Unix Toolkit ${toolkit_version}"
 in_filter_context=0
 version="1.0"
-description="Package genereated by CQ Unix Toolkit ${toolkit_version}"
-while getopts ":g:v:r:i:e:o:d:" opt; do
-  case $opt in
-     g)  
-      group="$OPTARG";;
-     v)
-      version="$OPTARG";;
-     d)
-      description="$OPTARG";;
-     o)
-      zipfile=`readlink -f "$OPTARG"`;;
-     r)
-      if [ $in_filter_context -eq 1 ]
-      then
-        filter_definition="${filter_definition}\n</filter>"
-      fi
-      in_filter_context=1
-      filter_definition="${filter_definition}\n<filter root=\"${OPTARG}\">"
-      ;;
-     i)
-      if [ $in_filter_context -eq 0 ]
-      then
-        echo "Include pattern (-i) should be nested in scope of filter root\
- path (-r)." >&2
-        echo "Please add -r JCRPATH before adding -i/-e options." >&2
-        exit 1;
-      fi
-      filter_definition="${filter_definition}\n  <include pattern=\"${OPTARG}\"/>"
-      ;;
-     e)
-      if [ $in_filter_context -eq 0 ]
-      then
-        echo "Exclude pattern (-e) should be nested in scope of filter root\
- path (-r)." >&2
-        echo "Please add -r JCRPATH before adding -i/-e options." >&2
-        exit 1;
-      fi
-      filter_definition="${filter_definition}\n  <exclude pattern=\"${OPTARG}\"/>"
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+
+while getopts ":g:v:r:i:e:o:d:" opt
+do
+    case ${opt} in
+        g)
+            group="$OPTARG";;
+        v)
+            version="$OPTARG";;
+        d)
+            description="$OPTARG";;
+        o)
+            zipfile=$(readlink -f "${OPTARG}");;
+        r)
+            if [ ${in_filter_context} -eq 1 ]
+            then
+                filter_definition="${filter_definition}\n</filter>"
+            fi
+            in_filter_context=1
+            _add_filter "${OPTARG}";;
+        i)
+            if [ ${in_filter_context} -eq 0 ]
+            then
+                echo "Include pattern (-i) should be nested in scope of" \
+                    "filter root path (-r)." >&2
+                echo "Please add -r JCRPATH before adding -i/-e options." >&2
+                exit 1;
+            fi
+            _add_include_entry "${OPTARG}";;
+        e)
+            if [ ${in_filter_context} -eq 0 ]
+            then
+                echo "Exclude pattern (-e) should be nested in scope of" \
+                    "filter root path (-r)." >&2
+                echo "Please add -r JCRPATH before adding -i/-e options." >&2
+                exit 1;
+            fi
+            _add_exclude_entry "${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -ne 1 ];
+if [ ${#} -ne 1 ];
 then
-	_usage
+    _usage
 fi
-group_entry="<entry key=\"group\">${group}</entry>"
-name=$1
-dir=`pwd`
+group_entry=$(cat << EOT
+<entry key="group">${group}</entry>
+EOT
+)
+name=${1}
+dir=$(pwd)
 if [ "${zipfile}" = "" ]
 then
     zipfile="${dir}/${name}-${version}.zip"
 fi
-filter_definition="""${filter_definition}
+filter_definition=$(cat << EOT
+${filter_definition}
 </filter>
-</workspaceFilter>"""
-package_definition="""${package_definition}${group_entry}
-<entry key=\"name\">${name}</entry>
-<entry key=\"version\">${version}</entry>
-<entry key=\"description\">${description}</entry>
-</properties>"""
-ZIP=`which zip`
+</workspaceFilter>
+EOT
+)
+package_definition=$(cat << EOT
+${package_definition}
+${group_entry}
+<entry key="name">${name}</entry>
+<entry key="version">${version}</entry>
+<entry key="description">${description}</entry>
+</properties>
+EOT
+)
+ZIP=$(which zip)
 if [ ${?} -ne 0 -o "${ZIP}" = "" ]
 then
     echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
-tempdir=`mktemp -d`
-exitcode=$?
+tempdir=$(mktemp -d)
+exitcode=${?}
 if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
@@ -180,7 +223,7 @@ mkdir -p "${vault}"
 
 ${ECHO} "${filter_definition}" > "${vault}/filter.xml"
 ${ECHO} "${package_definition}" > "${vault}/properties.xml"
-cd ${tempdir}
+cd "${tempdir}"
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}
 cd "${dir}"
@@ -188,12 +231,12 @@ if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot create zip package properly." >&2
 fi
-rm ${vault}/filter.xml
-rm ${vault}/properties.xml
-rmdir ${tempdir}/jcr_root
-rmdir ${tempdir}/META-INF/vault
-rmdir ${tempdir}/META-INF
-rmdir ${tempdir}
+rm "${vault}/filter.xml"
+rm "${vault}/properties.xml"
+rmdir "${tempdir}/jcr_root"
+rmdir "${tempdir}/META-INF/vault"
+rmdir "${tempdir}/META-INF"
+rmdir "${tempdir}"
 
 if [ ${exitcode} -eq 0 ]
 then
