@@ -215,10 +215,12 @@ EOF
 
 _httpcode()
 {
-    if [ -z "${1}" -o "${1}" = "200" -o "${1}" = "204" ]
-    then
-        exit 0
-    fi
+    case "${1}" in
+        "")  exit 0;;
+        200) exit 0;;
+        201) exit 0;;
+        204) exit 0;;
+    esac
     codes=$(cat <<-'EOF'
     301 Resource has been moved permanently
     302 Resource has been moved temporarily
