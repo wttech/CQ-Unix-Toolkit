@@ -1,0 +1,123 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...]
+Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
+touch and mkdir commands
+
+Examples:
+  cqjcr -u admin -l /              # Return JCR child nodes for '/' existing on
+                                   # the local instance
+
+
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -r AGENTID            show agent queue stats
+  -m                    machine-friendly mode
+  -s                    sling stats
+  -S                    current jcr sessions
+EOT
+exit 1
+}
+
+
+_jcr_sessions() 
+{
+    exit 0
+}
+
+_sling_stats() 
+{
+    exit 0
+}
+
+_replication_queue() 
+{
+    exit 0
+}
+
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+# API common options
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
+
+machine_friendly=0
+mode=""
+while getopts ":r:mSs${apigetopts}" opt
+do
+    case "${opt}" in
+        r)
+            agent="${OPTARG}"
+            mode="r";;
+        m)
+            machine_friendly=1;;
+        s)
+            mode="s";;
+        S)
+            mode="S";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
+then
+    echo "You need to choose one of the following operation:" >&2
+    echo " -r / -s / -S" >&2
+    _usage
+fi
+
+AUTH="${username}:${password}"
+ECHO=$(which echo)
+[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+
+case "${mode}" in
+    r) _replication_queue "${agent}";;
+    s) _sling_stats;;
+    S) _jcr_sessions;;
+esac
+
+echo "You need to choose one of the following operation:" >&2
+echo " -r / -s / -S" >&2
+
