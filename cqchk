@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Invoke CRX repository check and fix on them. By default fixes are not performed.
 Read-only access to repositorys is used unless -f option is provided.

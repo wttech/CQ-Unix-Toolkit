@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 List all packages in CQ Package Manager using instance URL.
 

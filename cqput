@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] file1 file2 ... 
 Upload CRX ZIP packages to CRX Package Manager using instance URL.
  

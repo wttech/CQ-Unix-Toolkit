@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] URL
 Download specified file or resource using full URL specification. Normally
 filename is taken from URL. File is created in current directory. You can force

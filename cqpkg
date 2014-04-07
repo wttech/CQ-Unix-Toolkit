@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
+	cat <<EOT
 Usage: $(basename "${0}") [SPECIFICATION...] package-name
 Create minimal empty CQ Vault ZIP package locally using provided specification
 that can be uploaded to CRX/CQ Package Manager and built or installed.
@@ -65,7 +65,7 @@ exit 1
 
 _add_filter()
 {
-    filter_definition=$(cat << EOF
+    filter_definition=$(cat <<EOF
 ${filter_definition}
 <filter root="${1}">
 EOF
@@ -74,7 +74,7 @@ EOF
 
 _add_include_entry()
 {
-    filter_definition=$(cat << EOF
+    filter_definition=$(cat <<EOF
 ${filter_definition}
   <include pattern="${1}"/>
 EOF
@@ -83,7 +83,7 @@ EOF
 
 _add_exclude_entry()
 {
-    filter_definition=$(cat << EOF
+    filter_definition=$(cat <<EOF
 ${filter_definition}
   <exclude pattern="${1}"/>
 EOF
@@ -109,13 +109,13 @@ else
     ECHO="${ECHO} -e "
 fi
 
-filter_definition=$(cat << EOT
+filter_definition=$(cat <<EOT
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
 EOT
 )
 toolkit_version=$("${API}" -v)
-package_definition=$(cat << EOT
+package_definition=$(cat <<EOT
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
@@ -179,7 +179,7 @@ if [ ${#} -ne 1 ]
 then
     _usage
 fi
-group_entry=$(cat << EOT
+group_entry=$(cat <<EOT
 <entry key="group">${group}</entry>
 EOT
 )
@@ -189,13 +189,13 @@ if [ "${zipfile}" = "" ]
 then
     zipfile="${dir}/${name}-${version}.zip"
 fi
-filter_definition=$(cat << EOT
+filter_definition=$(cat <<EOT
 ${filter_definition}
 </filter>
 </workspaceFilter>
 EOT
 )
-package_definition=$(cat << EOT
+package_definition=$(cat <<EOT
 ${package_definition}
 ${group_entry}
 <entry key="name">${name}</entry>

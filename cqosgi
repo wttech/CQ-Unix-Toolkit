@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Returns CQ instance OSGI bundles list and its states in pretty-printed form
 using instance URL. Use -j to return original JSON form. Use -m for machine.

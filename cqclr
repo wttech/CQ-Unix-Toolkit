@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Clear cache for specified dispatcher (-i option). By default clear the whole
 cache / node or specified node provided by -r option. To match specific

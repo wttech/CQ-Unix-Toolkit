@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Invoke TAR PersistenceManager optimization/compaction process for specified CQ
 instance in the background by default with 1 ms sleeping phase between each

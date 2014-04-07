@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] package-name
 Removes already uploaded CRX package by group id and name in CRX Package
 Manager using instance URL.

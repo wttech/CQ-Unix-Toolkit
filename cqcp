@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-    cat << EOT
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] package-resource-name
 Makes local copy of already uploaded package by group id and name in CQ Package
 Manager using instance URL.
