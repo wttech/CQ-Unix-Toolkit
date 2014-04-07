@@ -68,7 +68,7 @@ fi
 options=""
 ${ECHO} \
     "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
-if [ $warning -eq 1 ]
+if [ ${warning} -eq 1 ]
 then
     ${ECHO} "Would you like to:"
     ${ECHO} "-- replace (a)ll ${count} links and install new files,"
@@ -80,7 +80,7 @@ then
         -a "${REPLY}" != "I" -a "${REPLY}" != "s" -a "${REPLY}" != "S" ]
     then
         echo "Aborted"
-        exit 1;
+        exit 1
     fi
     ask=0
     options=""
@@ -96,7 +96,7 @@ else
     if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
     then
         echo "Aborted"
-        exit 1;
+        exit 1
     fi
 fi
 
