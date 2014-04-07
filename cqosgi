@@ -65,7 +65,7 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
     filtered_items=$(${ECHO} -e "${STATUS}" | sed 's#{#\n{#g' \
         | grep -E "${REGEXP}")
     items=$(${ECHO} -e "${filtered_items}" \
-        | sed -E "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
+        | ${SEDX} "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
         | sort -nk1 -t "${TAB}")
     total=$(${ECHO} -e "${items}" | wc -l)
     if [ "${machine_friendly}" -eq 0 ]
@@ -105,7 +105,7 @@ then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
-
+SEDX=$("${API}" -s)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -182,7 +182,7 @@ then
     exit ${EXITCODE2}
 fi
 
-STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
 
 if [ "${operations}" != "" ]
 then
@@ -197,7 +197,7 @@ then
             echo "Only run/stop operations are permitted for bundles" >&2
             exit 2
         fi
-        bundle_escaped=$(echo "${bundle}" | sed -r 's#\.#\\.#g')
+        bundle_escaped=$(echo "${bundle}" | ${SEDX} 's#\.#\\.#g')
         id=$(echo "${bundle_map}" | grep -E "[[:space:]]+${bundle_escaped}\$" \
             | cut -f1)
         if [ "${id}" = "" ]
@@ -212,8 +212,8 @@ then
     do
         action=$(echo "${op}" | cut -c1)
         bundle_spec=$(echo "${op}" | cut -c2-)
-        bundle_id=$(echo "${bundle_spec}" | sed -r 's/^([0-9]+).+$/\1/')
-        bundle=$(echo "${bundle_spec}" | sed -r 's/^[0-9]+(.+)$/\1/')
+        bundle_id=$(echo "${bundle_spec}" | ${SEDX} 's/^([0-9]+).+$/\1/')
+        bundle=$(echo "${bundle_spec}" | ${SEDX} 's/^[0-9]+(.+)$/\1/')
 
         [ "${action}" = "R" ] && activity="Running bundle: " \
             || activity="Stopping bunle: "

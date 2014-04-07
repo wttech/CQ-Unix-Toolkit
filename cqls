@@ -101,10 +101,10 @@ _print_preformatted()
 
     filtered_items=$(${ECHO} -e "${STATUS}" | tr -d '\n' | \
         sed 's/<package>/\n<package>/g' | \
-        sed -r 's/>\s+</></g' | grep -E "${REGEXP1}")
+        ${SEDX} 's/>\s+</></g' | grep -E "${REGEXP1}")
     items=$(${ECHO} -e "${filtered_items}" \
-        | sed -E "s#${REGEXP1}#${ORDERING1}#" \
-        | sed -E "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
+        | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
+        | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
         | cut -f1-${fields_num})
     total=$(${ECHO} -e "${items}" | wc -l)
     if [ "${machine}" -eq 0 ]
@@ -148,6 +148,7 @@ then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
+SEDX=$("${API}" -s)
 
 
 # API common options

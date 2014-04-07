@@ -78,7 +78,7 @@ _print_preformatted()
     [ "${full}" -eq 1 ] && fields_num=9 || fields_num=6
     items=$(echo "${STATUS}" | sed 's#{#\n{#g;' \
         | grep -E "${REGEXP}" \
-        | sed -E "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
+        | ${SEDX} "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
         | cut -f 1-${fields_num})
     total=$(${ECHO} -e "${items}" | wc -l)
 
@@ -124,6 +124,7 @@ then
     exit 1
 fi
 
+SEDX=$("${API}" -s)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -197,7 +198,7 @@ if [ ${EXITCODE2} -ne 0 ]
 then
     exit ${EXITCODE2}
 fi
-STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
 
 if [ ${pretty} -eq 1 ]
 then
