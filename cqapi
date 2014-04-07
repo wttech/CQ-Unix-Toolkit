@@ -35,6 +35,9 @@ Examples:
   cqapi -E                       # Extract exception message from stdin
   cqapi -e                       # Detect if on stdin there is exception
   cqapi -v                       # Returns toolkit version
+  cqapi -s                       # Returns command and parameter required for
+                                 # sed extended mode (extended regexp) to
+                                 # be compatible with BSD/Mac OS X.
 
 
 Options:
@@ -59,7 +62,7 @@ exit 1
 
 _sedpath()
 {
-    echo "$SED"
+    echo "${SEDX}"
     exit
 }
 
@@ -80,7 +83,8 @@ _curlpath()
         echo "${CURLBIN}"
         exit 0
     fi
-    if [[ -n $BSD ]]; then
+    if [ -n "${BSD}" ]
+    then
         CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
     else
         CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ')
@@ -181,7 +185,7 @@ _curlcode()
         '
 EOF
     )
-    msg=$(echo "${codes}" | $SED 's#^[ \t]+##' | grep "^${1} " \
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
         | cut -f2- -d ' ')
     if [ -z "${msg}" ]
     then
@@ -211,7 +215,7 @@ _httpcode()
     503 Internal CQ error
 EOF
     )
-    msg=$(echo "${codes}" | $SED 's#^[ \t]+##' | grep "^${1} " \
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
         | cut -f2- -d ' ')
     if [ -z "${msg}" ]
     then
@@ -224,7 +228,7 @@ EOF
 
 _java_exception()
 {
-    head -n 1 | cut -f2 -d ':' | $SED 's#^[ ]+##'
+    head -n 1 | cut -f2 -d ':' | ${SEDX} 's#^[ ]+##'
     exit
 }
 
@@ -272,13 +276,17 @@ password=admin
 
 OPTIONS=":Pu:p:i:csC:H:Eve-:"
 PARSE_OPTIONS="u:p:i:"
-if [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "freebsd"* ]]; then
+
+BSD_PRESENT=$(echo "${OSTYPE}" | grep -c -E '(darwin|bsd)')
+if [ "${BSD_PRESENT}" -gt 0 ]
+then
     BSD=1
 fi
-if [[ -n "$BSD" ]]; then
-    SED="sed -E"
+if [ -n "${BSD}" ]
+then
+    SEDX="sed -E "
 else
-    SED="sed -r"
+    SEDX="sed -r "
 fi
 
 explicit_option=0
@@ -295,7 +303,7 @@ do
         P) parse_mode=1; OPTIONS=":P${PARSE_OPTIONS}";;
         u) username=${OPTARG}; explicit_option=1;;
         p) password=${OPTARG}; explicit_option=1;;
-        i) instance=$(echo "${OPTARG}" | $SED 's#[/]+$##'); 
+        i) instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
            explicit_option=1;;
         C) argument=${OPTARG};;
         H) argument=${OPTARG};;
