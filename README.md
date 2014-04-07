@@ -165,6 +165,12 @@ be visible system-wide you can invoke `install` script provided in repository
 that creates symbolic link in /usr/local/bin directory or you can change
 `INSTALL_DIR` variable in script if you want to something else.
 
+Building an RPM package
+-----------------------
+
+Before building place `v1.1.0.tar.gz` file from above URL in SOURCES rpmbuild
+directory. The correct URL can be obtained from spec file from `Source:` field.
+
 
 Contributors
 ============

@@ -24,7 +24,7 @@ Vendor: Cognifide Limited
 Packager: Arkadiusz Kita <arkadiusz.kita@cognifide.com>
 BuildArch: noarch
 
-# NOTE! Before building place v1.0.0.tar.gz file from above URL in SOURCES
+# NOTE! Before building place v1.1.0.tar.gz file from above URL in SOURCES
 # rpmbuild directory.
 
 %description
@@ -42,7 +42,7 @@ platform such as:
 
 %prep
 echo Building %{name}-%{version}-%{release}
-%setup -n CQ-Unix-Toolkit-1.0.0
+%setup -n CQ-Unix-Toolkit-1.1.0
 
 %build
 mkdir -p %buildroot/%{_bindir}/
