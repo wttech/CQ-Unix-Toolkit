@@ -44,14 +44,14 @@ exit 1
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1

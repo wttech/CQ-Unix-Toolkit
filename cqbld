@@ -19,20 +19,20 @@ _usage()
 Usage: $(basename) "${0}"` [OPTION...] package-name
 Build (rebuild) already uploaded package by group id and name in CQ Package
 Manager using instance URL.
- 
+
 Examples:
   cqbld -u admin pack            # Build package named pack
   cqbld -u admin -g GRP pack     # Build package named pack in group GRP
   cqbld -i http://localhost:5510 # Build package for localhost instance on tcp
         -g com.group stuff       # port 5510 named stuff in group:com.group
-        -p secret                # with password provided: secret 
+        -p secret                # with password provided: secret
 
 Options:
 
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -g                    locate package by additional group ID  
+  -g                    locate package by additional group ID
 
 
 EOT
@@ -67,7 +67,7 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 while getopts ":g:${apigetopts}" opt
 do
     case ${opt} in
-        g)  
+        g)
             group="${OPTARG}";;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;

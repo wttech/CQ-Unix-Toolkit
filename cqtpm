@@ -117,7 +117,7 @@ ${ECHON} "Stopping current TarPM compaction (if started)..."
 FILEPATH="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/stopTar\
 Optimization/"
 STATUS=$(${CURLBIN} \
-    -s  \
+    -s \
     -u "${AUTH}" \
         --write-out "%{http_code}" \
     -H "${REFERERHEADER}" \
