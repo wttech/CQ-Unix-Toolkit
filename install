@@ -43,21 +43,24 @@ total=0
 cmds=""
 for cmd in cq*
 do
-    total=$((total+1))
-    if [ -f "${INSTALL_DIR}/${cmd}" ]
+    if [ -x "${basedir}/${cmd}" ]
     then
-        if [ -L "${INSTALL_DIR}/${cmd}" ]
+        total=$((total+1))
+        if [ -f "${INSTALL_DIR}/${cmd}" ]
         then
-            target=$(readlink -f "${INSTALL_DIR}/${cmd}")
-            output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
-        else
-            output="${INSTALL_DIR}/${cmd} (binary file)\n"
+            if [ -L "${INSTALL_DIR}/${cmd}" ]
+            then
+                target=$(readlink -f "${INSTALL_DIR}/${cmd}")
+                output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
+            else
+                output="${INSTALL_DIR}/${cmd} (binary file)\n"
+            fi
+            count=$((count+1))
+            existing_tools="${existing_tools}${output}"
+            warning=1
         fi
-        count=$((count+1))
-        existing_tools="${existing_tools}${output}"
-        warning=1
+        cmds="${cmds} ${cmd}"
     fi
-    cmds="${cmds} ${cmd}"
 done
 if [ ! -z "${existing_tools}" ]
 then
@@ -65,6 +68,8 @@ then
     ${ECHO} "${existing_tools}"
 fi
 
+ask=0
+force=0
 options=""
 ${ECHO} \
     "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
@@ -82,9 +87,7 @@ then
         echo "Aborted"
         exit 1
     fi
-    ask=0
     options=""
-    force=0
     case "${REPLY}" in
         A) force=1; options="-f" ;;
         a) force=1; options="-f" ;;
