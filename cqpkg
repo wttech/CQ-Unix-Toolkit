@@ -133,13 +133,13 @@ version="1.0"
 
 while getopts ":g:v:r:i:e:o:d:" opt
 do
-    case ${opt} in
+    case "${opt}" in
         g)
-            group="$OPTARG";;
+            group="${OPTARG}";;
         v)
-            version="$OPTARG";;
+            version="${OPTARG}";;
         d)
-            description="$OPTARG";;
+            description="${OPTARG}";;
         o)
             zipfile=$(readlink -f "${OPTARG}");;
         r)
@@ -175,7 +175,7 @@ do
 done
 shift $((OPTIND-1))
 
-if [ ${#} -ne 1 ];
+if [ ${#} -ne 1 ]
 then
     _usage
 fi
