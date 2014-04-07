@@ -62,6 +62,7 @@ rm -v *
 %{_bindir}/cqmrg
 %{_bindir}/cqosgi
 %{_bindir}/cqput
+%{_bindir}/cqpkg
 %{_bindir}/cqrun
 %{_bindir}/cqtpm
 %{_bindir}/cqwfl
