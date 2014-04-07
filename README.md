@@ -59,6 +59,8 @@ Below is list of separate tools and purpose of each other
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
 * cqosgi -- Display bundles list and manage them by starting/stopping on demand
+* cqclr -- Simulates activation on dispatcher to clear its cache. Use dispatcher
+  URL, (not CQ one) as instance URL (-i option).
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
