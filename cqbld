@@ -84,7 +84,7 @@ fi
 
 name=${1}
 
-if [ -z  "${group}" ]
+if [ -z "${group}" ]
 then
     group_switch=""
     group_arg=""

@@ -19,20 +19,20 @@ _usage()
 Usage: $(basename "${0}") [OPTION...] package-name
 Installs already uploaded CRX package by group id and name in CRX Package
 Manager using instance URL.
- 
+
 Examples:
   cqrun -u admin pack            # Install package named pack
   cqrun -u admin -g GRP pack     # Install package named pack in group GRP
   cqrun -i http://localhost:5510 # Install package for localhost instance on tcp
         -g com.group stuff       # port 5510 named stuff in group: com.group
-        -p secret                # with password provided: secret 
+        -p secret                # with password provided: secret
 
 Options:
 
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -g                    locate package by additional group ID  
+  -g                    locate package by additional group ID
 
 
 EOT
@@ -40,16 +40,16 @@ exit 1
 }
 
 CWD=$(dirname "${0}")
-API="$CWD/cqapi"
+API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1
@@ -67,7 +67,7 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 # Custom arguments
 while getopts ":g:${apigetopts}" opt; do
   case ${opt} in
-     g)  
+     g)
       group="${OPTARG}";;
     \?)
       echo "Invalid option: -${OPTARG}" >&2; _usage;;
@@ -83,7 +83,7 @@ then
 fi
 name=${1}
 
-if [ -z  "${group}" ]
+if [ -z "${group}" ]
 then
     group_switch=""
     group_arg=""
@@ -101,8 +101,8 @@ REFERERHEADER="Referer: ${REFERER}"
 STATUS=$(${CURLBIN} \
     -s \
     --write-out "%{http_code}" \
-    -u "$AUTH" \
-    -H "$REFERERHEADER" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
     -F cmd=inst \
     ${group_switch} "${group_arg}" \
     -F "name=${name}" \

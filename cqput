@@ -88,38 +88,38 @@ REFERERHEADER="Referer: ${REFERER}"
 bad=0
 while [ ${#} -ne 0 ] 
 do
-        file=${1}
-        if [ ! -f "${file}" ]
+    file=${1}
+    if [ ! -f "${file}" ]
+    then
+        echo "Cannot find file: '${file}'" >&2
+        bad=1
+    else
+        STATUS=$(${CURLBIN} \
+            -s \
+            --write-out "%{http_code}" \
+            -u "${AUTH}" \
+            -H "${REFERERHEADER}" \
+            -F file=@"${file}" \
+            -F force=true \
+            -F install=false \
+            "${instance}${FILEPATH}")
+        EXITCODE=${?}
+        "${API}" -C ${EXITCODE}
+        STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+        STATUS=$(echo "${STATUS}" | sed '$d')
+        "${API}" -H "${STATUSCODE}"
+        EXITCODE2=${?}
+        if [ "${EXITCODE}" -ne 0 -o "${EXITCODE2}" -ne 0 ]
         then
-            echo "Cannot find file: '${file}'" >&2
             bad=1
         else
-            STATUS=$(${CURLBIN} \
-                -s \
-                --write-out "%{http_code}" \
-                -u "${AUTH}" \
-                -H "${REFERERHEADER}" \
-                -F file=@"${file}" \
-                -F force=true \
-                -F install=false \
-                "${instance}${FILEPATH}")
-            EXITCODE=${?}
-            "${API}" -C $EXITCODE
-            STATUSCODE=$(echo "${STATUS}" | tail -n 1)
-            STATUS=$(echo "$STATUS" | sed '$d')
-            "${API}" -H "${STATUSCODE}"
-            EXITCODE2=${?}
-            if [ "${EXITCODE}" -ne 0 -o "${EXITCODE2}" -ne 0 ]
-            then
-                bad=1
-            else
-                echo "${STATUS}"
-                echo "OK" >&2
-            fi
+            echo "${STATUS}"
+            echo "OK" >&2
         fi
-        shift
+    fi
+    shift
 done
-if [ $bad -eq 1 ]
+if [ ${bad} -eq 1 ]
 then
     exit 1
 fi

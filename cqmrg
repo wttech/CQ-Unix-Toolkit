@@ -40,16 +40,16 @@ exit 1
 }
 
 CWD=$(dirname "${0}")
-API="$CWD/cqapi"
+API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1
@@ -68,7 +68,7 @@ background=true
 while getopts ":f${apigetopts}" opt
 do
     case ${opt} in
-        f)  
+        f)
             background=false;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
@@ -101,7 +101,7 @@ STATUS=$(${CURLBIN} \
     -X POST --data background=${background} \
     "${instance}${FILEPATH}")
 
-EXITCODE=$?
+EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 
 if [ ${EXITCODE} -ne 0 ]

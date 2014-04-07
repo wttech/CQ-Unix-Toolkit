@@ -17,14 +17,14 @@ _usage()
 {
     cat << EOT
 Usage: $(basename "${0}") [OPTION...]
-Invoke CRX repository check and fix on them. By default fixes are not performed.  
-Read-only access to repositorys is used unless -f option is provided.  
+Invoke CRX repository check and fix on them. By default fixes are not performed.
+Read-only access to repositorys is used unless -f option is provided.
 
 Examples:
   cqchk -u admin -f              # Check repository and fix error automatically
   cqchk -i http://localhost:5510 # Check repository for localhost instance on
                                  # on tcp port 5510 without fixing anything
-  cqchk -p secret                # Check reposiotry without fixing anything 
+  cqchk -p secret                # Check reposiotry without fixing anything
                                  # provided login password: secret
 
 Options:
@@ -32,14 +32,14 @@ Options:
   -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -f                    force fixing erros when possible  
+  -f                    force fixing erros when possible
 
 EOT
 exit 1
 }
 
 CWD=$(dirname "${0}")
-API="$CWD/cqapi"
+API="${CWD}/cqapi"
 "${API}" -P >/dev/null
 if [ ${?} -ne 0 ]
 then
@@ -65,8 +65,8 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 # Custom arguments
 fix=false
 while getopts ":f${apigetopts}" opt; do
-    case $opt in
-        f)  
+    case "${opt}" in
+        f)
             fix=true;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
@@ -99,7 +99,7 @@ STATUS=$(${CURLBIN} \
     -X POST --data "logEach=false&fixInconsistencies=${fix}" \
     "${instance}${FILEPATH}")
 
-EXITCODE=$?
+EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 if [ ${EXITCODE} -ne 0 ]
 then
@@ -129,7 +129,7 @@ STATUS=$(${CURLBIN} \
     -H "${REFERERHEADER}" \
     -X POST --data "fixInconsistencies=${fix}" \
     "${instance}${FILEPATH}")
-EXITCODE=$?
+EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 if [ ${EXITCODE} -ne 0 ]
 then

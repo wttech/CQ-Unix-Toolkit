@@ -20,11 +20,11 @@ Usage: $(basename "${0}") [OPTION...]
 Invoke DataStore compaction/garbage collection operation for specified CQ
 instance by default with 15ms sleeping phase per each node (to not load CQ
 heavily).
- 
+
 Examples:
-  cqgc -u admin -d 1            # Invokes garbage collection with minimal 
-                                # sleeping phase i.e. during night to shorten 
-                                # process 
+  cqgc -u admin -d 1            # Invokes garbage collection with minimal
+                                # sleeping phase i.e. during night to shorten
+                                # process
   cqgc -i http://localhost:5510 # Invokes garbace collection for localhost
                                 # instance on tcp port 5510
   cqgc -f -p secret             # Invokes garbage collection using provided
@@ -36,7 +36,7 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -d                    changes sleeping phase for each node  
+  -d                    changes sleeping phase for each node
   -f                    stops current GC session
 
 EOT
@@ -53,14 +53,14 @@ then
 fi
 
 CURLBIN=$("${API}" -c)
-if [ $? -ne 0 ]
+if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
 
 # API common options
-cmdapi=$("${API}" -P "$@")
+cmdapi=$("${API}" -P "${@}")
 username=$(echo "${cmdapi}" | cut -f1)
 password=$(echo "${cmdapi}" | cut -f2)
 instance=$(echo "${cmdapi}" | cut -f3)
@@ -73,7 +73,7 @@ force_stop=0
 while getopts ":d:f${apigetopts}" opt
 do
     case ${opt} in
-        d)  
+        d)
             delay_ms=$(echo "${OPTARG}" | tr -cd '[:digit:]');;
         f)
             force_stop=1;;
@@ -128,7 +128,7 @@ then
     STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/;')
     echo "${STATUS}"
     "${API}" -H "${STATUSCODE}"
-    
+
     EXITCODE2=${?}
     if [ ${EXITCODE2} -ne 0 ]
     then

@@ -19,13 +19,13 @@ _usage()
 Usage: $(basename "${0}") [OPTION...] package-resource-name
 Makes local copy of already uploaded package by group id and name in CQ Package
 Manager using instance URL.
- 
+
 Examples:
   cqcp -u admin pack            # Get package copy named pack
   cqcp -u admin -g GRP pack     # Get package copy named pack in group GRP
   cqcp -i http://localhost:5510 # Get package copy for localhost instance on
        -g com.group stuff       # tcp port 5510 named stuff in group:com.group
-       -p secret                # with password provided: secret 
+       -p secret                # with password provided: secret
        -o alt-stuff.zip         # with local name specified as alt-stuff.zip
 
 Options:
@@ -33,7 +33,7 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -g                    locate package by additional group ID  
+  -g                    locate package by additional group ID
   -o                    store local copy of package using provided filename
                         or path
 
@@ -69,9 +69,9 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 while getopts ":o:g:${apigetopts}" opt
 do
     case ${opt} in
-        g)  
+        g)
             group="${OPTARG}";;
-        o)  
+        o)
             outfile="${OPTARG}";;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
@@ -87,7 +87,7 @@ then
 fi
 name=${1}
 
-if [ -z  "${group}" ]
+if [ -z "${group}" ]
 then
     group_switch=""
     group_arg=""
@@ -107,7 +107,7 @@ AUTH="${username}:${password}"
 FILEPATH="/crx/packmgr/service.jsp"
 REFERERHEADER="Referer: ${REFERER}"
 
-STATUS=$($CURLBIN \
+STATUS=$(${CURLBIN} \
     -s \
     --write-out "%{content_type} %{http_code}" \
     -u "${AUTH}" \
@@ -124,7 +124,7 @@ STATUSFIELDS=$(echo "${STATUS}" | tail -n 1)
 STATUSCODE=$(echo "${STATUSFIELDS}" | cut -f2 -d ' ')
 CONTENTTYPE=$(echo "${STATUSFIELDS}" | cut -f1 -d ' ')
 "${API}" -H "${STATUSCODE}"
-EXITCODE2=$?
+EXITCODE2=${?}
 fullfile=$(readlink -f "${outfile}")
 plain=0
 if [ "${EXITCODE2}" -eq 0 -a ${EXITCODE} -eq 0 ]
@@ -158,9 +158,9 @@ EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 STATUSCODE=$(echo "${STATUS}" | tail -n 1 | cut -f1 -d ' ')
 CONTENTTYPE=$(echo "${STATUS}" | tail -n 1 | cut -f2 -d ' ')
-STATUS=$(echo "$STATUS" | sed '$d')
+STATUS=$(echo "${STATUS}" | sed '$d')
 "${API}" -H "${STATUSCODE}"
-EXITCODE2=$?
+EXITCODE2=${?}
 if [ ${EXITCODE2} -eq 0 -a ${EXITCODE} -eq 0 ]
 then
     if [ "${plain}" -eq 0 ]

@@ -201,8 +201,8 @@ STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
 
 if [ ${pretty} -eq 1 ]
 then
-    _print_preformatted "$STATUS" ${machine_friendly} ${full}
+    _print_preformatted "${STATUS}" ${machine_friendly} ${full}
 else
-    echo "$STATUS"
+    echo "${STATUS}"
 fi
 

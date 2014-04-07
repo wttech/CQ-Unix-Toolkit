@@ -198,9 +198,9 @@ then
             exit 2
         fi
         bundle_escaped=$(echo "${bundle}" | sed -r 's#\.#\\.#g')
-        id=$(echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}\$" \
+        id=$(echo "${bundle_map}" | grep -E "[[:space:]]+${bundle_escaped}\$" \
             | cut -f1)
-        if [ "$id" = "" ]
+        if [ "${id}" = "" ]
         then
             echo "Cannot find specified bundle: ${bundle}" >&2
             exit 3

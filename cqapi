@@ -88,7 +88,7 @@ _curlcode()
 {
     if [ -z "${1}" -o "${1}" -eq 0 ]
     then
-            exit 0
+        exit 0
     fi
     codes=$(cat <<-'EOF'
     1 Unsupported protocol. This build of curl has no support for this protocol.
@@ -184,7 +184,7 @@ _httpcode()
 {
     if [ -z "${1}" -o "${1}" = "200" ]
     then
-            exit 0
+        exit 0
     fi
     codes=$(cat <<-'EOF'
     301 Resource has been moved permanently
@@ -235,8 +235,8 @@ _invalid_option()
 {
     if [ "${1}" -ne 1 ]
     then
-       echo "Invalid option: -${2}" >&2
-      _usage
+        echo "Invalid option: -${2}" >&2
+        _usage
     fi
 }
 
@@ -244,8 +244,8 @@ _missing_argument()
 {
     if [ "${1}" -eq 0 ]
     then
-      echo "Option -${2} requires an argument." >&2
-      _usage
+        echo "Option -${2} requires an argument." >&2
+        _usage
     fi
 }
 
@@ -315,7 +315,7 @@ do
             # Valid option - calculate shift
             continue=0
             valid_option_shift=$((optind_before-last_optind))
-            if [ $valid_option_shift -ge 0  ]
+            if [ ${valid_option_shift} -ge 0 ]
             then
                 total_shift=${valid_option_shift}
             fi
@@ -324,7 +324,7 @@ do
 
     OPTIND=$((last_optind+total_shift))
     # Check for infinitive parsing of the same argument twice by getopts
-    if [ $OPTIND -eq ${last_optind} ]
+    if [ ${OPTIND} -eq ${last_optind} ]
     then
         if [ ${idle_pass} -gt 2 ]
         then
