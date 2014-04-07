@@ -43,6 +43,7 @@ Options:
   -p                    Use provided password for authentication
   -i                    Use specified instance URL to connect
   -c                    Print on stdout curl binary path
+  -s                    Print sed path with -r option
   -P                    Enable parse mode for API common arguments. This must
                         be first parameter.
   -C                    Get curl friendly error for specified exit code.
@@ -54,6 +55,12 @@ Options:
 
 EOT
 exit 1
+}
+
+_sedpath()
+{
+    echo "$SED"
+    exit
 }
 
 _curlpath()
@@ -73,7 +80,11 @@ _curlpath()
         echo "${CURLBIN}"
         exit 0
     fi
-    CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ')
+    if [[ -n $BSD ]]; then
+        CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
+    else
+        CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ')
+    fi
     EXITCODE=${?}
     if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]
     then
@@ -170,7 +181,7 @@ _curlcode()
         '
 EOF
     )
-    msg=$(echo "${codes}" | sed -r 's#^[ \t]+##' | grep "^${1} " \
+    msg=$(echo "${codes}" | $SED 's#^[ \t]+##' | grep "^${1} " \
         | cut -f2- -d ' ')
     if [ -z "${msg}" ]
     then
@@ -200,7 +211,7 @@ _httpcode()
     503 Internal CQ error
 EOF
     )
-    msg=$(echo "${codes}" | sed -r 's#^[ \t]+##' | grep "^${1} " \
+    msg=$(echo "${codes}" | $SED 's#^[ \t]+##' | grep "^${1} " \
         | cut -f2- -d ' ')
     if [ -z "${msg}" ]
     then
@@ -213,7 +224,7 @@ EOF
 
 _java_exception()
 {
-    head -n 1 | cut -f2 -d ':' | sed -r 's#^[ ]+##'
+    head -n 1 | cut -f2 -d ':' | $SED 's#^[ ]+##'
     exit
 }
 
@@ -259,8 +270,16 @@ instance="http://localhost:5410"
 username=admin
 password=admin
 
-OPTIONS=":Pu:p:i:cC:H:Eve-:"
+OPTIONS=":Pu:p:i:csC:H:Eve-:"
 PARSE_OPTIONS="u:p:i:"
+if [[ "$OSTYPE" == "darwin"* || "$OSTYPE" == "freebsd"* ]]; then
+    BSD=1
+fi
+if [[ -n "$BSD" ]]; then
+    SED="sed -E"
+else
+    SED="sed -r"
+fi
 
 explicit_option=0
 parse_mode=0
@@ -276,7 +295,7 @@ do
         P) parse_mode=1; OPTIONS=":P${PARSE_OPTIONS}";;
         u) username=${OPTARG}; explicit_option=1;;
         p) password=${OPTARG}; explicit_option=1;;
-        i) instance=$(echo "${OPTARG}" | sed -r 's#[/]+$##'); 
+        i) instance=$(echo "${OPTARG}" | $SED 's#[/]+$##'); 
            explicit_option=1;;
         C) argument=${OPTARG};;
         H) argument=${OPTARG};;
@@ -351,6 +370,7 @@ fi
 # cqapi normal modes
 case "${mode}" in
   c) _curlpath;;
+  s) _sedpath;;
   C) _curlcode "${argument}";;
   H) _httpcode "${argument}";;
   E) _java_exception;;

@@ -105,7 +105,7 @@ then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
-
+SED=$("${API}" -s)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -182,7 +182,7 @@ then
     exit ${EXITCODE2}
 fi
 
-STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+STATUS=$(echo "${STATUS}" | $SED 's#[0-9]{3}$##')
 
 if [ "${operations}" != "" ]
 then
@@ -197,7 +197,7 @@ then
             echo "Only run/stop operations are permitted for bundles" >&2
             exit 2
         fi
-        bundle_escaped=$(echo "${bundle}" | sed -r 's#\.#\\.#g')
+        bundle_escaped=$(echo "${bundle}" | $SED 's#\.#\\.#g')
         id=$(echo "$bundle_map" | grep -E "[[:space:]]+${bundle_escaped}\$" \
             | cut -f1)
         if [ "$id" = "" ]
@@ -212,8 +212,8 @@ then
     do
         action=$(echo "${op}" | cut -c1)
         bundle_spec=$(echo "${op}" | cut -c2-)
-        bundle_id=$(echo "${bundle_spec}" | sed -r 's/^([0-9]+).+$/\1/')
-        bundle=$(echo "${bundle_spec}" | sed -r 's/^[0-9]+(.+)$/\1/')
+        bundle_id=$(echo "${bundle_spec}" | $SED 's/^([0-9]+).+$/\1/')
+        bundle=$(echo "${bundle_spec}" | $SED 's/^[0-9]+(.+)$/\1/')
 
         [ "${action}" = "R" ] && activity="Running bundle: " \
             || activity="Stopping bunle: "

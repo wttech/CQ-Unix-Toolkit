@@ -124,6 +124,7 @@ then
     exit 1
 fi
 
+SED=$("${API}" -s)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -197,7 +198,7 @@ if [ ${EXITCODE2} -ne 0 ]
 then
     exit ${EXITCODE2}
 fi
-STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+STATUS=$(echo "${STATUS}" | $SED 's#[0-9]{3}$##')
 
 if [ ${pretty} -eq 1 ]
 then
