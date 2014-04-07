@@ -1,0 +1,246 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+	cat << EOT
+Usage: $(basename "${0}") [SPECIFICATION...] package-name
+Create minimal empty CQ Vault ZIP package locally using provided specification
+that can be uploaded to CRX/CQ Package Manager and built or installed.
+
+Please note that all CQ-related files like 'nodetype.cnd' are added to package
+during it's building (see 'cqbld' command).
+ 
+Examples:
+  cqpkg -r /content content           # Create package 'content-1.0.zip'
+                                      # in current working directory named
+                                      # 'content' that holds '/content' node
+                                      # and all subnodes under it.
+
+  cqpkg -r /content -o /tmp/pack.zip  # Create package 'pack.zip'
+        content                       # in '/tmp' directory named
+                                      # 'content' that holds '/content' node
+                                      # and all subnodes under it.
+
+  cqpkg -r /content -g mypackages     # Create package 'content-2.0.zip'
+        -v 2.0 -d 'My first package'  # named content with version 2.0,
+         content                      # with group 'mypackages' (as namespace)
+                                      # with 'My first package' description
+                                      # that holds /content node and all
+                                      # subnodes under it
+
+  cqpkg -r /content/dam               # Create dam-jpeg package
+        -i '/content/dam(/[^/.]+)*(/[^/\.]+\.jpe?g(/.*)?)?$'
+        dam-jpeg                      # that holds .jpeg or .jpg nodes
+                                      # from /content/dam node.
+
+Options:
+
+  -g GROUP              define Vault group/namespace for package
+  -v VERSION            define version for package
+  -d DESCRIPTION        define user-friendly package description
+  -r JCRPATH            define new filter root JCR path (allowed many times)
+  -i REGEXP             define include regular expression (allowed many times)
+                        for current filter root path (indicated by -r)
+  -e REGEXP             define exclude regular expression (allowed many times)
+                        for current filter root path (indicated by -r)
+  -o ZIPPATH            generates package in path specified by ZIPPATH
+
+
+EOT
+exit 1
+}
+
+_add_filter()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+<filter root="${1}">
+EOF
+    )
+}
+
+_add_include_entry()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+  <include pattern="${1}"/>
+EOF
+    )
+}
+
+_add_exclude_entry()
+{
+    filter_definition=$(cat << EOF
+${filter_definition}
+  <exclude pattern="${1}"/>
+EOF
+    )
+}
+
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+ECHO=$(which echo)
+if [ ${?} -ne 0 -o -z "${ECHO}" ]
+then
+    # fallback to echo
+    ECHO="echo"
+else
+    ECHO="${ECHO} -e "
+fi
+
+filter_definition=$(cat << EOT
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+EOT
+)
+toolkit_version=$("${API}" -v)
+package_definition=$(cat << EOT
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<comment>FileVault Package Properties</comment>
+<entry key="createdBy">cq-unix-toolkit</entry>
+<entry key="buildCount">1</entry>
+<entry key="dependencies"/>
+<entry key="packageFormatVersion">2</entry>
+EOT
+)
+
+description="Package genereated by CQ Unix Toolkit ${toolkit_version}"
+in_filter_context=0
+version="1.0"
+
+while getopts ":g:v:r:i:e:o:d:" opt
+do
+    case "${opt}" in
+        g)
+            group="${OPTARG}";;
+        v)
+            version="${OPTARG}";;
+        d)
+            description="${OPTARG}";;
+        o)
+            zipfile=$(readlink -f "${OPTARG}");;
+        r)
+            if [ ${in_filter_context} -eq 1 ]
+            then
+                filter_definition="${filter_definition}\n</filter>"
+            fi
+            in_filter_context=1
+            _add_filter "${OPTARG}";;
+        i)
+            if [ ${in_filter_context} -eq 0 ]
+            then
+                echo "Include pattern (-i) should be nested in scope of" \
+                    "filter root path (-r)." >&2
+                echo "Please add -r JCRPATH before adding -i/-e options." >&2
+                exit 1;
+            fi
+            _add_include_entry "${OPTARG}";;
+        e)
+            if [ ${in_filter_context} -eq 0 ]
+            then
+                echo "Exclude pattern (-e) should be nested in scope of" \
+                    "filter root path (-r)." >&2
+                echo "Please add -r JCRPATH before adding -i/-e options." >&2
+                exit 1;
+            fi
+            _add_exclude_entry "${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -ne 1 ]
+then
+    _usage
+fi
+group_entry=$(cat << EOT
+<entry key="group">${group}</entry>
+EOT
+)
+name=${1}
+dir=$(pwd)
+if [ "${zipfile}" = "" ]
+then
+    zipfile="${dir}/${name}-${version}.zip"
+fi
+filter_definition=$(cat << EOT
+${filter_definition}
+</filter>
+</workspaceFilter>
+EOT
+)
+package_definition=$(cat << EOT
+${package_definition}
+${group_entry}
+<entry key="name">${name}</entry>
+<entry key="version">${version}</entry>
+<entry key="description">${description}</entry>
+</properties>
+EOT
+)
+ZIP=$(which zip)
+if [ ${?} -ne 0 -o "${ZIP}" = "" ]
+then
+    echo "Cannot find zip packaging command-line tool. Aborted" >&2
+    exit 2
+fi
+tempdir=$(mktemp -d)
+exitcode=${?}
+if [ ${exitcode} -ne 0 ]
+then
+    echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
+    exit 1
+fi
+vault="${tempdir}/META-INF/vault"
+mkdir -p "${tempdir}/jcr_root"
+mkdir -p "${vault}"
+
+${ECHO} "${filter_definition}" > "${vault}/filter.xml"
+${ECHO} "${package_definition}" > "${vault}/properties.xml"
+cd "${tempdir}"
+"${ZIP}" -q -r - ./ > "${zipfile}"
+exitcode=${?}
+cd "${dir}"
+if [ ${exitcode} -ne 0 ]
+then
+    echo "Cannot create zip package properly." >&2
+fi
+rm "${vault}/filter.xml"
+rm "${vault}/properties.xml"
+rmdir "${tempdir}/jcr_root"
+rmdir "${tempdir}/META-INF/vault"
+rmdir "${tempdir}/META-INF"
+rmdir "${tempdir}"
+
+if [ ${exitcode} -eq 0 ]
+then
+    echo "Empty package created: '${zipfile}'"
+else
+    exit 3
+fi
