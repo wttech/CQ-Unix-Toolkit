@@ -100,7 +100,7 @@ _print_preformatted()
     filtered_items=$(${ECHOX} "${STATUS}" | tr -d '\n' | \
         sed 's/<package>/\n<package>/g' | \
         ${SEDX} 's/>\s+</></g' | grep -E "${REGEXP1}")
-    items=$(${ECHO} -e "${filtered_items}" \
+    items=$(${ECHOX} "${filtered_items}" \
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
         | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
         | cut -f1-${fields_num})

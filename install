@@ -20,16 +20,32 @@ then
     exit 1
 fi
 
-ECHO=$(which echo)
-if [ ${?} -ne 0 ]
+
+BSD_PRESENT=$(echo "${OSTYPE}" | grep -c -E '(darwin|bsd)')
+if [ "${BSD_PRESENT}" -gt 0 ]
 then
-    ECHO="echo"
-else
-    ECHO="${ECHO} -e "
+    BSD=1
 fi
+
+if [ -n "${BSD}" ]
+then
+    ECHOX="echo "
+else
+    ECHOX=$(which echo)
+    if [ ${?} -ne 0 -o -z "${ECHOX}" ]
+    then
+        # fallback to echo
+        ECHOX="echo "
+    else
+        ${ECHOX} --version >/dev/null 2>/dev/null
+        BSDECHO=${?}
+        [ ${BSDECHO} -eq 0 ] && ECHOX="${ECHOX} -e " || ECHOX="echo "
+    fi
+fi
+
 dir=$(dirname "${0}")
 basedir=$(readlink -f "${dir}")
-${ECHO} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
+${ECHOX} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
 if [ ! -d "${INSTALL_DIR}" ] 
 then
     echo "Cannot find '${INSTALL_DIR}' directory" >&2
@@ -64,22 +80,22 @@ do
 done
 if [ ! -z "${existing_tools}" ]
 then
-    ${ECHO} "${count} currently existing commands will be overwritten:"
-    ${ECHO} "${existing_tools}"
+    ${ECHOX} "${count} currently existing commands will be overwritten:"
+    ${ECHOX} "${existing_tools}"
 fi
 
 ask=0
 force=0
 options=""
-${ECHO} \
+${ECHOX} \
     "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
 if [ ${warning} -eq 1 ]
 then
-    ${ECHO} "Would you like to:"
-    ${ECHO} "-- replace (a)ll ${count} links and install new files,"
-    ${ECHO} "-- replace (i)ndividual ones, install new files"
-    ${ECHO} "-- (s)kip existing ones, install new files"
-    ${ECHO} "-- (q)uit\n"
+    ${ECHOX} "Would you like to:"
+    ${ECHOX} "-- replace (a)ll ${count} links and install new files,"
+    ${ECHOX} "-- replace (i)ndividual ones, install new files"
+    ${ECHOX} "-- (s)kip existing ones, install new files"
+    ${ECHOX} "-- (q)uit\n"
     read -p "   (a/i/s/q) ? " REPLY
     if [ "${REPLY}" != "A" -a "${REPLY}" != "a" -a "${REPLY}" != "i" \
         -a "${REPLY}" != "I" -a "${REPLY}" != "s" -a "${REPLY}" != "S" ]
@@ -123,5 +139,5 @@ do
         fi
     fi
 done
-${ECHO} "\nInstallation finished."
+${ECHOX} "\nInstallation finished."
 
