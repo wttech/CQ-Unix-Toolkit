@@ -203,7 +203,7 @@ then
     echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
-tempdir=$(mktemp -d -t cqpkg)
+tempdir=$(mktemp -d -t cqpkgXXXXXXXXXX)
 exitcode=${?}
 if [ ${exitcode} -ne 0 ]
 then
