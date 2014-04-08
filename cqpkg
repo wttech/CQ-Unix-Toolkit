@@ -100,8 +100,6 @@ then
     exit 1
 fi
 
-ECHOX=$("${API}" -w)
-
 filter_definition=$(cat <<EOT
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
@@ -214,8 +212,8 @@ vault="${tempdir}/META-INF/vault"
 mkdir -p "${tempdir}/jcr_root"
 mkdir -p "${vault}"
 
-${ECHOX} "${filter_definition}" > "${vault}/filter.xml"
-${ECHOX} "${package_definition}" > "${vault}/properties.xml"
+printf "${filter_definition}" > "${vault}/filter.xml"
+printf "${package_definition}" > "${vault}/properties.xml"
 cd "${tempdir}"
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}
