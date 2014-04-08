@@ -38,6 +38,10 @@ Examples:
   cqapi -s                       # Returns command and parameter required for
                                  # sed extended mode (extended regexp) to
                                  # be compatible with BSD/Mac OS X.
+  cqapi -w                       # Returns command and parameter required for
+                                 # extended printing purposes (interpreting
+                                 # escape sequences) to be compatible
+                                 # with BSD/Mac OS X.
 
 
 Options:
@@ -55,6 +59,8 @@ Options:
                         stack trace at the same time
   -e                    Detect if on stdin thereis exception stacktrace
   -v                    Provides toolkit version
+  -w                    Print echo command line or path with escaped sequences
+                        turned on
 
 EOT
 exit 1
@@ -63,6 +69,12 @@ exit 1
 _sedpath()
 {
     echo "${SEDX}"
+    exit
+}
+
+_echopath()
+{
+    echo "${ECHOX}"
     exit
 }
 
@@ -241,8 +253,7 @@ _java_exception_detection()
 
 _parse()
 {
-    ECHO=$(which echo)
-    ${ECHO} -e "${1}\t${2}\t${3}\t${4}\t${5}"
+    ${ECHOX} "${1}\t${2}\t${3}\t${4}\t${5}"
     exit
 }
 
@@ -274,7 +285,7 @@ instance="http://localhost:5410"
 username=admin
 password=admin
 
-OPTIONS=":Pu:p:i:csC:H:Eve-:"
+OPTIONS=":Pu:p:i:csC:H:Evwe-:"
 PARSE_OPTIONS="u:p:i:"
 
 BSD_PRESENT=$(echo "${OSTYPE}" | grep -c -E '(darwin|bsd)')
@@ -286,7 +297,25 @@ if [ -n "${BSD}" ]
 then
     SEDX="sed -E "
 else
-    SEDX="sed -r "
+    sed --version >/dev/null 2>/dev/null
+    BSDSED=${?}
+    [ ${BSDSED} -eq 0 ] && SEDX="sed -r " || SEDX="sed -E "
+fi
+
+if [ -n "${BSD}" ]
+then
+    ECHOX="echo "
+else
+    ECHOX=$(which echo)
+    if [ ${?} -ne 0 -o -z "${ECHOX}" ]
+    then
+        # fallback to echo
+        ECHOX="echo "
+    else
+        ${ECHOX} --version >/dev/null 2>/dev/null
+        BSDECHO=${?}
+        [ ${BSDECHO} -eq 0 ] && ECHOX="${ECHOX} -e " || ECHOX="echo "
+    fi
 fi
 
 explicit_option=0
@@ -384,6 +413,7 @@ case "${mode}" in
   E) _java_exception;;
   e) _java_exception_detection;;
   v) _version;;
+  w) _echopath;;
 esac
 
 _usage

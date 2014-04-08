@@ -52,14 +52,6 @@ _generate_regexp_number() {
 _print_preformatted()
 {
     SEP='|'
-    ECHO=$(which echo)
-    if [ ${?} -ne 0 -o -z "${ECHO}" ]
-    then
-        # fallback to echo
-        ECHO="echo"
-    else
-        ECHO="${ECHO} -e "
-    fi
     STATUS=${1}
     machine_friendly=${2}
     full=${3}
@@ -80,12 +72,12 @@ _print_preformatted()
         | grep -E "${REGEXP}" \
         | ${SEDX} "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
         | cut -f 1-${fields_num})
-    total=$(${ECHO} -e "${items}" | wc -l)
+    total=$(${ECHOX} "${items}" | wc -l)
 
     if [ "${machine_friendly}" -eq 0 ]
     then
-        ${ECHO} "${total} workflows."
-        ${ECHO} ""
+        ${ECHOX} "${total} workflows."
+        ${ECHOX} ""
         h1="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD"
         h2="|MODEL VERSION|TITLE|COMMENT"
         [ "${full}" -eq 1 ] && output="${h1}${h2}" || output="${h1}"
@@ -95,15 +87,15 @@ _print_preformatted()
 
     if [ "${machine_friendly}" -eq 1 ]
     then
-        ${ECHO} -n "${output}"
+        ${ECHOX} "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
-            echo "Cannot find column utility"
+            echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
+        ${ECHOX} "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
             -s "${SEP}"
     fi
 }
@@ -125,6 +117,7 @@ then
 fi
 
 SEDX=$("${API}" -s)
+ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -162,13 +155,13 @@ fi
 
 if [ ${machine_friendly} -eq 1 -a ${pretty} -eq 0 ]
 then
-    echo "Switches: -j and -m cannot be applied together."
+    echo "Switches: -j and -m cannot be applied together." >&2
     _usage
 fi
 
 if [ ${full} -eq 1 -a ${pretty} -eq 0 ]
 then
-    echo "Switches: -j and -l cannot be applied together."
+    echo "Switches: -j and -l cannot be applied together." >&2
     _usage
 fi
 

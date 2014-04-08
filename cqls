@@ -44,9 +44,7 @@ exit 1
 _print_preformatted()
 {
     SEP='|'
-    ECHO=$(which echo)
-    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
-    TAB=$(${ECHO} "\t")
+    TAB=$(${ECHOX} "\t")
     STATUS=${1}
     mode=${2}
     machine=${3}
@@ -99,36 +97,36 @@ _print_preformatted()
     REGEXP2="(.*)${G2}${G3}${G4}${G5}${G6}${G7}.*"
     ORDERING2="\1\2\t\3\t\4\t\5\t\6\t\7"
 
-    filtered_items=$(${ECHO} -e "${STATUS}" | tr -d '\n' | \
+    filtered_items=$(${ECHOX} "${STATUS}" | tr -d '\n' | \
         sed 's/<package>/\n<package>/g' | \
         ${SEDX} 's/>\s+</></g' | grep -E "${REGEXP1}")
-    items=$(${ECHO} -e "${filtered_items}" \
+    items=$(${ECHOX} "${filtered_items}" \
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
         | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
         | cut -f1-${fields_num})
-    total=$(${ECHO} -e "${items}" | wc -l)
+    total=$(${ECHOX} "${items}" | wc -l)
     if [ "${machine}" -eq 0 ]
     then
-        ${ECHO} "${total} packages."
-        ${ECHO} ""
+        ${ECHOX} "${total} packages."
+        ${ECHOX} ""
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
         H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
-        output=$(${ECHO} -e "${header}" | cut -f1-${fields_num} -d '|')
+        output=$(${ECHOX} "${header}" | cut -f1-${fields_num} -d '|')
         output="${output}\n"
     fi
     output="${output}${items}"
     if [ "${machine}" -eq 1 ]
     then
-        ${ECHO} -n "${output}"
+        ${ECHOX} "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
-            ${ECHO} "Cannot find column utility"
+            echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHO} "${output}" | tr '\t' "${SEP}" \
+        ${ECHOX} "${output}" | tr '\t' "${SEP}" \
             | column -xt -c ${fields_num} -s "${SEP}"
     fi
 }
@@ -149,7 +147,7 @@ then
     exit 1
 fi
 SEDX=$("${API}" -s)
-
+ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -222,7 +220,7 @@ EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 if [ ${EXITCODE} -ne 0 ]
 then
-    echo "Couldn't get packages list"
+    echo "Couldn't get packages list" >&2
     exit ${EXITCODE}
 fi
 
@@ -231,7 +229,7 @@ STATUSCODE=$(echo "${STATUS}" | tail -n 1)
 EXITCODE2=${?}
 if [ ${EXITCODE2} -ne 0 ]
 then
-    echo "Couldn't get packages list"
+    echo "Couldn't get packages list" >&2
     exit ${EXITCODE2}
 fi
 

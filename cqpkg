@@ -100,14 +100,7 @@ then
     exit 1
 fi
 
-ECHO=$(which echo)
-if [ ${?} -ne 0 -o -z "${ECHO}" ]
-then
-    # fallback to echo
-    ECHO="echo"
-else
-    ECHO="${ECHO} -e "
-fi
+ECHOX=$("${API}" -w)
 
 filter_definition=$(cat <<EOT
 <?xml version="1.0" encoding="UTF-8"?>
@@ -221,8 +214,8 @@ vault="${tempdir}/META-INF/vault"
 mkdir -p "${tempdir}/jcr_root"
 mkdir -p "${vault}"
 
-${ECHO} "${filter_definition}" > "${vault}/filter.xml"
-${ECHO} "${package_definition}" > "${vault}/properties.xml"
+${ECHOX} "${filter_definition}" > "${vault}/filter.xml"
+${ECHOX} "${package_definition}" > "${vault}/properties.xml"
 cd "${tempdir}"
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}
