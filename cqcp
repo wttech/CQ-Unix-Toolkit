@@ -87,14 +87,8 @@ then
 fi
 name=${1}
 
-if [ -z "${group}" ]
-then
-    group_switch=""
-    group_arg=""
-else
-    group_switch="-F"
-    group_arg="group=${group}"
-fi
+group_switch="-F"
+group_arg="group=${group}"
 
 if [ -z "${outfile}" ]
 then
@@ -109,13 +103,13 @@ REFERERHEADER="Referer: ${REFERER}"
 
 STATUS=$(${CURLBIN} \
     -s \
-    --write-out "%{content_type} %{http_code}" \
     -u "${AUTH}" \
     -H "${REFERERHEADER}" \
-    -F cmd=get \
-    ${group_switch} "${group_arg}" \
+    --write-out '%{content_type} %{http_code}' \
     -o /dev/null \
+    -F cmd=get \
     -F "name=${name}" \
+    ${group_switch} "${group_arg}" \
     "${instance}${FILEPATH}")
 
 EXITCODE=${?}
@@ -149,15 +143,14 @@ STATUS=$(${CURLBIN} \
     -u "${AUTH}" \
     -H "${REFERERHEADER}" \
     -F cmd=get \
-    ${group_switch} "${group_arg}" \
-    -F "name=${name}" \
     -o "${redirection}" \
+    -F "name=${name}" \
+    ${group_switch} "${group_arg}" \
     "${instance}${FILEPATH}")
 
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
-STATUSCODE=$(echo "${STATUS}" | tail -n 1 | cut -f1 -d ' ')
-CONTENTTYPE=$(echo "${STATUS}" | tail -n 1 | cut -f2 -d ' ')
+STATUSCODE=$(echo "${STATUS}" | tail -n 1 | cut -f2- -d ' ')
 STATUS=$(echo "${STATUS}" | sed '$d')
 "${API}" -H "${STATUSCODE}"
 EXITCODE2=${?}
