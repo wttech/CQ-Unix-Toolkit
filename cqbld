@@ -16,7 +16,7 @@
 _usage()
 {
     cat <<EOT
-Usage: $(basename) "${0}"` [OPTION...] package-name
+Usage: $(basename) "${0}" [OPTION...] package-name
 Build (rebuild) already uploaded package by group id and name in CQ Package
 Manager using instance URL.
 
