@@ -60,12 +60,12 @@ _print_preformatted()
     REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
 \"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
 symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
-    filtered_items=$(${ECHOX} "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
+    filtered_items=$(printf "%s" "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
         | grep -E "${REGEXP}")
-    items=$(printf "${filtered_items}" \
+    items=$(printf "%s" "${filtered_items}" \
         | ${SEDX} "s#${REGEXP}#\1${TB}\6${TB}\4${TB}\5${TB}\2#"\
         | sort -nk1 -t "${TB}")
-    total=$(printf "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l)
     if [ "${machine_friendly}" -eq 0 ]
     then
         echo "${total} bundles."
@@ -75,7 +75,7 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
     output="${output}${items}"
     if [ "${machine_friendly}" -eq 1 ]
     then
-        printf "${output}"
+        printf "%s" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -83,7 +83,7 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+        printf "%s" "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
     fi
 }
 
@@ -104,7 +104,6 @@ then
     exit 1
 fi
 SEDX=$("${API}" -s)
-ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")

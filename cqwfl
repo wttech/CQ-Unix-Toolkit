@@ -74,7 +74,7 @@ _print_preformatted()
         | grep -E "${REGEXP}" \
         | ${SEDX} "s#${REGEXP}#${REPLACEMENT}#" \
         | cut -f 1-${fields_num})
-    total=$(printf "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l)
 
     if [ "${machine_friendly}" -eq 0 ]
     then
@@ -89,7 +89,7 @@ _print_preformatted()
 
     if [ "${machine_friendly}" -eq 1 ]
     then
-        printf "${output}"
+        printf "%s" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -97,8 +97,8 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
-            -s "${SEP}"
+        printf "%s" "${output}" | tr '\t' "${SEP}" | column -xt \
+            -c ${fields_num} -s "${SEP}"
     fi
 }
 
@@ -119,7 +119,6 @@ then
 fi
 
 SEDX=$("${API}" -s)
-ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")

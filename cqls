@@ -97,28 +97,28 @@ _print_preformatted()
     REGEXP2="(.*)${G2}${G3}${G4}${G5}${G6}${G7}.*"
     ORDERING2="\1\2${TB}\3${TB}\4${TB}\5${TB}\6${TB}\7"
 
-    filtered_items=$(printf "${STATUS}" | tr -d '\n' \
+    filtered_items=$(printf "%s" "${STATUS}" | tr -d '\n' \
         | sed "s/<package>/${TB}<package>/g" | tr '\t' '\n' \
         | ${SEDX} 's/> +</></g' | grep -E "${REGEXP1}")
-    items=$(printf "${filtered_items}" \
+    items=$(printf "%s" "${filtered_items}" \
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
         | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" \
         | cut -f1-${fields_num})
-    total=$(printf "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l)
     if [ "${machine}" -eq 0 ]
     then
-        printf "${total} packages."
+        printf "%s packages." "${total}"
         echo
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
         H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
-        output=$(printf "${header}" | cut -f1-${fields_num} -d '|')
+        output=$(printf "%s" "${header}" | cut -f1-${fields_num} -d '|')
         output="${output}\n"
     fi
     output="${output}${items}"
     if [ "${machine}" -eq 1 ]
     then
-        printf "${output}"
+        printf "%s" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -126,7 +126,7 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "${output}" | tr '\t' "${SEP}" \
+        printf "%s" "${output}" | tr '\t' "${SEP}" \
             | column -xt -c ${fields_num} -s "${SEP}"
     fi
 }

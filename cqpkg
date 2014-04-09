@@ -201,7 +201,7 @@ then
     echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
-tempdir=$(mktemp -d -t cqpkgXXXXXXXXXX)
+tempdir=$(mktemp -d cqpkgXXXXXXXXXX)
 exitcode=${?}
 if [ ${exitcode} -ne 0 ]
 then
@@ -212,8 +212,8 @@ vault="${tempdir}/META-INF/vault"
 mkdir -p "${tempdir}/jcr_root"
 mkdir -p "${vault}"
 
-printf "${filter_definition}" > "${vault}/filter.xml"
-printf "${package_definition}" > "${vault}/properties.xml"
+printf "%s" "${filter_definition}" > "${vault}/filter.xml"
+printf "%s" "${package_definition}" > "${vault}/properties.xml"
 cd "${tempdir}"
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}

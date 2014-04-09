@@ -74,7 +74,7 @@ _sedpath()
 
 _echopath()
 {
-    echo "${ECHOX}"
+    echo "printf"
     exit
 }
 
@@ -253,9 +253,44 @@ _java_exception_detection()
 
 _parse()
 {
-    printf "${1}\t${2}\t${3}\t${4}\t${5}"
+    printf "%s\t%s\t%s\t%s\t%s" "${1}" "${2}" "${3}" "${4}" "${5}"
     exit
 }
+
+_process_parse_mode()
+{
+    instance="http://localhost:5410"
+    username=admin
+    password=admin
+    while [ ${#} -ne 0 ]
+    do
+        getopts_failed=1
+        while getopts ":${PARSE_OPTIONS}" option
+        do
+            getopts_failed=0
+            case "${option}" in
+                u) 
+                    username=${OPTARG}; 
+                    explicit_option=1;;
+                p) 
+                    password=${OPTARG}; 
+                    explicit_option=1;;
+                i) 
+                    instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
+                    explicit_option=1;;
+            esac
+        done
+        if [ ${getopts_failed} -eq 1 ]
+        then
+            shift
+        fi
+    done
+
+    _parse "${username}" "${password}" "${instance}" "${explicit_option}" \
+        "${PARSE_OPTIONS}"
+    exit 0
+}
+
 
 _invalid_option()
 {
@@ -281,9 +316,6 @@ _version()
     exit
 }
 
-instance="http://localhost:5410"
-username=admin
-password=admin
 
 OPTIONS=":Pu:p:i:csC:H:Evwe-:"
 PARSE_OPTIONS="u:p:i:"
@@ -292,26 +324,8 @@ sed --version >/dev/null 2>/dev/null
 BSDSED=${?}
 [ ${BSDSED} -eq 0 ] && SEDX="sed -r " || SEDX="sed -E "
 
-if [ -n "${BSD}" ]
-then
-    ECHOX="echo "
-else
-    ECHOX=$(which echo)
-    if [ ${?} -ne 0 -o -z "${ECHOX}" ]
-    then
-        # fallback to echo
-        ECHOX="echo "
-    else
-        ${ECHOX} --version >/dev/null 2>/dev/null
-        BSDECHO=${?}
-        [ ${BSDECHO} -eq 0 ] && ECHOX="${ECHOX} -e " || ECHOX="echo "
-    fi
-fi
-
 explicit_option=0
 parse_mode=0
-
-idle_pass=0
 mode=?
 argument=?
 
@@ -319,7 +333,10 @@ while getopts "${OPTIONS}" option
 do
     mode=${option}
     case ${option} in
-        P) parse_mode=1; OPTIONS=":P${PARSE_OPTIONS}";;
+        P) 
+            cq_api_output=$(_process_parse_mode "${@}"); 
+            printf "%s\n" "${cq_api_output}"
+            exit ${?};;
         u) username=${OPTARG}; explicit_option=1;;
         p) password=${OPTARG}; explicit_option=1;;
         i) instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
@@ -329,70 +346,10 @@ do
         \?) _invalid_option ${parse_mode} "${OPTARG}";;
         :) _missing_argument ${parse_mode} "${OPTARG}";;
     esac
-
-    continue=1
-    last_optind=${OPTIND}
-    total_shift=0
-    delta=0
-    while [ ${continue} -eq 1 ]; do
-        optind_before=${OPTIND}
-        getopts "${OPTIONS}" vopt
-        getopts_status=${?}
-        total_shift=$((total_shift+delta))
-        delta=$((OPTIND-optind_before))
-
-        if [ ${getopts_status} -ne 0 ]
-        then
-            if [ ${#} -le ${OPTIND} ]
-            then
-                # Parse break - EOL reached
-                continue=0
-            elif [ ${delta} -ge 0 ]
-            then
-                # Skip broken argument
-                OPTIND=$((OPTIND+1))
-                continue=1
-            fi
-        elif [ "${vopt}" = "?" -o "${vopt}" = ":" ]
-        then
-            # Invalid option - continue readahed
-            continue=1
-        else
-            # Valid option - calculate shift
-            continue=0
-            valid_option_shift=$((optind_before-last_optind))
-            if [ ${valid_option_shift} -ge 0 ]
-            then
-                total_shift=${valid_option_shift}
-            fi
-        fi
-    done
-
-    OPTIND=$((last_optind+total_shift))
-    # Check for infinitive parsing of the same argument twice by getopts
-    if [ ${OPTIND} -eq ${last_optind} ]
-    then
-        if [ ${idle_pass} -gt 2 ]
-        then
-            # Skip in case of infinitive loop
-            OPTIND=$((OPTIND+1))
-        fi
-        idle_pass=$((idle_pass+1))
-    else
-        idle_pass=0
-    fi
-
 done
 
 shift $((OPTIND-1))
 
-# cqapi Parse mode for -u -p -i parameters
-if [ ${parse_mode} -eq 1 ]
-then
-    _parse "${username}" "${password}" "${instance}" "${explicit_option}" \
-        "${PARSE_OPTIONS}"
-    exit 0
-fi
 
 # cqapi normal modes
 case "${mode}" in
