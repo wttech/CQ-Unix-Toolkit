@@ -95,12 +95,12 @@ _curlpath()
         echo "${CURLBIN}"
         exit 0
     fi
-    if [ -n "${BSD}" ]
+    CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ' 2>/dev/null)
+    if [ ${?} -ne 0 }
     then
         CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
-    else
-        CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ')
     fi
+
     EXITCODE=${?}
     if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]
     then
