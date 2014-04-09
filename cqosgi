@@ -65,7 +65,7 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
     items=$(printf "%s" "${filtered_items}" \
         | ${SEDX} "s#${REGEXP}#\1${TB}\6${TB}\4${TB}\5${TB}\2#"\
         | sort -nk1 -t "${TB}")
-    total=$(printf "%s" "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
     if [ "${machine_friendly}" -eq 0 ]
     then
         printf "%s bundles\n\n" "${total}"
