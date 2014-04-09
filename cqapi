@@ -253,7 +253,7 @@ _java_exception_detection()
 
 _parse()
 {
-    ${ECHOX} "${1}\t${2}\t${3}\t${4}\t${5}"
+    printf "${1}\t${2}\t${3}\t${4}\t${5}"
     exit
 }
 
@@ -288,19 +288,9 @@ password=admin
 OPTIONS=":Pu:p:i:csC:H:Evwe-:"
 PARSE_OPTIONS="u:p:i:"
 
-BSD_PRESENT=$(echo "${OSTYPE}" | grep -c -E '(darwin|bsd)')
-if [ "${BSD_PRESENT}" -gt 0 ]
-then
-    BSD=1
-fi
-if [ -n "${BSD}" ]
-then
-    SEDX="sed -E "
-else
-    sed --version >/dev/null 2>/dev/null
-    BSDSED=${?}
-    [ ${BSDSED} -eq 0 ] && SEDX="sed -r " || SEDX="sed -E "
-fi
+sed --version >/dev/null 2>/dev/null
+BSDSED=${?}
+[ ${BSDSED} -eq 0 ] && SEDX="sed -r " || SEDX="sed -E "
 
 if [ -n "${BSD}" ]
 then
