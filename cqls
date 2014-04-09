@@ -127,7 +127,7 @@ _print_preformatted()
             exit 1
         fi
         printf "%s" "${output}" | tr '\t' "${SEP}" \
-            | column -xt -c ${fields_num} -s "${SEP}"
+            | ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
 

@@ -84,7 +84,8 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+        printf "%s" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt -c 5 \
+            -s "${SEP}" 2>/dev/null
     fi
 }
 
