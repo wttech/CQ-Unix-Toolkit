@@ -51,6 +51,7 @@ _generate_regexp_number() {
 
 _print_preformatted()
 {
+    TB=$(printf '\t')
     SEP='|'
     STATUS=${1}
     machine_friendly=${2}
@@ -67,10 +68,11 @@ _print_preformatted()
     G9=$(_generate_regexp "title")
 
     REGEXP=".*${G1},${G2},${G3},${G4},${G5},${G6},${G7},${G8},${G9}.*"
+    REPLACEMENT="\4${TB}\2${TB}\3${TB}\5${TB}\1${TB}\7${TB}\6${TB}\9${TB}\8"
     [ "${full}" -eq 1 ] && fields_num=9 || fields_num=6
-    items=$(echo "${STATUS}" | sed 's#{#\n{#g;' \
+    items=$(echo "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
         | grep -E "${REGEXP}" \
-        | ${SEDX} "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
+        | ${SEDX} "s#${REGEXP}#${REPLACEMENT}#" \
         | cut -f 1-${fields_num})
     total=$(printf "${items}" | wc -l)
 
