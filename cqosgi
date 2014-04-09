@@ -54,28 +54,28 @@ exit 1
 _print_preformatted()
 {
     SEP='|'
-    TAB=$(${ECHOX} "\t")
+    TB=$(printf "\t")
     STATUS=${1}
     machine_friendly=${2}
     REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
 \"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
 symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
-    filtered_items=$(${ECHOX} "${STATUS}" | sed 's#{#\n{#g' \
+    filtered_items=$(${ECHOX} "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
         | grep -E "${REGEXP}")
-    items=$(${ECHOX} "${filtered_items}" \
-        | ${SEDX} "s#${REGEXP}#\1\t\6\t\4\t\5\t\2#"\
-        | sort -nk1 -t "${TAB}")
-    total=$(${ECHOX} "${items}" | wc -l)
+    items=$(printf "${filtered_items}" \
+        | ${SEDX} "s#${REGEXP}#\1${TB}\6${TB}\4${TB}\5${TB}\2#"\
+        | sort -nk1 -t "${TB}")
+    total=$(printf "${items}" | wc -l)
     if [ "${machine_friendly}" -eq 0 ]
     then
-        ${ECHOX} "${total} bundles."
-        ${ECHOX} ""
+        echo "${total} bundles."
+        echo
         output="ID|SYMBOL|STATUS|VERSION|NAME\n"
     fi
     output="${output}${items}"
     if [ "${machine_friendly}" -eq 1 ]
     then
-        ${ECHOX} "${output}"
+        printf "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -83,7 +83,7 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHOX} "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
+        printf "${output}" | tr '\t' "${SEP}" | column -xt -c 5 -s "${SEP}"
     fi
 }
 
