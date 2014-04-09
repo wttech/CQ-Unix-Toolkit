@@ -95,8 +95,8 @@ _curlpath()
         echo "${CURLBIN}"
         exit 0
     fi
-    CURLBIN=$(${WHEREIS} -b curl | cut -f2 -d ' ' 2>/dev/null)
-    if [ "${?}" -ne 0 ]
+    CURLBIN=$(${WHEREIS} -b curl 2>/dev/null | cut -f2 -d ' ')
+    if [ -z "${CURLBIN}" ]
     then
         CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
     fi
