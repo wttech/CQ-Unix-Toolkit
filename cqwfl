@@ -72,12 +72,12 @@ _print_preformatted()
         | grep -E "${REGEXP}" \
         | ${SEDX} "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
         | cut -f 1-${fields_num})
-    total=$(${ECHOX} "${items}" | wc -l)
+    total=$(printf "${items}" | wc -l)
 
     if [ "${machine_friendly}" -eq 0 ]
     then
-        ${ECHOX} "${total} workflows."
-        ${ECHOX} ""
+        echo "${total} workflows."
+        echo
         h1="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD"
         h2="|MODEL VERSION|TITLE|COMMENT"
         [ "${full}" -eq 1 ] && output="${h1}${h2}" || output="${h1}"
@@ -87,7 +87,7 @@ _print_preformatted()
 
     if [ "${machine_friendly}" -eq 1 ]
     then
-        ${ECHOX} "${output}"
+        printf "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -95,7 +95,7 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHOX} "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
+        printf "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
             -s "${SEP}"
     fi
 }
