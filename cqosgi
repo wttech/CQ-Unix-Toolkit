@@ -68,11 +68,12 @@ symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
     total=$(printf "%s" "${items}" | wc -l)
     if [ "${machine_friendly}" -eq 0 ]
     then
-        echo "${total} bundles."
-        echo
-        output="ID|SYMBOL|STATUS|VERSION|NAME\n"
+        printf "%s bundles\n\n" "${total}"
+        output="ID|SYMBOL|STATUS|VERSION|NAME"
+        output=$(printf "%s\n%s" "${output}" "${items}")
+    else
+        output="${items}"
     fi
-    output="${output}${items}"
     if [ "${machine_friendly}" -eq 1 ]
     then
         printf "%s" "${output}"

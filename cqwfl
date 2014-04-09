@@ -78,14 +78,14 @@ _print_preformatted()
 
     if [ "${machine_friendly}" -eq 0 ]
     then
-        echo "${total} workflows."
-        echo
+        printf "%s workflows\n\n" "${total}"
         h1="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD"
         h2="|MODEL VERSION|TITLE|COMMENT"
         [ "${full}" -eq 1 ] && output="${h1}${h2}" || output="${h1}"
-        output="${output}\n"
+        output=$(printf "%s\n%s" "${output}" "${items}")
+    else
+        output="${items}"
     fi
-    output="${output}${items}"
 
     if [ "${machine_friendly}" -eq 1 ]
     then
