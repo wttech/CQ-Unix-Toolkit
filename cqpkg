@@ -132,7 +132,7 @@ do
         d)
             description="${OPTARG}";;
         o)
-            zipfile=$(readlink -f "${OPTARG}");;
+            zipfilename="${OPTARG}";;
         r)
             if [ ${in_filter_context} -eq 1 ]
             then
@@ -176,10 +176,14 @@ EOT
 )
 name=${1}
 dir=$(pwd)
-if [ "${zipfile}" = "" ]
+if [ -z "${zipfilename}" ]
 then
     zipfile="${dir}/${name}-${version}.zip"
+else
+    zipfile=$(cd $(dirname "${zipfilename}"); \
+        pwd)/$(basename "${zipfilename}")
 fi
+
 filter_definition=$(cat <<EOT
 ${filter_definition}
 </filter>
