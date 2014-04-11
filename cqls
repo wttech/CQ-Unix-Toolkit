@@ -44,7 +44,7 @@ exit 1
 _print_preformatted()
 {
     SEP='|'
-    TAB=$(${ECHOX} "\t")
+    TB=$(printf "\t")
     STATUS=${1}
     mode=${2}
     machine=${3}
@@ -85,7 +85,7 @@ _print_preformatted()
     X11="<${KEY11}${NONPLACEHOLDER}${KEY11}>"
 
     REGEXP1=".*${G1}${G2}${G3}${G4}${G5}(${X6}${X7}${X8}${X9}${X10}${X11}).*"
-    ORDERING1="\2\t\1\t\3\t\5\t\4\t\6"
+    ORDERING1="\2${TB}\1${TB}\3${TB}\5${TB}\4${TB}\6"
 
     G2="<${KEY6}${PLACEHOLDER}${KEY6}>"
     G3="<${KEY7}${PLACEHOLDER}${KEY7}>"
@@ -95,30 +95,30 @@ _print_preformatted()
     G7="<${KEY11}${PLACEHOLDER}${KEY11}>"
 
     REGEXP2="(.*)${G2}${G3}${G4}${G5}${G6}${G7}.*"
-    ORDERING2="\1\2\t\3\t\4\t\5\t\6\t\7"
+    ORDERING2="\1\2${TB}\3${TB}\4${TB}\5${TB}\6${TB}\7"
 
-    filtered_items=$(${ECHOX} "${STATUS}" | tr -d '\n' | \
-        sed 's/<package>/\n<package>/g' | \
-        ${SEDX} 's/>\s+</></g' | grep -E "${REGEXP1}")
-    items=$(${ECHOX} "${filtered_items}" \
+    filtered_items=$(printf "%s" "${STATUS}" | tr -d '\n' \
+        | sed "s/<package>/${TB}<package>/g" | tr '\t' '\n' \
+        | ${SEDX} 's/> +</></g' | grep -E "${REGEXP1}")
+    items=$(printf "%s" "${filtered_items}" \
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
-        | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TAB}" \
+        | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" \
         | cut -f1-${fields_num})
-    total=$(${ECHOX} "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
     if [ "${machine}" -eq 0 ]
     then
-        ${ECHOX} "${total} packages."
-        ${ECHOX} ""
+        printf "%s package\n\n" "${total}"
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
         H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
-        output=$(${ECHOX} "${header}" | cut -f1-${fields_num} -d '|')
-        output="${output}\n"
+        output=$(printf "%s\n" "${header}" | cut -f1-${fields_num} -d '|')
+        output=$(printf "%s\n%s" "${output}" "${items}")
+    else
+        output="${items}"
     fi
-    output="${output}${items}"
     if [ "${machine}" -eq 1 ]
     then
-        ${ECHOX} "${output}"
+        printf "%s" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -126,8 +126,8 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHOX} "${output}" | tr '\t' "${SEP}" \
-            | column -xt -c ${fields_num} -s "${SEP}"
+        printf "%s" "${output}" | tr '\t' "${SEP}" \
+            | ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
 
@@ -147,7 +147,6 @@ then
     exit 1
 fi
 SEDX=$("${API}" -s)
-ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")

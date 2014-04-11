@@ -132,7 +132,7 @@ do
         d)
             description="${OPTARG}";;
         o)
-            zipfile=$(readlink -f "${OPTARG}");;
+            zipfilename="${OPTARG}";;
         r)
             if [ ${in_filter_context} -eq 1 ]
             then
@@ -176,10 +176,14 @@ EOT
 )
 name=${1}
 dir=$(pwd)
-if [ "${zipfile}" = "" ]
+if [ -z "${zipfilename}" ]
 then
     zipfile="${dir}/${name}-${version}.zip"
+else
+    zipfile=$(cd $(dirname "${zipfilename}"); \
+        pwd)/$(basename "${zipfilename}")
 fi
+
 filter_definition=$(cat <<EOT
 ${filter_definition}
 </filter>
@@ -212,8 +216,8 @@ vault="${tempdir}/META-INF/vault"
 mkdir -p "${tempdir}/jcr_root"
 mkdir -p "${vault}"
 
-printf "${filter_definition}" > "${vault}/filter.xml"
-printf "${package_definition}" > "${vault}/properties.xml"
+printf "%s" "${filter_definition}" > "${vault}/filter.xml"
+printf "%s" "${package_definition}" > "${vault}/properties.xml"
 cd "${tempdir}"
 "${ZIP}" -q -r - ./ > "${zipfile}"
 exitcode=${?}

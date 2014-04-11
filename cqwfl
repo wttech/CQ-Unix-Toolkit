@@ -51,6 +51,7 @@ _generate_regexp_number() {
 
 _print_preformatted()
 {
+    TB=$(printf '\t')
     SEP='|'
     STATUS=${1}
     machine_friendly=${2}
@@ -67,27 +68,28 @@ _print_preformatted()
     G9=$(_generate_regexp "title")
 
     REGEXP=".*${G1},${G2},${G3},${G4},${G5},${G6},${G7},${G8},${G9}.*"
+    REPLACEMENT="\4${TB}\2${TB}\3${TB}\5${TB}\1${TB}\7${TB}\6${TB}\9${TB}\8"
     [ "${full}" -eq 1 ] && fields_num=9 || fields_num=6
-    items=$(echo "${STATUS}" | sed 's#{#\n{#g;' \
+    items=$(echo "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
         | grep -E "${REGEXP}" \
-        | ${SEDX} "s#${REGEXP}#\4\t\2\t\3\t\5\t\1\t\7\t\6\t\9\t\8#" \
+        | ${SEDX} "s#${REGEXP}#${REPLACEMENT}#" \
         | cut -f 1-${fields_num})
-    total=$(${ECHOX} "${items}" | wc -l)
+    total=$(printf "%s" "${items}" | wc -l | tr -d ' ' )
 
     if [ "${machine_friendly}" -eq 0 ]
     then
-        ${ECHOX} "${total} workflows."
-        ${ECHOX} ""
+        printf "%s workflows\n\n" "${total}"
         h1="STARTTIME|STATE|INITIATOR|MODEL|ITEM|PAYLOAD"
         h2="|MODEL VERSION|TITLE|COMMENT"
         [ "${full}" -eq 1 ] && output="${h1}${h2}" || output="${h1}"
-        output="${output}\n"
+        output=$(printf "%s\n%s" "${output}" "${items}")
+    else
+        output="${items}"
     fi
-    output="${output}${items}"
 
     if [ "${machine_friendly}" -eq 1 ]
     then
-        ${ECHOX} "${output}"
+        printf "%s" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -95,8 +97,8 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHOX} "${output}" | tr '\t' "${SEP}" | column -xt -c ${fields_num} \
-            -s "${SEP}"
+        printf "%s" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt \
+            -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
 
@@ -117,7 +119,6 @@ then
 fi
 
 SEDX=$("${API}" -s)
-ECHOX=$("${API}" -w)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
