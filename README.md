@@ -11,7 +11,8 @@ Table of contents
 4. Notes on Cygwin compatibility
 5. CQ Compatibilty
 6. Installation
-7. Contributors
+7. Building an RPM package
+8. Contributors
 
 
 Introduction
@@ -24,11 +25,18 @@ party commands to perform some different tasks on Adobe CQ platform such as:
   packages
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
+* Clear/invalidate dispatcher cache for subtree specified by /statfilelevel
 * Active workflow instances list
 * Display OSGI bundles list and start/stop specified bundles
 
 Each action is wrapped in separate stand-alone script with additional usage
 output that allows to perform these tasks easily.
+
+The toolkit aims at use only the basic built-in commands for typical UNIX
+system to avoid installing any 3rd party custom dependency which is often
+not possible or prohibited whilst still providing nearly all functionalities
+for different operating systems and different shell flavours like csh/ksh/bash/
+dash etc.
 
 Basically almost every tool requires authorized connection to CQ instance which
 is performed by toolkit using three basic options:
@@ -37,10 +45,13 @@ is performed by toolkit using three basic options:
    * -p (password)
    * -i (URL to instance) i.e. https://localhost:5510
 
+In the future we want to provide ability to configure so called connection
+profiles which will improve passing URL/username/password in easier manner.
+
 Which for what?
 ===============
 
-Below is list of separate tools and purpose of each other
+Below there is a list of separate tools and short purpose phrase for each one:
 
 * cqpkg -- Creates empty zip package on local filesystem using provided
   specification (name, group, version, paths, filters) which is valid
@@ -85,15 +96,18 @@ Each script can be executed *without parameters* from your terminal i.e.:
           -g                    locate package by additional group ID
 
 
-so you can find out how to operate and specify required arguments.
+so you can find out how to operate and specify required arguments. We are
+working to be able to help users point correct syntax or provide suggestions
+in case of incorrect command line is passed.
 
 Supported shell environments
 ----------------------------
 
-Currently CQ Unix Toolkit supports only some subset of shell environments,
+Currently CQ Unix Toolkit supports only some subset of all shell environments,
 however that list will be improved in the next releases.
-For each command default shell is used and it is indicated by /bin/sh symbolic
-link in your system.
+For each command default shell indicated by /bin/sh symbolic link in your system
+is used. In case of problems you can prefix command with shell name to use
+non-default shell i.e. (`bash ./cqbld` instead of `./cqbld`).
 
 * bash (tested and fully supported)
 * dash (tested and fully supported)
@@ -103,8 +117,8 @@ link in your system.
 * mksh (MirBSD Korn Shell)
 * ksh (should work like on mksh however it's not directly tested!)
 
-Please note that zsh is currently not supported at all! You can get weird errors
-on that.
+Please note that zsh is currently *not supported at all*! You can get weird
+errors on that.
 
 Notes on Cygwin compatibility
 -----------------------------
@@ -178,6 +192,9 @@ CQ Compatibilty
 *  Compatible with CQ 5.4 or higher (but not AEM 6.0 and higher)
    * cqwfl
    * cqosgi
+   * cqclr
+
+Using CQ Unix Toolkit with AEM 6.0 is not recommended.
 
 Installation
 ------------
@@ -190,8 +207,9 @@ that creates symbolic link in /usr/local/bin directory or you can change
 Building an RPM package
 -----------------------
 
-Before building place `v1.1.0.tar.gz` file from above URL in SOURCES rpmbuild
-directory. The correct URL can be obtained from spec file from `Source:` field.
+Before building place `v1.1.0.tar.gz` file in SOURCES rpmbuild directory.
+The correct URL from which file can be obtained is defined in spec file in
+`Source:` field.
 
 
 Contributors
