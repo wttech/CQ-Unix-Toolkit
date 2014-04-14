@@ -53,24 +53,24 @@ Which for what?
 
 Below there is a list of separate tools and short purpose phrase for each one:
 
-* cqpkg -- Creates empty zip package on local filesystem using provided
+* `cqpkg` -- Creates empty zip package on local filesystem using provided
   specification (name, group, version, paths, filters) which is valid
   and minimal CRX FileVault package. CQ connection not required.
-* cqbld -- Builds remotely uploaded CQ package using connection parameters
-* cqcp -- Makes a copy of remote CQ package to your local environment
-* cqget -- Makes a copy of CQ resource to your local environment
-* cqrun -- Install uploaded CQ package on remote instanse
-* cqdel -- Remove completely remotely available CQ package
-* cqput -- Upload package from your local environment
-* cqls -- List packages uploaded/installed in remote CQ
-* cqchk -- Checks remote CQ instance repository if it's consistent
-* cqgc -- Deletes effectively removed content from instance to reclaim free
+* `cqbld` -- Builds remotely uploaded CQ package using connection parameters
+* `cqcp` -- Makes a copy of remote CQ package to your local environment
+* `cqget` -- Makes a copy of CQ resource to your local environment
+* `cqrun` -- Install uploaded CQ package on remote instanse
+* `cqdel` -- Remove completely remotely available CQ package
+* `cqput` -- Upload package from your local environment
+* `cqls` -- List packages uploaded/installed in remote CQ
+* `cqchk` -- Checks remote CQ instance repository if it's consistent
+* `cqgc` -- Deletes effectively removed content from instance to reclaim free
   space
-* cqmrg -- Merge CQ TarPM indexes
-* cqtpm -- Deletes effectively removed content from TarPM CQ storage
-* cqwfl -- Display active (or broken) workflow instances
-* cqosgi -- Display bundles list and manage them by starting/stopping on demand
-* cqclr -- Simulates activation on dispatcher to clear its cache. Use dispatcher
+* `cqmrg` -- Merge CQ TarPM indexes
+* `cqtpm` -- Deletes effectively removed content from TarPM CQ storage
+* `cqwfl` -- Display active (or broken) workflow instances
+* `cqosgi` -- Display bundles list and manage them by starting/stopping on demand
+* `cqclr` -- Simulates activation on dispatcher to clear its cache. Use dispatcher
   URL, (not CQ one) as instance URL (-i option).
 
 Each script can be executed *without parameters* from your terminal i.e.:
