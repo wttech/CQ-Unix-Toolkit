@@ -54,7 +54,7 @@ Below is list of separate tools and purpose of each other
 * cqls -- List packages uploaded/installed in remote CQ
 * cqchk -- Checks remote CQ instance repository if it's consistent
 * cqgc -- Deletes effectively removed content from instance to reclaim free
-          space
+  space
 * cqmrg -- Merge CQ TarPM indexes
 * cqtpm -- Deletes effectively removed content from TarPM CQ storage
 * cqwfl -- Display active (or broken) workflow instances
@@ -90,56 +90,78 @@ so you can find out how to operate and specify required arguments.
 Supported shell environments
 ----------------------------
 
-Currently CQ Unix Toolkit supports only some subset of shell environments.
-Default shell will be used and it is indicated by /bin/sh symbolic link
-in your system.
+Currently CQ Unix Toolkit supports only some subset of shell environments,
+however that list will be improved in the next releases.
+For each command default shell is used and it is indicated by /bin/sh symbolic
+link in your system.
 
 * bash (tested and fully supported)
 * dash (tested and fully supported)
 * bash on cygwin (line breaks problem, missing commands)
+* bash on Mac OS X (with sed/echo BSD versions)
+* csh (tested and fully supported on FreeBSD)
+* mksh (MirBSD Korn Shell)
+* ksh (should work like on mksh however it's not directly tested!)
+
+Please note that zsh is currently not supported at all! You can get weird errors
+on that.
 
 Notes on Cygwin compatibility
 -----------------------------
 
-In order to use toolkit on cygwin make sure you have:
-* util-linux
-* curl
-cygwin packages installed.
+In order to use toolkit on cygwin make sure you have marked/installed the
+following cygwin packages:
 
-Please rememeber that files should have \n endingings only. Using git clone they
-can be changes automatically to \r\n so please use one of the following
+* util-linux (required for all tools)
+* curl (required for almost all tools)
+* zip (required for cqpkg tool)
+
+To test commands just type in command line the following expressions and
+compare results:
+
+        $ zip -v | head -1
+        Copyright (c) 1990-2008 Info-ZIP - Type 'zip "-L"' for software license.
+
+        $ curl --version 2>&1 | head -1
+        curl 7.34.0 (i686-pc-cygwin) libcurl/7.34.0 OpenSSL/1.0.1f zlib/1.2.8 libidn/1.26 libssh2/1.4.2
+
+        $ column --version
+        column from the package util-linux 2.21.2
+
+
+Please rememeber that files should have `\n` endings only. Using git clone they
+can be changed automatically to `\r\n` so please use one of the following
 solutions:
 
-* Change git config option to core.autocrlf = false:
-
+* Prior cloning repository change `git config` option to `core.autocrlf = false`
 
         $ git config --global core.autocrlf input
+        $ git clone https://github.com/Cognifide/CQ-Unix-Toolkit.git
 
+* Prefix each call with `bash -o igncr` (temporary solution)
 
-* Prefix each call with bash -o igncr
-
+An example of invalid file line endings:
 
         $ ./cqapi
         ./cqapi: line 16: syntax error `$'\r''
         '/cqapi: line 16: `_usage()
 
+A quick method to fix invalid file line endings problem:
 
         $ bash -o igncr ./cqapi
         Usage: cqapi [OPTION...]
         ...
 
+To fix this *permanently* in your code copy just enter in proper directory name:
 
-  This requires changing cqapi line endings using
-
-
-        $ dos2unix cqapi
+        $ dos2unix cq*
 
 
 
 CQ Compatibilty
 ---------------
 
-*  Compatible with CRX 2.2 or higher
+*  Compatible with CRX 2.2 or higher (but not AEM 6.0 and higher)
    * cqbld
    * cqcp
    * cqget
@@ -148,12 +170,12 @@ CQ Compatibilty
    * cqput
    * cqls
    * cqpkg
-*  Compatible with CQ 5.5 or higher
+*  Compatible with CQ 5.5 or higher (but not AEM 6.0 and higher)
    * cqchk
    * cqgc
    * cqmrg
    * cqtpm
-*  Compatible with CQ 5.4 or higher
+*  Compatible with CQ 5.4 or higher (but not AEM 6.0 and higher)
    * cqwfl
    * cqosgi
 
@@ -183,7 +205,8 @@ I want to thank:
 * Bartek Szafko (project management)
 * Michał Leszczyński (infrastructure and development tools)
 * Artur Kłopotek (cygwin hints)
-* Robert Kapała
+* Robert Kapała (QA/improvements)
+* Tomek Rękawek (fixes and tests for Mac OS X default shell)
 
 Arkadiusz Kita [at] cognifide.com
 
