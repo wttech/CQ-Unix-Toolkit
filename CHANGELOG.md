@@ -10,10 +10,10 @@ New features/improvements:
 * Tool to define empty Vault package -- cqpkg
 * Tool to check state of OSGI bundle and to manage them (stop/start) -- cqosgi
 * Install script improvements (possibility to override some symbolic links)
+* Prepared noarch RPM spec file
 
 Bugfixes:
 
-* Prepare noarch RPM spec file
 * On cygwin filename contains double quotes (which is incorrect behavior)
 * Unable to work with packages with spaces in package group or package name
 * cqwfl is working slowly and it aborts execution for many active workflows
