@@ -25,18 +25,18 @@ party commands to perform some different tasks on Adobe CQ platform such as:
   packages
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
-* Clear/invalidate dispatcher cache for subtree specified by /statfilelevel
+* Clear/invalidate dispatcher cache for subtree specified by `/statfilelevel`
 * Active workflow instances list
 * Display OSGI bundles list and start/stop specified bundles
 
 Each action is wrapped in separate stand-alone script with additional usage
 output that allows to perform these tasks easily.
 
-The toolkit aims at use only the basic built-in commands for typical UNIX
-system to avoid installing any 3rd party custom dependency which is often
-not possible or prohibited whilst still providing nearly all functionalities
-for different operating systems and different shell flavours like csh/ksh/bash/
-dash etc.
+The toolkit aims at use only the basic built-in commands for typical UNIX/POSIX
+compliant system to avoid installing any 3rd party custom dependencies which is
+often not possible or prohibited whilst still providing nearly all
+functionalities for different operating systems and different shell flavours 
+like csh/ksh/bash/dash etc.
 
 Basically almost every tool requires authorized connection to CQ instance which
 is performed by toolkit using three basic options:
@@ -105,7 +105,7 @@ Supported shell environments
 
 Currently CQ Unix Toolkit supports only some subset of all shell environments,
 however that list will be improved in the next releases.
-For each command default shell indicated by /bin/sh symbolic link in your system
+For each command default shell indicated by `/bin/sh` symbolic link in your system
 is used. In case of problems you can prefix command with shell name to use
 non-default shell i.e. (`bash ./cqbld` instead of `./cqbld`).
 
@@ -117,18 +117,18 @@ non-default shell i.e. (`bash ./cqbld` instead of `./cqbld`).
 * mksh (MirBSD Korn Shell)
 * ksh (should work like on mksh however it's not directly tested!)
 
-Please note that zsh is currently *not supported at all*! You can get weird
-errors on that.
+Please note that `zsh` is currently _not supported at all_! You can get weird
+errors when using this shell implementation.
 
-Notes on Cygwin compatibility
------------------------------
+Notes on Windows/Cygwin compatibility
+-------------------------------------
 
 In order to use toolkit on cygwin make sure you have marked/installed the
 following cygwin packages:
 
-* util-linux (required for all tools)
-* curl (required for almost all tools)
-* zip (required for cqpkg tool)
+* `util-linux` (required for all tools)
+* `curl` (required for almost all tools)
+* `zip` (required for cqpkg tool)
 
 To test commands just type in command line the following expressions and
 compare results:
@@ -199,10 +199,10 @@ Using CQ Unix Toolkit with AEM 6.0 is not recommended.
 Installation
 ------------
 
-Above scripts don't require special installation. If you want these scripts to
-be visible system-wide you can invoke `install` script provided in repository
-that creates symbolic link in /usr/local/bin directory or you can change
-`INSTALL_DIR` variable in script if you want to something else.
+Above scripts don't require special installation. If you want these CQ Unix
+Toolkit to be visible system-wide you can invoke `install` script provided in
+repository that creates symbolic link in `/usr/local/bin` directory or you can
+change `INSTALL_DIR` variable in script if you want to something else.
 
 Building an RPM package
 -----------------------
