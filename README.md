@@ -111,7 +111,7 @@ non-default shell i.e. (`bash ./cqbld` instead of `./cqbld`).
 
 * bash (tested and fully supported)
 * dash (tested and fully supported)
-* bash on cygwin (line breaks problem, missing commands)
+* bash on cygwin (see remarks for Cygwin in the next section below)
 * bash on Mac OS X (with sed/echo BSD versions)
 * csh (tested and fully supported on FreeBSD)
 * mksh (MirBSD Korn Shell)
@@ -175,7 +175,7 @@ To fix this *permanently* in your code copy just enter in proper directory name:
 CQ Compatibilty
 ---------------
 
-*  Compatible with CRX 2.2 or higher (but not AEM 6.0 and higher)
+*  Compatible with CRX 2.2 or higher (but not AEM 6.0 and higher yet)
    * cqbld
    * cqcp
    * cqget
@@ -184,12 +184,12 @@ CQ Compatibilty
    * cqput
    * cqls
    * cqpkg
-*  Compatible with CQ 5.5 or higher (but not AEM 6.0 and higher)
+*  Compatible with CQ 5.5 or higher (but not AEM 6.0 and higher yet)
    * cqchk
    * cqgc
    * cqmrg
    * cqtpm
-*  Compatible with CQ 5.4 or higher (but not AEM 6.0 and higher)
+*  Compatible with CQ 5.4 or higher (but not AEM 6.0 and higher yet)
    * cqwfl
    * cqosgi
    * cqclr
