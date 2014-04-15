@@ -332,8 +332,8 @@ _urlencode()
         | sed 's#%#%25#g'      \
         | sed 's# #%20#g'      \
         | sed 's#!#%21#g'      \
-        | sed -r 's#\\#%23#g'  \
-        | sed -r 's#\$#%24#g' \
+        | ${SEDX} 's#\\#%23#g'  \
+        | ${SEDX} 's#\$#%24#g' \
         | sed 's#&#%26#g'      \
         | sed "s#'#%27#g"      \
         | sed 's#(#%28#g'      \
