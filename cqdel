@@ -15,8 +15,8 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename $0` [OPTION...] package-name
+    cat <<EOT
+Usage: $(basename "${0}") [OPTION...] package-name
 Removes already uploaded CRX package by group id and name in CRX Package
 Manager using instance URL.
  
@@ -39,79 +39,81 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
-API="$CWD/cqapi"
-APITEST=`$API -P`
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`$API -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
-
 
 # API common options
-cmdapi=`    $API -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 while getopts ":g:${apigetopts}" opt; do
-  case $opt in
-     g)  
-      group="$OPTARG";;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+    case ${opt} in
+        g)
+            group="${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -gt 1 -o $passed -eq 0 ];
+if [ ${#} -gt 1 -o "${passed}" -eq 0 ];
 then
-	_usage
+    _usage
 fi
-name=$1
+name=${1}
 
-if [ -z  "${group}" ]
+if [ -z "${group}" ]
 then
-        group_arg=""
+    group_switch=""
+    group_arg=""
 else
-        group_arg="-F group=${group}"
+    group_switch="-F"
+    group_arg="group=${group}"
 fi
 
 
-REFERER="$instance/crx/packmgr"
-AUTH="$username:$password"
+REFERER="${instance}/crx/packmgr"
+AUTH="${username}:${password}"
 FILEPATH="/crx/packmgr/service.jsp"
-REFERERHEADER="Referer: $REFERER"
+REFERERHEADER="Referer: ${REFERER}"
 
-STATUS=`$CURLBIN \
-	-s \
-        --write-out "%{http_code}" \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-        -F cmd=rm \
-        ${group_arg} \
-        -F name=${name} \
-	"$instance${FILEPATH}"`
-	
-EXITCODE=$?
-$API -C $EXITCODE
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d'`
-$API -H $STATUSCODE
-EXITCODE2=$?
+STATUS=$(${CURLBIN} \
+    -s \
+    --write-out "%{http_code}" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
+    -F cmd=rm \
+    ${group_switch} "${group_arg}" \
+    -F "name=${name}" \
+    "${instance}${FILEPATH}")
+    
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d')
+
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
 echo "${STATUS}"
 exit $((EXITCODE + EXITCODE2))
 

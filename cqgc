@@ -15,16 +15,16 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename $0` [OPTION...]
+    cat <<EOT
+Usage: $(basename "${0}") [OPTION...]
 Invoke DataStore compaction/garbage collection operation for specified CQ
 instance by default with 15ms sleeping phase per each node (to not load CQ
 heavily).
- 
+
 Examples:
-  cqgc -u admin -d 1            # Invokes garbage collection with minimal 
-                                # sleeping phase i.e. during night to shorten 
-                                # process 
+  cqgc -u admin -d 1            # Invokes garbage collection with minimal
+                                # sleeping phase i.e. during night to shorten
+                                # process
   cqgc -i http://localhost:5510 # Invokes garbace collection for localhost
                                 # instance on tcp port 5510
   cqgc -f -p secret             # Invokes garbage collection using provided
@@ -36,168 +36,172 @@ Options:
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -d                    changes sleeping phase for each node  
+  -d                    changes sleeping phase for each node
   -f                    stops current GC session
 
 EOT
 exit 1
 }
 
-CWD=`dirname $0`
-API="$CWD/cqapi"
-APITEST=`$API -P`
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`$API -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
-
 
 # API common options
-cmdapi=`    $API -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 delay_ms=15
 force_stop=0
-while getopts ":d:f${apigetopts}" opt; do
-  case $opt in
-     d)  
-      delay_ms=`echo $OPTARG|tr -cd '[:digit:]'`;;
-     f)
-      force_stop=1;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":d:f${apigetopts}" opt
+do
+    case ${opt} in
+        d)
+            delay_ms=$(echo "${OPTARG}" | tr -cd '[:digit:]');;
+        f)
+            force_stop=1;;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -gt 0 -o $passed -eq 0 ];
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ];
 then
-	_usage
+    _usage
 fi
 
 
-REFERER="$instance/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
-AUTH="$username:$password"
+REFERER="${instance}/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
+AUTH="${username}:${password}"
 FILEPATH1="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/a/DataStor\
 eGarbageCollectionDelay"
 FILEPATH2="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/runData\
 StoreGarbageCollection/java.lang.Boolean"
 FILEPATH3="/system/console/jmx/com.adobe.granite%3Atype%3DRepository/op/stopDat\
 aStoreGarbageCollection"
-REFERERHEADER="Referer: $REFERER"
+REFERERHEADER="Referer: ${REFERER}"
 
+ECHON=$(which echo)
+[ ${?} -ne 0 -o -z "${ECHON}" ] && ECHON="echo" || ECHON="${ECHON} -n "
 # Stopping GC sleeping phase delay
-if [ $force_stop -eq 1 ]
+if [ ${force_stop} -eq 1 ]
 then
-    echo -n "Stopping DataStore garbage collection (if working)..."
-    STATUS=`$CURLBIN \
+    ${ECHON} "Stopping DataStore garbage collection (if working)..."
+    STATUS=$(${CURLBIN} \
            -s \
            --write-out "%{http_code}" \
-           -u "$AUTH" \
-           -H "$REFERERHEADER" \
+           -u "${AUTH}" \
+           -H "${REFERERHEADER}" \
            -X POST \
-           "$instance${FILEPATH3}"`
+           "${instance}${FILEPATH3}")
 
-    EXITCODE=$?
-    $API -C $EXITCODE
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
 
-    if [ $EXITCODE -ne 0 ]
+    if [ ${EXITCODE} -ne 0 ]
     then
         echo "Cannot stop current garbage collection." >&2
-        exit $EXITCODE
+        exit ${EXITCODE}
     fi
 
-    STATUSCODE=`echo "$STATUS"|tail -n 1`
-    STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/;'`
+    STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+    STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/;')
     echo "${STATUS}"
-    $API -H $STATUSCODE
-    EXITCODE2=$?
-    if [ $EXITCODE2 -ne 0 ]
+    "${API}" -H "${STATUSCODE}"
+
+    EXITCODE2=${?}
+    if [ ${EXITCODE2} -ne 0 ]
     then
         echo "Cannot stop current garbage collection." >&2
-        exit $EXITCODE2
+        exit ${EXITCODE2}
     fi
     sleep 5s
 fi
 
 
 # Setting GC sleeping phase delay
-echo -n "Setting DataStore garbage collection sleeping phase..."
-STATUS=`$CURLBIN \
-	-s \
-        --write-out "%{http_code}" \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-	-X POST --data value=$delay_ms \
-	"$instance${FILEPATH1}"`
+${ECHON} "Setting DataStore garbage collection sleeping phase..."
+STATUS=$(${CURLBIN} \
+    -s \
+    --write-out "%{http_code}" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
+    -X POST --data value="${delay_ms}" \
+    "${instance}${FILEPATH1}")
 
-EXITCODE=$?
-$API -C $EXITCODE
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
 
-if [ $EXITCODE -ne 0 ]
+if [ ${EXITCODE} -ne 0 ]
 then
     echo "Cannot set garbage collection sleeping phase." >&2
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/;'`
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/;')
 echo "${STATUS}"
-$API -H $STATUSCODE
-EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+if [ ${EXITCODE2} -ne 0 ]
 then
     echo "Cannot set garbage collection sleeping phase." >&2
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
 
 # Invoke GC process in the foreground
-echo -n "Running DataStore garbage collection..."
-STATUS=`$CURLBIN \
+${ECHON} "Running DataStore garbage collection..."
+STATUS=$(${CURLBIN} \
     -s \
     --write-out "%{http_code}" \
-    -u "$AUTH" \
-    -H "$REFERERHEADER" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
     -X POST --data delete=true \
-	"$instance${FILEPATH2}"`
+    "${instance}${FILEPATH2}")
 
-EXITCODE=$?
-$API -C $EXITCODE
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
 
-if [ $EXITCODE -ne 0 ]
+if [ ${EXITCODE} -ne 0 ]
 then
     echo "Cannot invoke garbage collection." >&2
-    exit $EXITCODE
+    exit ${EXITCODE}
 fi
 
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-STATUS=`echo "$STATUS"|sed '$d;s/(null)//;s/^$/DONE/'`
-is_exception=`echo "$STATUS"|$API -e`
-if [ $is_exception -ge 0 ]
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/')
+is_exception=$(echo "${STATUS}" | "${API}" -e)
+if [ "${is_exception}" -ge 0 ]
 then
-    STATUS=`echo "$STATUS"|$API -E`
+    STATUS=$(echo "${STATUS}" | "${API}" -E)
 fi
 echo "${STATUS}"
-$API -H $STATUSCODE
-EXITCODE2=$?
-if [ $EXITCODE2 -ne 0 ]
+
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+if [ ${EXITCODE2} -ne 0 ]
 then
     echo "Cannot invoke garbage collection." >&2
-    exit $EXITCODE2
+    exit ${EXITCODE2}
 fi
 

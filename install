@@ -20,24 +20,124 @@ then
     exit 1
 fi
 
-dir=`dirname $0`
-basedir=`readlink -f $dir`
-echo "I assume that CQ UNIX tools are in: $basedir"
-echo "Installing symbolic links in: $INSTALL_DIR"
-if [ ! -d "$INSTALL_DIR" ] 
+
+BSD_PRESENT=$(echo "${OSTYPE}" | grep -c -E '(darwin|bsd)')
+if [ "${BSD_PRESENT}" -gt 0 ]
 then
-    echo "Cannot find $INSTALL_DIR directory" >&2
+    BSD=1
+fi
+
+if [ -n "${BSD}" ]
+then
+    ECHOX="echo "
+else
+    ECHOX=$(which echo)
+    if [ ${?} -ne 0 -o -z "${ECHOX}" ]
+    then
+        # fallback to echo
+        ECHOX="echo "
+    else
+        ${ECHOX} --version >/dev/null 2>/dev/null
+        BSDECHO=${?}
+        [ ${BSDECHO} -eq 0 ] && ECHOX="${ECHOX} -e " || ECHOX="echo "
+    fi
+fi
+
+dir=$(dirname "${0}")
+basedir=$(readlink -f "${dir}")
+${ECHOX} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
+if [ ! -d "${INSTALL_DIR}" ] 
+then
+    echo "Cannot find '${INSTALL_DIR}' directory" >&2
     exit 1
 fi
 
-read -p "Do you want to continue (Y/N) ?" REPLY
-if [ "${REPLY}" = "Y" ] 
+existing_tools=""
+warning=0
+count=0
+total=0
+cmds=""
+for cmd in cq*
+do
+    if [ -x "${basedir}/${cmd}" ]
+    then
+        total=$((total+1))
+        if [ -f "${INSTALL_DIR}/${cmd}" ]
+        then
+            if [ -L "${INSTALL_DIR}/${cmd}" ]
+            then
+                target=$(readlink -f "${INSTALL_DIR}/${cmd}")
+                output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
+            else
+                output="${INSTALL_DIR}/${cmd} (binary file)\n"
+            fi
+            count=$((count+1))
+            existing_tools="${existing_tools}${output}"
+            warning=1
+        fi
+        cmds="${cmds} ${cmd}"
+    fi
+done
+if [ ! -z "${existing_tools}" ]
 then
-    for cmd in `ls -1 cq*`
-    do
-        ln -vs "$basedir/$cmd" "$INSTALL_DIR/$cmd"
-    done
-    echo "Installation finished"
-else
-    echo "Aborted"
+    ${ECHOX} "${count} currently existing commands will be overwritten:"
+    ${ECHOX} "${existing_tools}"
 fi
+
+ask=0
+force=0
+options=""
+${ECHOX} \
+    "${total} commands (symbolic links) will be installed in: ${INSTALL_DIR}\n"
+if [ ${warning} -eq 1 ]
+then
+    ${ECHOX} "Would you like to:"
+    ${ECHOX} "-- replace (a)ll ${count} links and install new files,"
+    ${ECHOX} "-- replace (i)ndividual ones, install new files"
+    ${ECHOX} "-- (s)kip existing ones, install new files"
+    ${ECHOX} "-- (q)uit\n"
+    read -p "   (a/i/s/q) ? " REPLY
+    if [ "${REPLY}" != "A" -a "${REPLY}" != "a" -a "${REPLY}" != "i" \
+        -a "${REPLY}" != "I" -a "${REPLY}" != "s" -a "${REPLY}" != "S" ]
+    then
+        echo "Aborted"
+        exit 1
+    fi
+    options=""
+    case "${REPLY}" in
+        A) force=1; options="-f" ;;
+        a) force=1; options="-f" ;;
+        I) ask=1; options="-f";;
+        i) ask=1; options="-f";;
+    esac
+else
+    read -p "Do you want to continue (Y/N) ? " REPLY
+    if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
+    then
+        echo "Aborted"
+        exit 1
+    fi
+fi
+
+for cmd in ${cmds}
+do
+    confirmed=1
+    if [ ${ask} -eq 1 ]
+    then
+        read -p "Would you like to replace '${INSTALL_DIR}/${cmd}' (Y/N) ? "\
+        REPLY
+        if [ "${REPLY}" != "Y" -a "${REPLY}" != "y" ]
+        then
+            confirmed=0
+        fi
+    fi
+    if [ ${confirmed} -eq 1 ]
+    then
+        if [ ${force} -eq 1 -o ! -f "${INSTALL_DIR}/${cmd}" ]
+        then
+            ln ${options} -s "${basedir}/${cmd}" "${INSTALL_DIR}/${cmd}"
+        fi
+    fi
+done
+${ECHOX} "\nInstallation finished."
+

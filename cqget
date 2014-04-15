@@ -15,14 +15,14 @@
 # limitations under the License.
 _usage()
 {
-	cat << EOT
-Usage: `basename $0` [OPTION...] URL
+    cat <<EOT
+Usage: $(basename "${0}") [OPTION...] URL
 Download specified file or resource using full URL specification. Normally
 filename is taken from URL. File is created in current directory. You can force
 this behavior using -o option.
- 
+
 Examples:
-  cqget -u admin http://localhost:5410/etc/packages/pack.zip            
+  cqget -u admin http://localhost:5410/etc/packages/pack.zip
                                  # Get package named pack.zip from CQ on stdout
   cqget -u admin -o PACK.zip http://localhost:5410/etc/packages/pack.zip
                                  # Get package named pack.zip and save it to
@@ -39,78 +39,79 @@ EOT
 exit 1
 }
 
-CWD=`dirname $0`
-API="$CWD/cqapi"
-APITEST=`$API -P`
-if [ $? -ne 0 ]
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find or test cqapi command" >&2
-	exit 1
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
 fi
 
-CURLBIN=`$API -c`
-if [ $? -ne 0 ]
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
 then
-	echo "Fatal: cannot find curl" >&2
-	exit 1
+    echo "Fatal: cannot find curl" >&2
+    exit 1
 fi
-
 
 # API common options
-cmdapi=`    $API -P $@`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
-while getopts ":o:${apigetopts}" opt; do
-  case $opt in
-     o)  
-      outfile="$OPTARG";;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+while getopts ":o:${apigetopts}" opt
+do
+    case "${opt}" in
+        o)
+            outfile="${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
 done
 shift $((OPTIND-1))
 
-if [ $# -ne 1 ];
+if [ ${#} -ne 1 ];
 then
-	_usage
+    _usage
 fi
-URL=$1
-REFERER="$URL"
-AUTH="$username:$password"
-REFERERHEADER="Referer: $REFERER"
+URL=${1}
+REFERER="${URL}"
+AUTH="${username}:${password}"
+REFERERHEADER="Referer: ${REFERER}"
 
-if [ -z "$outfile" ]
+if [ -z "${outfile}" ]
 then
-        outfile=`basename "$URL"`
+    outfile=$(basename "${URL}")
 fi
-redirection="-o $outfile"
 
-STATUS=`$CURLBIN \
-	-s \
-        --write-out "%{http_code}" \
-	-u "$AUTH" \
-	-H "$REFERERHEADER" \
-        -f \
-        ${redirection} \
-	"$URL"`
 
-EXITCODE=$?
-$API -C $EXITCODE
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-$API -H ${STATUSCODE}
-EXITCODE2=$?
+STATUS=$(${CURLBIN} \
+    -s \
+    --write-out "%{http_code}" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
+    -f \
+    -o "${outfile}" \
+    "${URL}")
+
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+
+EXITCODE2=${?}
 if [ ${EXITCODE} -eq 0 -a ${EXITCODE} -eq 0 ]
 then
-    if [ ! -z "$outfile" ]
+    if [ ! -z "${outfile}" ]
     then
-        fullfile=`readlink -f $outfile`
-        echo "Resource copied to: $fullfile" 
+        fullfile=$(readlink -f "${outfile}")
+        echo "Resource copied to: '${fullfile}'"
     fi
 fi
 
