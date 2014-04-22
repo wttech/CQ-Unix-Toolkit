@@ -6,13 +6,15 @@ Table of contents
 -----------------
 
 1. Introduction
-2. Which for what? (quick description for each tool)
-3. Supported shell environments
-4. Notes on Cygwin compatibility
-5. CQ Compatibilty
-6. Installation
-7. Building an RPM package
-8. Contributors
+2. Simplicity is divine
+3. Main characteristic
+4. Which for what? (quick description for each tool)
+5. Supported shell environments
+6. Notes on Cygwin compatibility
+7. CQ Compatibilty
+8. Installation
+9. Building an RPM package
+10. Contributors
 
 
 Introduction
@@ -31,6 +33,27 @@ party commands to perform some different tasks on Adobe CQ platform such as:
 
 Each action is wrapped in separate stand-alone script with additional usage
 output that allows to perform these tasks easily.
+
+
+Simplicity is divine
+--------------------
+
+Each tool is rather a very simple HTTP call template that use available CQ
+services with custom pre-processing or post-processing.
+
+The real power of such simple tool is combining them into a part of something
+bigger that can automate complex "click-consuming" tasks for many similar
+instances like:
+
+* Installing hotfixes/releases automatically
+* Synchronizing content or configurations between instances
+* Making and restoring path-based backups
+* Monitoring and maintenance
+* Controlling and monitoring OSGi bundles
+
+
+Main characteristic
+-------------------
 
 The toolkit aims at use only the basic built-in commands for typical UNIX/POSIX
 compliant system to avoid installing any 3rd party custom dependencies which is
