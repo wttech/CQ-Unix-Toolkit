@@ -34,7 +34,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -f                    simulates optimization in the foreground as blocking 
@@ -42,7 +42,7 @@ Options:
   -s                    sets delay in seconds between each status pooling 
                         request (default 10 seconds). Used only when -f 
                         parameter is specified.
-  -d                    sets delay in miliseconds (default 1 ms) between each
+  -d                    sets delay in milliseconds (default 1 ms) between each
                         compacted transaction
 
 EOT
