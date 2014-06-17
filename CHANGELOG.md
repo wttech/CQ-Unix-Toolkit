@@ -1,6 +1,11 @@
 What's new in...
 ================
 
+1.1.1
+-----
+
+* Package upload fix for cqput (stderr OK message fixed)
+
 1.1.0
 -----
 
