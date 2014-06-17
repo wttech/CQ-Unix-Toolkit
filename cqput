@@ -114,7 +114,7 @@ do
             bad=1
         else
             echo "${STATUS}"
-            echo "OK" >&2
+            echo "OK"
         fi
     fi
     shift
