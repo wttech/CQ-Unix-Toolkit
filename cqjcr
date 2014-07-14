@@ -82,7 +82,7 @@ _list_children()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=$(echo "$STATUS" | grep -o -E '[0-9]{3}' | tail -n 1)
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
@@ -103,7 +103,7 @@ _list_children()
         | ${SEDX} "s#${FULL_NODE_REGEXP}#\1#")
     if [ ! -z "${CLEARED_STATUS}" ]
     then
-        ${ECHO} "${CLEARED_STATUS}"
+        printf "%s" "${CLEARED_STATUS}"
     fi
     exit 0
 }
@@ -164,27 +164,27 @@ _list_properties()
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
-            ${ECHO} "Cannot find column utility"
+            echo "Cannot find column utility" >&2
             exit 1
         fi
-        ${ECHO} "NAME\tVALUE\n${STATUS}" | tr '\t' "${SEP}" \
-            | column -xt -c 2 -s "${SEP}"
+        printf "NAME\tVALUE\n%s" "${STATUS}" | tr '\t' "${SEP}" \
+            | "${COLUMN}" -xt -c 2 -s "${SEP}" 2>/dev/null
     else
-        ${ECHO} "${STATUS}"
+        printf "%s" "${STATUS}"
     fi
     exit 0
 }
 
 _modify_properties()
 {
-    ${ECHO} "Creating/modyfing ${root}"
+    echo "Creating/modyfing ${root}"
     actions=""
     for operation in ${operations}
     do
         propname=$(echo "${operation}" | cut -f1 -d '=' | ${SEDX} 's#%20# #g')
         propvalue=$(echo "${operation}" | cut -f2- -d '=' | ${SEDX} 's#%20# #g')
-        ${ECHO} "  Setting '${propname}' to: '${propvalue}' "
-        actions="${actions}-F\000${propname}=${propvalue}\000"
+        echo "  Setting '${propname}' to: '${propvalue}' "
+        actions="${actions}\055F\000${propname}=${propvalue}\000"
     done
 
     FILEPATH="${root}"
@@ -192,7 +192,8 @@ _modify_properties()
     REFERERHEADER="Referer: ${URL}"
     args="${actions}${URL}"
 
-    STATUS=$(${ECHO} -ne "${args}" |
+    # shellcheck disable=SC2059
+    STATUS=$(printf "${args}" | \
         xargs -0 "${CURLBIN}" \
         -s -X POST \
         --write-out "%{http_code}" \
@@ -277,7 +278,7 @@ _delete_node()
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
-"${API}" -P >dev/null 2>/dev/null
+"${API}" -P >/dev/null 2>/dev/null
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
@@ -392,8 +393,6 @@ then
 fi
 
 AUTH="${username}:${password}"
-ECHO=$(which echo)
-[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
 [ ${list} -eq 1 ] && _list_children
 [ ${properties} -eq 1 ] && _list_properties
 [ ${modify} -eq 1 ] && _modify_properties
