@@ -209,7 +209,7 @@ fi
 
 if [ "${STATUSCODE}" = "404" ]
 then
-    echo "Cannot find snapshot for: [G=${group}:N=${name}:V=${version}]" >&2
+    echo "Cannot find snapshot for: [G=${group_name}:N=${name}:V=${version}]" >&2
 fi
 
 exit $((EXITCODE + EXITCODE2))
