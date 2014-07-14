@@ -16,7 +16,7 @@
 _usage()
 {
     cat << EOT
-Usage: `basename "${0}"` [OPTION...]
+Usage: $(basename "${0}") [OPTION...]
 Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
 touch and mkdir commands
 
@@ -69,38 +69,38 @@ _list_children()
     FILEPATH="${root}.1.json"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-    STATUS=`${CURLBIN} \
+    STATUS=$("${CURLBIN}" \
         -s \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
-        "${URL}"`
+        "${URL}")
 
-    EXITCODE=${?}
-    "${API}" -C ${EXITCODE}
+    EXITCODE="${?}"
+    "${API}" -C "${EXITCODE}"
     if [ ${EXITCODE} -ne 0 ]
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "$STATUS" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
         exit ${EXITCODE2}
     fi
 
-    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
     NEW_NODE=':\{'
     NODE_NAME='[^"]+'
     STR_SEP='"'
     NODE_REGEXP_FULL_EXTRACT="(${STR_SEP}${NODE_NAME}${STR_SEP}${NEW_NODE})"
     NODE_REGEXP_EXTRACT="${STR_SEP}(${NODE_NAME})${STR_SEP}${NEW_NODE}"
     FULL_NODE_REGEXP=".*${NODE_REGEXP_EXTRACT}.*"
-    CLEARED_STATUS=`echo "${STATUS}" \
-        | sed -r "s#${NODE_REGEXP_FULL_EXTRACT}#\n\1#g" \
+    CLEARED_STATUS=$(echo "${STATUS}" \
+        | ${SEDX} "s#${NODE_REGEXP_FULL_EXTRACT}#\n\1#g" \
         | grep -E "${FULL_NODE_REGEXP}" \
-        | sed -r "s#${FULL_NODE_REGEXP}#\1#"`
+        | ${SEDX} "s#${FULL_NODE_REGEXP}#\1#")
     if [ ! -z "${CLEARED_STATUS}" ]
     then
         ${ECHO} "${CLEARED_STATUS}"
@@ -113,21 +113,21 @@ _list_properties()
     FILEPATH="${root}.json"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
-        "${URL}"`
+        "${URL}")
 
     EXITCODE=${?}
-    "${API}" -C ${EXITCODE}
+    "${API}" -C "${EXITCODE}"
     if [ ${EXITCODE} -ne 0 ]
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
@@ -147,21 +147,21 @@ _list_properties()
     TOKENS_NUM="${QT}(${NODE_NAME})${QT}:(${NUMBER}),?"
 
 
-    STATUS=`echo "${STATUS}"|sed -r 's#[0-9]{3}$##'`
-    STATUS=`echo "${STATUS}" | sed -r 's#\\\"#%9999%#' \
-        | sed -r "s#${PROP_NUM}#\n\1\n#g" \
-        | sed -r "s#${PROP_STR}#\n\1\n#g" \
-        | sed -r "s#${PROP_ARR}#\n\1\n#g" \
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%9999%#' \
+        | ${SEDX} "s#${PROP_NUM}#\n\1\n#g" \
+        | ${SEDX} "s#${PROP_STR}#\n\1\n#g" \
+        | ${SEDX} "s#${PROP_ARR}#\n\1\n#g" \
         | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR})" \
-        | sed -r "s#.*${TOKENS_NUM}.*#\1\t\2#" \
-        | sed -r "s#.*${TOKENS_STR}.*#\1\t\2#" \
-        | sed -r "s#.*${TOKENS_ARR}.*#\1\t\2#" \
-        | sed -r 's#%9999%#"#g'`
+        | ${SEDX} "s#.*${TOKENS_NUM}.*#\1\t\2#" \
+        | ${SEDX} "s#.*${TOKENS_STR}.*#\1\t\2#" \
+        | ${SEDX} "s#.*${TOKENS_ARR}.*#\1\t\2#" \
+        | ${SEDX} 's#%9999%#"#g')
 
-    if [ ${machine_friendly} -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 ]
     then
         SEP='|'
-        COLUMN=`which column`
+        COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
         then
             ${ECHO} "Cannot find column utility"
@@ -178,15 +178,13 @@ _list_properties()
 _modify_properties()
 {
     ${ECHO} "Creating/modyfing ${root}"
-    first=1
     actions=""
     for operation in ${operations}
     do
-        propname=`echo "${operation}" | cut -f1 -d '=' | sed -r 's#%20# #g'`
-        propvalue=`echo "${operation}" | cut -f2- -d '=' | sed -r 's#%20# #g'`
+        propname=$(echo "${operation}" | cut -f1 -d '=' | ${SEDX} 's#%20# #g')
+        propvalue=$(echo "${operation}" | cut -f2- -d '=' | ${SEDX} 's#%20# #g')
         ${ECHO} "  Setting '${propname}' to: '${propvalue}' "
         actions="${actions}-F\000${propname}=${propvalue}\000"
-        first=0
     done
 
     FILEPATH="${root}"
@@ -194,20 +192,20 @@ _modify_properties()
     REFERERHEADER="Referer: ${URL}"
     args="${actions}${URL}"
 
-    STATUS=`${ECHO} -ne "${args}" |
-        xargs -0 ${CURLBIN} \
+    STATUS=$(${ECHO} -ne "${args}" |
+        xargs -0 "${CURLBIN}" \
         -s -X POST \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
-        -H "${REFERERHEADER}"`
+        -H "${REFERERHEADER}")
     EXITCODE=${?}
     if [ ${EXITCODE} -ne 0 ]
     then
         echo "There was a problem calling: xargs + curl" >&2
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
@@ -222,23 +220,23 @@ _create_node()
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         -X POST \
         -F"jcr:primaryType=${type}" \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
-        "${URL}"`
+        "${URL}")
 
     EXITCODE=${?}
-    "${API}" -C ${EXITCODE}
+    "${API}" -C "${EXITCODE}"
     if [ ${EXITCODE} -ne 0 ]
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "$STATUS" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
@@ -252,13 +250,13 @@ _delete_node()
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         -X DELETE \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
-        "${URL}"`
+        "${URL}")
 
     EXITCODE=${?}
     "${API}" -C ${EXITCODE}
@@ -266,8 +264,8 @@ _delete_node()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "$STATUS"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
@@ -277,29 +275,30 @@ _delete_node()
 }
 
 
-CWD=`dirname "${0}"`
-API="$CWD/cqapi"
-APITEST=`"${API}" -P`
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >dev/null 2>/dev/null
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
 
+SEDX=$("${API}" -s)
 # API common options
-cmdapi=`    "${API}" -P ${@}`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 root=""
 list=0
@@ -314,7 +313,7 @@ v_counter=0
 machine_friendly=0
 delete=0
 while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
-  case $opt in
+  case "${opt}" in
      l)
       list=1
       root="${OPTARG}";;
@@ -339,7 +338,7 @@ while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
       modify=1
       if [ ! -z "${property_id}" ]
       then
-          propvalue=`echo "${OPTARG}" | sed 's# #%20#g'`
+          propvalue=$(echo "${OPTARG}" | sed 's# #%20#g')
           operations="${operations} ${property_id}=${propvalue}"
           property_id=""
       else
@@ -351,7 +350,7 @@ while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
      n)
       n_counter=$((n_counter+1))
       modify=1;
-      property_id=`echo "${OPTARG}" | sed 's# #%20#g'`;;
+      property_id=$(echo "${OPTARG}" | sed 's# #%20#g');;
      \?)
       echo "Invalid option: -$OPTARG" >&2; _usage;;
      :)
@@ -360,7 +359,7 @@ while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ ${#} -gt 0 -o ${passed} -eq 0 ]
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
 then
     echo "You need to choose one of the following operation:" >&2
     echo " -l / -s / -c / -a" >&2
@@ -393,7 +392,7 @@ then
 fi
 
 AUTH="${username}:${password}"
-ECHO=`which echo`
+ECHO=$(which echo)
 [ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
 [ ${list} -eq 1 ] && _list_children
 [ ${properties} -eq 1 ] && _list_properties
