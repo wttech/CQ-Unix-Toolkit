@@ -16,7 +16,7 @@
 _usage()
 {
 	cat << EOT
-Usage: `basename "${0}"` [OPTION...] package-name
+Usage: $(basename "${0}") [OPTION...] package-name
 Download installation snapshot specified by package name and optionally group
 and version. Optionally package can be dropped from CQ after downloading.
  
@@ -62,16 +62,16 @@ EOT
 exit 1
 }
 
-CWD=`dirname "${0}"`
+CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
-APITEST=`"${API}" -P`
+"${API}" -P 2> /dev/null > /dev/null
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
@@ -80,12 +80,12 @@ fi
 
 
 # API common options
-cmdapi=`    "${API}" -P ${@}`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 drop=0
@@ -93,7 +93,7 @@ null=0
 file=0
 version="1.0"
 while getopts ":o:dv:g:0${apigetopts}" opt; do
-  case $opt in
+  case "${opt}" in
      o)  
       outfile="${OPTARG}";
       file=1;;
@@ -113,7 +113,7 @@ while getopts ":o:dv:g:0${apigetopts}" opt; do
 done
 shift $((OPTIND-1))
 
-if [ ${#} -ne 1 ]
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
 then
     _usage
 fi
@@ -134,15 +134,15 @@ then
     _usage
 fi
 
-name=${1}
-INSTANCE_URL=${instance}
+name="${1}"
+INSTANCE_URL="${instance}"
 PACKAGES_PATH="/etc/packages"
 SNAPSHOT_NODE=".snapshot"
 EXTENSION=".zip"
 
 [ -z "${group_name}" ] && GROUP_PATH="" || GROUP_PATH="/${group_name}"
 
-CQ_PKG_URL="${instance}${PACKAGES_PATH}"
+CQ_PKG_URL="${INSTANCE_URL}${PACKAGES_PATH}"
 
 [ -z "${version}" ] && verspec="" || verspec="-${version}"
 
@@ -164,41 +164,41 @@ then
 fi
 
 
-STATUS=`${CURLBIN} \
+STATUS=$("${CURLBIN}" \
         -s \
         --write-out "%{http_code}" \
         -u "${AUTH}" \
         -H "${REFERER_HEADER}" \
         -o "${outfile}" \
-        "${URL}"`
+        "${URL}")
 
-EXITCODE=$?
-"${API}" -C $EXITCODE
-STATUSCODE=`echo "$STATUS"|tail -n 1`
-"${API}" -H ${STATUSCODE}
+EXITCODE=${?}
+"${API}" -C "${EXITCODE}"
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+"${API}" -H "${STATUSCODE}"
 EXITCODE2=$?
 if [ ${EXITCODE} -eq 0 -a ${EXITCODE2} -eq 0 ]
 then
-    if [ ! -z "${outfile}" -a ${null} -ne 1 ]
+    if [ ! -z "${outfile}" -a "${null}" -ne 1 ]
     then
-        fullfile=`readlink -f "${outfile}"`
-        echo "Uninstall snapshot saved as: $fullfile" 
+        fullfile=$(readlink -f "${outfile}")
+        echo "Uninstall snapshot saved as: ${fullfile}"
     fi
     
-    if [ $drop -eq 1 ]
+    if [ ${drop} -eq 1 ]
     then
-        STATUS=`${CURLBIN} \
+        STATUS=$(${CURLBIN} \
                 -s \
                 --write-out "%{http_code}" \
                 -u "${AUTH}" \
                 -H "${REFERER_HEADER}" \
                 -X DELETE \
                 -f \
-                "${URL}"`
+                "${URL}")
         EXITCODE=$?
-        "${API}" -C $EXITCODE
-        STATUSCODE=`echo "$STATUS"|tail -n 1`
-        "${API}" -H ${STATUSCODE}
+        "${API}" -C ${EXITCODE}
+        STATUSCODE=$(echo "$STATUS" | tail -n 1)
+        "${API}" -H "${STATUSCODE}"
         EXITCODE2=$?
         if [ ${EXITCODE} -eq 0 -a ${EXITCODE2} -eq 0 ]
         then
