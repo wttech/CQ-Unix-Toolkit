@@ -16,7 +16,7 @@
 _usage()
 {
     cat << EOT
-Usage: `basename "${0}"` [OPTION...] configuration-id
+Usage: $(basename "${0}") [OPTION...] configuration-id
 Delete specified OSGI configuration from instance passed as -i URL option.
 Please be cautious before deletion unknown configuration. This may harm your
 CQ instance and make it unusable.
@@ -44,7 +44,7 @@ exit 1
 _delete_configuration()
 {
     CONFIGMGR="/system/console/configMgr/"
-    original_config_id=`echo "${config_id}" | sed 's#%20# #g'`
+    original_config_id=$(echo "${config_id}" | sed 's#%20# #g')
 
     echo "Deleting '${original_config_id}'."
     FILEPATH="${CONFIGMGR}${config_id}"
@@ -54,13 +54,13 @@ _delete_configuration()
 
     QUERYSTRING="${CONST_PARAMS}"
     URL="${instance}${FILEPATH}${QUERYSTRING}"
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         --write-out "%{http_code}" \
         -u "$AUTH" \
         -H "$REFERERHEADER" \
         -X POST \
-        "${URL}"`
+        "${URL}")
 
     EXITCODE=${?}
     "${API}" -C $EXITCODE
@@ -68,8 +68,8 @@ _delete_configuration()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
@@ -79,17 +79,16 @@ _delete_configuration()
 }
 
 
-CWD=`dirname "${0}"`
+CWD=$(dirname "${0}")
 API="$CWD/cqapi"
-APITEST=`"${API}" -P`
-
+"${API}" -P >/dev/nul 2>/dev/null
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
@@ -98,33 +97,32 @@ fi
 
 
 # API common options
-cmdapi=`    "${API}" -P ${@}`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 while getopts ":${apigetopts}" opt; do
-  case $opt in
+  case "${opt}" in
      \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
+      echo "Invalid option: -${OPTARG}" >&2; _usage;;
      :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
   esac
 done
 shift $((OPTIND-1))
 
-if [ ${#} -ne 1 -o ${passed} -eq 0 ]
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
 then
     _usage
 fi
 
 config_id="${1}"
-config_id=`echo "${config_id}" | sed 's# #%20#g'`
+config_id=$(echo "${config_id}" | sed 's# #%20#g')
 AUTH="${username}:${password}"
-ECHO=`which echo`
-[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+
 _delete_configuration
 
