@@ -54,7 +54,7 @@ _list_configurations()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=$(echo "$STATUS" | grep -o -E '[0-9]{3}' | tail -n 1)
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
