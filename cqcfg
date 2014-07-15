@@ -16,7 +16,7 @@
 _usage()
 {
     cat << EOT
-Usage: `basename "${0}"` [OPTION...] [configuration-id]
+Usage: $(basename "${0}") [OPTION...] [configuration-id]
 Return details of specified OSGI configuration in pretty-printed form or
 machine-friendly form (-m/-n) using instance URL. Allows to modify OSGI
 configuration (-s/-v) or even create a new configuration based on factory (-f).
@@ -76,18 +76,18 @@ exit 1
 
 _print_general_info()
 {
-    DETAILS=`echo "${STATUS}" | sed -r "s#${PROP_REGEXP}#\1\3#"`
+    DETAILS=$(echo "${STATUS}" | ${SEDX} "s#${PROP_REGEXP}#\1\3#")
     D1='"pid":"([^"]*)"'
     D2='"title":"([^"]*)"'
     D3='"description":"([^"]*)"'
     D4='"bundleLocation":"([^"]*)"'
-    PID=`echo "${DETAILS}" | grep -E -o "${D1}" | sed -r "s#.*${D1}.*#\1#"`
-    TITLE=`echo "${DETAILS}" | grep -E -o "${D2}" | sed -r "s#.*${D2}.*#\1#"`
-    DESCRIPTION=`echo "${DETAILS}" | grep -E -o "${D3}" \
-        | sed -r "s#.*${D3}.*#\1#"`
-    BUNDLE=`echo "${DETAILS}" | grep -E -o "${D4}" | sed -r "s#.*${D4}.*#\1#"`
+    PID=$(echo "${DETAILS}" | grep -E -o "${D1}" | ${SEDX} "s#.*${D1}.*#\1#")
+    TITLE=$(echo "${DETAILS}" | grep -E -o "${D2}" | ${SEDX} "s#.*${D2}.*#\1#")
+    DESCRIPTION=$(echo "${DETAILS}" | grep -E -o "${D3}" \
+        | ${SEDX} "s#.*${D3}.*#\1#")
+    BUNDLE=$(echo "${DETAILS}" | grep -E -o "${D4}" | ${SEDX} "s#.*${D4}.*#\1#")
 
-    if [ ${machine_friendly} -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 ]
     then
         output="PID\t${PID}\n"
         output="${output}TITLE\t${TITLE}\n"
@@ -97,16 +97,17 @@ _print_general_info()
         output="${PID}\n${TITLE}\n${DESCRIPTION}\n${BUNDLE}"
     fi
 
-    if [ ${machine_friendly} -eq 0 -o ${info} -eq 1 ]
+    if [ "${machine_friendly}" -eq 0 -o "${info}" -eq 1 ]
     then
-        echo "${output}" | "${API}" -F ${machine_friendly}
+        echo "${output}" | "${API}" -F "${machine_friendly}"
     fi
 }
 
 _print_properties()
 {
     PROP_ENTRY_REGEXP='("[^"]+":\{"name":)'
-    PROP_ENTRIES=`echo "${PROPERTIES}" | sed -r "s#${PROP_ENTRY_REGEXP}#\n\1#g"`
+    PROP_ENTRIES=$(echo "${PROPERTIES}" \
+        | ${SEDX} "s#${PROP_ENTRY_REGEXP}#\n\1#g")
 
     PR12='"([^"]+)":\{"name":"([^"]*)",'
     PR3='"type":(.*),'
@@ -120,35 +121,35 @@ _print_properties()
     VALUES_RG='\{"labels":\[.*\],"values":(\[.*\])\},?'
     SWAPRG='(.*)\t(.*)\t(.*)\t(.*)\t(.*)}?'
     TYPE_ID_RG='(.*)\t(.*)\t(.*)\t(.*)\t([0-9]+,?).*'
-    PROPS_BASIC_ROWS=`echo "${PROP_ENTRIES}" | \
+    PROPS_BASIC_ROWS=$(echo "${PROP_ENTRIES}" | \
         grep -E "${PR12}" \
-        | sed -r "s#${PR12}${PR3S}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4N}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | sed -r "s#${PR12}${PR3A}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | sed -r "s#${PR12}${PR3S}${PR4}#\1\t\4\t\2\t\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4N}#\1\t\4\t\2\t\t\3#" \
-        | sed -r "s#${PR12}${PR3A}${PR4A}#\1\t\4\t\2\t\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4A}#\1\t\4\t\2\t\t\3#" \
-        | sed -r "s#${PR12}${PR3}${PR4}#\1\t\4\t\2\t\t\3#" \
-        | sed -r "s#${VALUES_RG}#\1#" \
-        | sed -r "s#${TYPE_ID_RG}#\1\t\2\t\3\t\4\t#" \
-        | sed -r "s#${SWAPRG}#\1\t\2\t\3\t\5\t\4#" \
-        | sed -r 's#%22#"#g'`
+        | ${SEDX} "s#${PR12}${PR3S}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4N}${PR5}#\1\t\4\t\2\t\5\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3A}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3S}${PR4}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4N}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3A}${PR4A}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4A}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${VALUES_RG}#\1#" \
+        | ${SEDX} "s#${TYPE_ID_RG}#\1\t\2\t\3\t\4\t#" \
+        | ${SEDX} "s#${SWAPRG}#\1\t\2\t\3\t\5\t\4#" \
+        | ${SEDX} 's#%22#"#g')
 
     output="${PROPS_BASIC_ROWS}"
-    if [ ${machine_friendly} -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 ]
     then
         output="ID\tVALUE\tNAME\tVALUES\tDESCRIPTION\n${output}"
     fi
-    if [ ${long} -eq 0 ]
+    if [ "${long}" -eq 0 ]
     then
-        output=`${ECHO} "${output}" | cut -f1-4`
+        output=$(printf "%s" "${output}" | cut -f1-4)
     fi
-    if [ ${machine_friendly} -eq 0 -o ${info} -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 -o "${info}" -eq 0 ]
     then
-        echo "${output}" | "${API}" -F ${machine_friendly}
+        echo "${output}" | "${API}" -F "${machine_friendly}"
     fi
 }
 
@@ -158,44 +159,44 @@ _print_configuration()
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
 
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         --write-out "%{http_code}" \
         -u "$AUTH" \
         -H "$REFERERHEADER" \
         -X POST \
-        "$instance${FILEPATH}"`
+        "$instance${FILEPATH}")
 
     EXITCODE=${?}
-    "${API}" -C $EXITCODE
+    "${API}" -C "${EXITCODE}"
     if [ ${EXITCODE} -ne 0 ]
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "${STATUS}"|grep -o -E '[0-9]{3}'|tail -n 1`
-    "${API}" -H ${STATUSCODE}
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
     if [ ${EXITCODE2} -ne 0 ]
     then
         exit ${EXITCODE2}
     fi
-    TAB=`${ECHO} "\t"`
-    STATUS=`echo "${STATUS}" | sed -r 's#[0-9]{3}$##'`
 
-    if [ ${original} -eq 1 ]
+    STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+
+    if [ "${original}" -eq 1 ]
     then
         echo "${STATUS}"
         exit
     fi
 
     PROP_REGEXP='(.*)"properties":\{(.+})}(.*)'
-    PROPERTIES=`echo "${STATUS}" | sed -r 's#\\\"#%22#g' | \
-        grep -E -o "${PROP_REGEXP}" | sed -r "s#${PROP_REGEXP}#\2#" `
+    PROPERTIES=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%22#g' | \
+        grep -E -o "${PROP_REGEXP}" | ${SEDX} "s#${PROP_REGEXP}#\2#")
 
     _print_general_info
-    if [ ${machine_friendly} -eq 0 ]
+    if [ "${machine_friendly}" -eq 0 ]
     then
-       ${ECHO} -e "\n\n"
+       printf "\n\n"
     fi
     _print_properties
     exit
@@ -204,13 +205,13 @@ _print_configuration()
 _modify_configuration()
 {
     CONFIGMGR="/system/console/configMgr/"
-    original_config_id=`echo "${config_id}" | sed 's#%20# #g'`
+    original_config_id=$(echo "${config_id}" | sed 's#%20# #g')
 
-    if [ ${factory} -eq 1 ]
+    if [ "${factory}" -eq 1 ]
     then
         echo "Using factory: '${original_config_id}'."
-        temp_pid=`echo "[Temporary PID replaced by real PID upon save]" | \
-            "${API}" -f`
+        temp_pid=$(echo "[Temporary PID replaced by real PID upon save]" | \
+            "${API}" -f)
         FACTORY="factoryPid=${config_id}&"
         FILEPATH="${CONFIGMGR}${temp_pid}"
     else
@@ -224,29 +225,29 @@ _modify_configuration()
     first=1
     for operation in ${operations}
     do
-            propname=`echo "${operation}" | cut -f1 -d '='`
-            propvalue=`echo "${operation}" | cut -f2- -d '=' |\
-                sed 's# #%20#g' | "${API}" -f`
+            propname=$(echo "${operation}" | cut -f1 -d '=')
+            propvalue=$(echo "${operation}" | cut -f2- -d '=' |\
+                sed 's# #%20#g' | "${API}" -f)
 
-            prop_original_value=`echo "${operation}" | cut -f2- -d '=' |\
-                sed 's#%20# #g'`
-            ${ECHO} "  Setting '${propname}' to: '${prop_original_value}' "
+            prop_original_value=$(echo "${operation}" | cut -f2- -d '=' |\
+                sed 's#%20# #g')
+            echo "  Setting '${propname}' to: '${prop_original_value}' "
 
-            [ ${first} -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
+            [ "${first}" -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
             REQ_ACTION="${REQ_ACTION}${propname}=${propvalue}"
-            [ ${first} -eq 0 ] && PROPERTIES="${PROPERTIES}%2C"
+            [ "${first}" -eq 0 ] && PROPERTIES="${PROPERTIES}%2C"
             PROPERTIES="${PROPERTIES}${propname}"
             first=0
     done
     QUERYSTRING="${CONST_PARAMS}${REQ_ACTION}${PROPERTIES}"
     URL="${instance}${FILEPATH}${QUERYSTRING}"
-    STATUS=`${CURLBIN} \
+    STATUS=$(${CURLBIN} \
         -s \
         --write-out "%{http_code}\n%{redirect_url}" \
         -u "$AUTH" \
         -H "$REFERERHEADER" \
         -X POST \
-        "${URL}"`
+        "${URL}")
 
     EXITCODE=${?}
     "${API}" -C $EXITCODE
@@ -254,30 +255,30 @@ _modify_configuration()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=`echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1`
-    NEW_CONFIG_ID=`echo "${STATUS}" | tail -n 1 | \
-        sed -r "s#.*(${config_id}.*)#\1#"`
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1)
+    NEW_CONFIG_ID=$(echo "${STATUS}" | tail -n 1 | \
+        ${SEDX} "s#.*(${config_id}.*)#\1#")
 
     TEMPORARY_REDIRECT="302"
     if [ ! "${STATUSCODE}" = "${TEMPORARY_REDIRECT}" ]
     then
-        "${API}" -H ${STATUSCODE}
+        "${API}" -H "${STATUSCODE}"
         EXITCODE2=$?
         if [ ${EXITCODE2} -ne 0 ]
         then
             exit ${EXITCODE2}
         fi
     fi
-    if [ ${factory} -eq 1 ]
+    if [ "${factory}" -eq 1 ]
     then
         echo "New configuration created: ${NEW_CONFIG_ID}"
     fi
     exit
 }
 
-CWD=`dirname "${0}"`
+CWD=$(dirname "${0}")
 API="$CWD/cqapi"
-APITEST=`"${API}" -P`
+"${API}" -P >/dev/null 2>/dev/null
 
 if [ ${?} -ne 0 ]
 then
@@ -285,21 +286,22 @@ then
     exit 1
 fi
 
-CURLBIN=`"${API}" -c`
+CURLBIN=$("${API}" -c)
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
 
+SEDX=$("${API}" -s)
 
 # API common options
-cmdapi=`    "${API}" -P ${@}`
-username=`  echo "${cmdapi}" | cut -f1`
-password=`  echo "${cmdapi}" | cut -f2`
-instance=`  echo "${cmdapi}" | cut -f3`
-passed=`    echo "${cmdapi}" | cut -f4`
-apigetopts=`echo "${cmdapi}" | cut -f5`
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 machine_friendly=0
@@ -313,7 +315,7 @@ factory=0
 v_counter=0
 s_counter=0
 while getopts ":lfjmns:v:${apigetopts}" opt; do
-  case $opt in
+  case "${opt}" in
      j)
       original=1;;
      m)
@@ -329,13 +331,13 @@ while getopts ":lfjmns:v:${apigetopts}" opt; do
       modify=1
       if [ ! -z "${property_id}" ]
       then
-          propvalue=`echo "${OPTARG}" | sed 's# #%20#g'`
+          propvalue=$(echo "${OPTARG}" | sed 's# #%20#g')
           operations="${operations} ${property_id}=${propvalue}"
           property_id=""
       else
           echo "For each -v option there must be -s preceeding"\
             "option specified" >&2
-          echo ""
+          echo "" >&2
           _usage
       fi;;
      s)
@@ -343,19 +345,19 @@ while getopts ":lfjmns:v:${apigetopts}" opt; do
       modify=1;
       property_id="${OPTARG}";;
      \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
+      echo "Invalid option: -${OPTARG}" >&2; _usage;;
      :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
+      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
   esac
 done
 shift $((OPTIND-1))
 
-if [ ${#} -ne 1 -o ${passed} -eq 0 ]
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
 then
     _usage
 fi
 
-if [ ${s_counter} -ne ${v_counter} ]
+if [ "${s_counter}" -ne "${v_counter}" ]
 then
     echo "Options: -s and -v are connected together. You need to specify" \
      "matching pairs of such options (property/value)." >&2
@@ -364,13 +366,13 @@ then
 fi
 
 config_id="${1}"
-if [ ${machine_friendly} -eq 1 -a ${original} -eq 1 ]
+if [ "${machine_friendly}" -eq 1 -a "${original}" -eq 1 ]
 then
     echo "Switches: -j and -m cannot be applied together." >&2
     echo ""
     _usage
 fi
-if [ ${machine_friendly} -eq 0 -a ${info} -eq 1 ]
+if [ "${machine_friendly}" -eq 0 -a "${info}" -eq 1 ]
 then
     echo "Option: -n is dedicated for -m (machine-friendly output)." >&2
     echo ""
@@ -378,28 +380,27 @@ then
 fi
 
 AUTH="${username}:${password}"
-config_id=`echo "${config_id}" | sed 's# #%20#g'`
+config_id=$(echo "${config_id}" | sed 's# #%20#g')
 view_options=$((original+info+machine_friendly))
-if [ -z "${operations}" -a ${factory} -eq 1 ]
+if [ -z "${operations}" -a "${factory}" -eq 1 ]
 then
     echo "New configuration from factory -f option must be applied" \
         "together with modify operations: -s/-v" >&2
     echo "See what properties are supported. Call this command with factory" \
         " id but without -f/-s/-v options" >&2
-    echo ""
+    echo "" >&2
     _usage
     exit 2
 fi
 
-if [ "${operations}" != "" -a ${view_options} -ge 1 ]
+if [ "${operations}" != "" -a "${view_options}" -ge 1 ]
 then
     echo "View options -m, -j, -n or -l cannot be applied together " \
         "with modify operations: -s/-v. Choose only one functionality." >&2
     exit 2
 fi
 
-ECHO=`which echo`
-[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
-[ ${modify} -eq 0 ] && _print_configuration
-[ ${modify} -eq 1 ] && _modify_configuration
+
+[ "${modify}" -eq 0 ] && _print_configuration
+[ "${modify}" -eq 1 ] && _modify_configuration
 
