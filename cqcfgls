@@ -94,7 +94,7 @@ _list_configurations()
 
     STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
     CLEARED_STATUS2=$(echo "${STATUS}" | grep '^PID' | ${SEDX} 's#&nbsp;# #g' \
-        | ${SEX} 's#<br/>##g' | cut -f2- -d '=' \
+        | ${SEDX} 's#<br/>##g' | cut -f2- -d '=' \
         | ${SEDX} 's#^[ ]+##; s#[ ]+$##')
 
     printf "%s\n%s" "${CLEARED_STATUS}" "${CLEARED_STATUS2}" | sort | uniq
