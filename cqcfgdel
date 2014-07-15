@@ -81,7 +81,7 @@ _delete_configuration()
 
 CWD=$(dirname "${0}")
 API="$CWD/cqapi"
-"${API}" -P >/dev/nul 2>/dev/null
+"${API}" -P >/dev/null 2>/dev/null
 if [ ${?} -ne 0 ]
 then
     echo "Fatal: cannot find or test cqapi command" >&2
