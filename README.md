@@ -72,6 +72,8 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqosgi` -- Display bundles list and manage them by starting/stopping on demand
 * `cqclr` -- Simulates activation on dispatcher to clear its cache. Use dispatcher
   URL, (not CQ one) as instance URL (-i option).
+* `cqsnp` -- Download and/or delete package installation backup/snapshot that
+  is used for uninstalling packages.
 
 Each script can be executed *without parameters* from your terminal i.e.:
 
