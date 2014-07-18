@@ -1,6 +1,7 @@
 CQ-Unix-Toolkit
 ===============
 
+![CQ Unix Toolkit logo](logo.png)
 
 Table of contents
 -----------------
