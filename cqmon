@@ -41,16 +41,162 @@ exit 1
 
 _jcr_sessions() 
 {
+    JMX="/system/console/jmx/com.adobe.granite%3Aname%3DSESSION_COUNT%2Ctype%3DTimeSeries"
+    REFERER="${instance}${JMX}"
+    AUTH="${username}:${password}"
+    FILEPATH="${JMX}"
+    REFERERHEADER="Referer: ${REFERER}"
+
+    STATUS=$(${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${instance}${FILEPATH}")
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
+    EXITCODE2=${?}
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    VAR="ValuePerSecond"
+    ARR="[0-9\", ]*"    
+    SESSIONS=$(echo "${STATUS}" | tr -d '\n' \
+        | ${SEDX} "s#.*${TR}${TD}${VAR}${NTD}${TD}(${ARR})${NTD}${NTR}.*#\1#")
+    SESSION=$(echo "${SESSIONS}" | tr -d ' ' | tr ',' '\n' | tail -1)
+    echo ${SESSION}
     exit 0
 }
 
 _sling_stats() 
 {
+    JMX="/system/console/jmx/org.apache.sling%3Aservice%3DRequestProcessor%2Ctype%3Dengine"
+    REFERER="${instance}${JMX}"
+    AUTH="${username}:${password}"
+    FILEPATH="${JMX}"
+    REFERERHEADER="Referer: ${REFERER}"
+
+    STATUS=$(${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${instance}${FILEPATH}")
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
+    EXITCODE2=${?}
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    NUM="[-0-9\.NaN]*"
+    VAR1="${TR}${TD}StandardDeviationDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
+    VAR2="${TR}${TD}RequestsCount${NTD}${TD}(${NUM})${NTD}${NTR}"
+    VAR3="${TR}${TD}MinRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
+    VAR4="${TR}${TD}MaxRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
+    VAR5="${TR}${TD}MeanRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
+    V1=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR1}.*#\1#")
+    V2=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR2}.*#\1#")
+    V3=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR3}.*#\1#")
+    V4=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR4}.*#\1#")
+    V5=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR5}.*#\1#")    
+    
+    row1=$(printf "Number of requests\t%s" "${V2}")
+    row2=$(printf "Min duration in miliseconds\t%s" "${V3}")
+    row3=$(printf "Max duration in miliseconds\t%s" "${V4}")
+    row4=$(printf "StdDev duration in miliseconds\t%s" "${V1}")
+    row5=$(printf "Mean duration in miliseconds\t%s" "${V5}")
+    output=$(printf "%s\n%s\n%s\n%s\n%s\n" "${row1}" "${row2}" "${row3}" \
+        "${row4}" "${row5}")
+    printf "${output}" | ${API} -F "${machine_friendly}"
+
     exit 0
 }
 
 _replication_queue() 
 {
+    JMXPATH="/system/console/jmx"
+    JMX="${JMXPATH}/com.adobe.granite.replication%3Aid%3D\"${1}\"%2Ctype%3Dagent"
+    REFERER="${instance}${JMX}"
+    AUTH="${username}:${password}"
+    FILEPATH="${JMX}"
+    REFERERHEADER="Referer: ${REFERER}"
+
+    STATUS=$(${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        "${instance}${FILEPATH}")
+
+    EXITCODE=${?}
+    "${API}" -C ${EXITCODE}
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    "${API}" -H "${STATUSCODE}"
+    EXITCODE2=${?}
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    CHR="[-0-9\nA-Za-z:\+ ]*"
+    FORM="<form[^<]*>.*</form>"
+    NULL="<null>"
+    VAR1="${TR}${TD}Id${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR2="${TR}${TD}Valid${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR3="${TR}${TD}Enabled${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR4="${TR}${TD}QueueBlocked${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR5="${TR}${TD}QueuePaused${NTD}${TD}(${CHR})${FORM}${NTD}${NTR}"
+    VAR6="${TR}${TD}QueueNumEntries${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR7="${TR}${TD}QueueStatusTime${NTD}${TD}(${CHR})${NTD}${NTR}"
+    VAR8="${TR}${TD}QueueNextRetryTime${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"
+    VAR9="${TR}${TD}QueueProcessingSince${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"
+    VAR10="${TR}${TD}QueueLastProcessTime${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"    
+    V1=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR1}.*#\1#")
+    V2=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR2}.*#\1#")
+    V3=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR3}.*#\1#")
+    V4=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR4}.*#\1#")
+    V5=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR5}.*#\1#")
+    V6=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR6}.*#\1#")
+    V7=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR7}.*#\1#")
+    V8=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR8}.*#\1#")
+    V9=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR9}.*#\1#")
+    V10=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR10}.*#\1#")
+    row1=$(printf "ID\t%s" "${V1}")
+    row2=$(printf "Valid?\t%s" "${V2}")
+    row3=$(printf "Enabled\t%s" "${V3}")
+    row4=$(printf "Blocked\t%s" "${V4}")
+    row5=$(printf "Paused\t%s" "${V5}")
+    row6=$(printf "Entries\t%s" "${V6}")
+    row7=$(printf "Status time\t%s" "${V7}")
+    row8=$(printf "Next retry time\t%s" "${V8}")
+    row9=$(printf "Processing since\t%s" "${V9}")
+    row10=$(printf "Last processing time\t%s" "${V10}")
+    output=$(printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n" "${row1}" \
+        "${row2}" "${row3}" "${row4}" "${row5}" "${row6}" "${row7}" \
+        "${row8}" "${row9}" "${row10}")
+    printf "%s" "${output}" | ${API} -F "${machine_friendly}"
     exit 0
 }
 
@@ -70,6 +216,8 @@ then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
+
+SEDX=$("${API}" -s)
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -109,8 +257,11 @@ then
 fi
 
 AUTH="${username}:${password}"
-ECHO=$(which echo)
-[ $? -ne 0 -o -z "$ECHO" ] && ECHO="echo" || ECHO="$ECHO -e "
+
+TR="<tr[^>]*>"
+TD="<td[^>]*>"
+NTD="</td>"
+NTR="</tr>"
 
 case "${mode}" in
     r) _replication_queue "${agent}";;
