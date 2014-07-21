@@ -17,12 +17,21 @@ _usage()
 {
     cat << EOT
 Usage: $(basename "${0}") [OPTION...]
-Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
-touch and mkdir commands
+Monitor Sling and CQ critical measures and indicators like number of requests,
+duration, repository sessions, replication queues.
 
 Examples:
-  cqjcr -u admin -l /              # Return JCR child nodes for '/' existing on
-                                   # the local instance
+  cqmon -u admin -r publish        # Return replication status for 'publish'
+                                   # replication queue using 'admin' username
+  cqmon -u admin -p passw0rd -s    # Return Sling instance requests status
+                                   # and statistics like avg request duration,
+                                   # total number of requests with custom
+                                   # credentials 'admin' and 'passw0rd' for
+                                   # local instance
+  cqmon -u admin -p passw0rd -S    # Return number of currently opened JCR
+        -i http://10.0.0.1:5510    # sessions (repository sessions) on
+                                   # instance located at 10.0.0.1 on port 5510
+                                   # using custom credentials
 
 
 Options:
