@@ -1,6 +1,7 @@
 CQ-Unix-Toolkit
 ===============
 
+![CQ Unix Toolkit logo](logo.png)
 
 Table of contents
 -----------------
@@ -126,9 +127,14 @@ Notes on Windows/Cygwin compatibility
 In order to use toolkit on cygwin make sure you have marked/installed the
 following cygwin packages:
 
-* `util-linux` (required for all tools)
+* `util-linux` (required for all tools) 
+  ![Marking curl package](doc/cygwin1-curl.png)
 * `curl` (required for almost all tools)
+  ![Marking util-linux package](doc/cygwin2-util-linux.png)
 * `zip` (required for cqpkg tool)
+  ![Marking zip/unzip package](doc/cygwin3-zip.png)
+
+If you have any problems, please see [cygwin installation screencast](http://www.youtube.com/watch?v=11ilswbIjkg).
 
 To test commands just type in command line the following expressions and
 compare results:
