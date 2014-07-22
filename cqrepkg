@@ -17,10 +17,10 @@ _usage()
 {
 	cat <<EOT
 Usage: $(basename "${0}") [SPECIFICATION...] package-file
-Repackage/rewrite CQ Vault zip package locally (without connecting to CQ) 
+Read or repackage CQ Vault zip package locally (without connecting to CQ)
 using provided specification. The new package will be regenerated next to
 the original package. That behavior can be overridden. Without any specification
-the package general details will be displayed.
+the package general details will be displayed (read behavior instead of rewrite)
 
 Examples:
   cqrepkg -r /content/item            # Create package 'content-1.0-repkged.zip'
@@ -68,29 +68,45 @@ _add_filter()
 {
     filter_definition=$(cat <<EOF
 ${filter_definition}
-<filter root="${1}">
+${1}
 EOF
     )
 }
 
-_add_include_entry()
+_prepare_intermediary_paths_for_unpack()
 {
-    filter_definition=$(cat <<EOF
-${filter_definition}
-  <include pattern="${1}"/>
-EOF
-    )
+    partial_path=""
+    for path_element in $(echo "${1}" | tr '/' ' ')
+    do
+        partial_path="${partial_path}/${path_element}"
+        if [ "${partial_path}" != "${1}" ]
+        then
+            unpack_args="${unpack_args}\000jcr_root${partial_path}/.content.xml"
+        fi
+    done
 }
 
-_add_exclude_entry()
+prepare_unpack_args()
 {
-    filter_definition=$(cat <<EOF
-${filter_definition}
-  <exclude pattern="${1}"/>
-EOF
-    )
+    unpack_args="META-INF/*\000jcr_root/.content.xml"
+    for new_filter in ${new_filters}
+    do
+        _prepare_intermediary_paths_for_unpack "${new_filter}"
+        unpack_args="${unpack_args}\000jcr_root${new_filter}/*"
+    done
 }
 
+_clean_up()
+{
+    tree_level=$(echo "${tempdir}" | tr -cd '/' | wc -c)
+    if [ -n "${tempdir}" -a "${tree_level}" -gt 1 ]
+    then
+        # shellcheck disable=SC2115
+        rm -fr "${tempdir}/" >/dev/null
+    else
+        echo "Covardly refused to clean up '${tempdir}' directory" >&2
+    fi
+}
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
@@ -101,64 +117,32 @@ then
     exit 1
 fi
 
-filter_definition=$(cat <<EOT
-<?xml version="1.0" encoding="UTF-8"?>
-<workspaceFilter version="1.0">
-EOT
-)
+SEDX=$("${API}" -s)
+
 toolkit_version=$("${API}" -v)
-package_definition=$(cat <<EOT
-<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
-<properties>
-<comment>FileVault Package Properties</comment>
-<entry key="createdBy">cq-unix-toolkit</entry>
-<entry key="buildCount">1</entry>
-<entry key="dependencies"/>
-<entry key="packageFormatVersion">2</entry>
-EOT
-)
-
-description="Package genereated by CQ Unix Toolkit ${toolkit_version}"
-in_filter_context=0
 version="1.0"
-
-while getopts ":g:v:r:i:e:o:d:" opt
+modify=0
+while getopts ":g:v:r:n:o:d:" opt
 do
     case "${opt}" in
         g)
-            group="${OPTARG}";;
+            modify=1
+            new_name="${OPTARG}";;
+        g)
+            modify=1
+            new_group="${OPTARG}";;
         v)
-            version="${OPTARG}";;
+            modify=1
+            new_version="${OPTARG}";;
         d)
-            description="${OPTARG}";;
+            modify=1
+            new_description="${OPTARG}";;
         o)
-            zipfilename="${OPTARG}";;
+            modify=1
+            dest_zip_fn="${OPTARG}";;
         r)
-            if [ ${in_filter_context} -eq 1 ]
-            then
-                filter_definition="${filter_definition}\n</filter>"
-            fi
-            in_filter_context=1
+            modify=1
             _add_filter "${OPTARG}";;
-        i)
-            if [ ${in_filter_context} -eq 0 ]
-            then
-                echo "Include pattern (-i) should be nested in scope of" \
-                    "filter root path (-r)." >&2
-                echo "Please add -r JCRPATH before adding -i/-e options." >&2
-                exit 1;
-            fi
-            _add_include_entry "${OPTARG}";;
-        e)
-            if [ ${in_filter_context} -eq 0 ]
-            then
-                echo "Exclude pattern (-e) should be nested in scope of" \
-                    "filter root path (-r)." >&2
-                echo "Please add -r JCRPATH before adding -i/-e options." >&2
-                exit 1;
-            fi
-            _add_exclude_entry "${OPTARG}";;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
         :)
@@ -175,68 +159,149 @@ group_entry=$(cat <<EOT
 <entry key="group">${group}</entry>
 EOT
 )
-name=${1}
+src_zip_fn=${1}
 dir=$(pwd)
-if [ -z "${zipfilename}" ]
+if [ -z "${dest_zip_fn}" ]
 then
-    zipfile="${dir}/${name}-${version}.zip"
+    full_dest_zip_fn="${dir}/${name}-${version}.zip"
 else
-    zipfile=$(cd $(dirname "${zipfilename}"); \
-        pwd)/$(basename "${zipfilename}")
+    dir_dest_zip_fn=$(dirname "${dest_zip_fn}")
+    full_dest_zip_fn=$(cd "${dir_dest_zip_fn}"; \
+        pwd)/$(basename "${dest_zip_fn}")
 fi
 
-filter_definition=$(cat <<EOT
-${filter_definition}
-</filter>
-</workspaceFilter>
-EOT
-)
-package_definition=$(cat <<EOT
-${package_definition}
-${group_entry}
-<entry key="name">${name}</entry>
-<entry key="version">${version}</entry>
-<entry key="description">${description}</entry>
-</properties>
-EOT
-)
+new_filters=${filter_definition}
+
+
+UNZIP=$(which unzip)
+PROPS=$("${UNZIP}" -p "${src_zip_fn}" META-INF/vault/properties.xml \
+    2>/dev/null | tr -d '\n')
+FILTERS=$("${UNZIP}" -p "${src_zip_fn}" META-INF/vault/filter.xml 2>/dev/null)
+
+ENO="<entry key=\""
+ENC="\">"
+ENTXT="[^<]*"
+ENT="${ENC}(${ENTXT})</entry>"
+FO="<filter root=\""
+
+pkg_name=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}name${ENT}.*#\1#")
+pkg_group=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}group${ENT}.*#\1#g")
+pkg_description=$(echo "${PROPS}" \
+    | ${SEDX} "s#.*${ENO}description${ENT}.*#\1#g")
+pkg_version=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}version${ENT}.*#\1#g")
+pkg_build=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}buildCount${ENT}.*#\1#g")
+pkg_created=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}created${ENT}.*#\1#g")
+pkg_modified=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}lastModified${ENT}.*#\1#g")
+pkg_filters=$(echo "${FILTERS}" | grep -E "${FO}" \
+    | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
+
+if [ "${modify}" -eq 0 ]
+then
+    printf "Name\t\t%s\n" "${pkg_name}"
+    printf "Group\t\t%s\n" "${pkg_group}"
+    printf "Version\t\t%s\n" "${pkg_version}"
+    printf "Descr\t\t%s\n" "${pkg_description}"
+    printf "Build\t\t%s\n" "${pkg_build}"
+    printf "Create\t\t%s\n" "${pkg_created}"
+    printf "Modify\t\t%s\n\n" "${pkg_modified}"
+    for filter in ${pkg_filters}
+    do
+        printf "Filter\t\t%s\n" "${filter}"
+    done
+    exit 0
+fi
+
+
+# Modify
 ZIP=$(which zip)
-if [ ${?} -ne 0 -o "${ZIP}" = "" ]
+if [ ${?} -ne 0 -o -z "${ZIP}" ]
 then
     echo "Cannot find zip packaging command-line tool. Aborted" >&2
     exit 2
 fi
-tempdir=$(mktemp -d cqpkgXXXXXXXXXX)
+tempdir=$(mktemp -d cqrepkgXXXXXXXXXX)
 exitcode=${?}
 if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
     exit 1
 fi
-vault="${tempdir}/META-INF/vault"
-mkdir -p "${tempdir}/jcr_root"
-mkdir -p "${vault}"
 
-printf "%s" "${filter_definition}" > "${vault}/filter.xml"
-printf "%s" "${package_definition}" > "${vault}/properties.xml"
-cd "${tempdir}"
-"${ZIP}" -q -r - ./ > "${zipfile}"
+tempdir=$(readlink -f ${tempdir})
 exitcode=${?}
-cd "${dir}"
 if [ ${exitcode} -ne 0 ]
 then
-    echo "Cannot create zip package properly." >&2
+    echo "Cannot detect full path for temporary directory ${tempdir}" >&2
+    exit 1
 fi
-rm "${vault}/filter.xml"
-rm "${vault}/properties.xml"
-rmdir "${tempdir}/jcr_root"
-rmdir "${tempdir}/META-INF/vault"
-rmdir "${tempdir}/META-INF"
-rmdir "${tempdir}"
+
+
+vault="${tempdir}/META-INF/vault"
+prepare_unpack_args
+# shellcheck disable=SC2059
+printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
+    "${src_zip_fn}"
+exitcode=${?}
+if [ ${exitcode} -ne 0 ]
+then
+    echo "Cannot unpack CQ package properly." >&2
+    _clean_up
+    exit 1
+fi
+
+filtersfn="${vault}/filter.xml"
+propertiesfn="${vault}/properties.xml"
+definitionfn="${vault}/definition/.content.xml"
+CT="</entry>"
+OT1="<entry key=\""
+OT2="\">"
+
+name_e="${OT1}name${OT2}"
+name_r="s#${name_e}${pkg_name}${CT}#${name_e}${new_name}${CT}#"
+name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
+[ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${filtersfn}"
+[ -n "${new_name}" ] && ${SEDX} -i "${name_rd}" "${definitionfn}"
+
+group_e="${OT1}group${OT2}"
+group_r="s#${group_e}${pkg_group}${CT}#${group_e}${new_group}${CT}#"
+group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
+[ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${filtersfn}"
+[ -n "${new_group}" ] && ${SEDX} -i "${group_rd}" "${definitionfn}"
+
+description_e="${OT1}description${OT2}"
+description_r1="${description_e}${pkg_description}${CT}"
+description_r2="${description_e}${new_description}${CT}"
+description_r="s#${description_r1}#${description_r2}#"
+description_rd1="description=\"${pkg_description}\""
+description_rd2="description=\"${new_description}\""
+description_rd="s#${description_rd1}#${description_rd2}#"
+[ -n "${new_description}" ] && ${SEDX} -i "${description_r}" "${filtersfn}"
+[ -n "${new_description}" ] && ${SEDX} -i "${description_rd}" "${definitionfn}"
+
+version_e="${OT1}version${OT2}"
+version_r="s#${version_e}${pkg_version}${CT}#${version_e}${new_version}${CT}#"
+version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
+[ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${filtersfn}"
+[ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
+
+# TODO Changing filters...
+
+#find "${tempdir}"
+#cd "${tempdir}"
+#"${ZIP}" -q -r - ./ > "${zipfile}"
+#exitcode=${?}
+#cd "${dir}"
+#if [ ${exitcode} -ne 0 ]
+#then
+#    echo "Cannot create zip package properly." >&2
+#fi
+#rm -fr "${tempdir}/" >/dev/null
+_clean_up
 
 if [ ${exitcode} -eq 0 ]
 then
-    echo "Empty package created: '${zipfile}'"
+    echo "OK"
+    #echo "Empty package created: '${zipfile}'"
 else
     exit 3
 fi
