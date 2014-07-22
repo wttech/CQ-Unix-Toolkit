@@ -184,14 +184,21 @@ ENTXT="[^<]*"
 ENT="${ENC}(${ENTXT})</entry>"
 FO="<filter root=\""
 
-pkg_name=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}name${ENT}.*#\1#")
-pkg_group=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}group${ENT}.*#\1#g")
+pkg_name=$(echo "${PROPS}" \
+    | grep -E -o "${ENO}name${ENT}" \
+    | ${SEDX} "s#.*${ENO}name${ENT}.*#\1#")
+pkg_group=$(echo "${PROPS}" \
+    | grep -E -o "${ENO}group${ENT}" \
+    | ${SEDX} "s#.*${ENO}group${ENT}.*#\1#g")
 pkg_description=$(echo "${PROPS}" \
+    | grep -E -o "${ENO}description${ENT}" \
     | ${SEDX} "s#.*${ENO}description${ENT}.*#\1#g")
 pkg_version=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}version${ENT}.*#\1#g")
 pkg_build=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}buildCount${ENT}.*#\1#g")
-pkg_created=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}created${ENT}.*#\1#g")
-pkg_modified=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}lastModified${ENT}.*#\1#g")
+pkg_created=$(echo "${PROPS}" | grep -E -o "${ENO}created${ENT}" \
+    | ${SEDX} "s#.*${ENO}created${ENT}.*#\1#g")
+pkg_modified=$(echo "${PROPS}" | grep -E -o "${ENO}lastModified${ENT}" \
+    | ${SEDX} "s#.*${ENO}lastModified${ENT}.*#\1#g")
 pkg_filters=$(echo "${FILTERS}" | grep -E "${FO}" \
     | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
 
@@ -259,13 +266,13 @@ OT2="\">"
 name_e="${OT1}name${OT2}"
 name_r="s#${name_e}${pkg_name}${CT}#${name_e}${new_name}${CT}#"
 name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
-[ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${filtersfn}"
+[ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${propertiesfn}"
 [ -n "${new_name}" ] && ${SEDX} -i "${name_rd}" "${definitionfn}"
 
 group_e="${OT1}group${OT2}"
 group_r="s#${group_e}${pkg_group}${CT}#${group_e}${new_group}${CT}#"
 group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
-[ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${filtersfn}"
+[ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${propertiesfn}"
 [ -n "${new_group}" ] && ${SEDX} -i "${group_rd}" "${definitionfn}"
 
 description_e="${OT1}description${OT2}"
@@ -275,17 +282,57 @@ description_r="s#${description_r1}#${description_r2}#"
 description_rd1="description=\"${pkg_description}\""
 description_rd2="description=\"${new_description}\""
 description_rd="s#${description_rd1}#${description_rd2}#"
-[ -n "${new_description}" ] && ${SEDX} -i "${description_r}" "${filtersfn}"
+[ -n "${new_description}" ] && ${SEDX} -i "${description_r}" "${propertiesfn}"
 [ -n "${new_description}" ] && ${SEDX} -i "${description_rd}" "${definitionfn}"
 
 version_e="${OT1}version${OT2}"
 version_r="s#${version_e}${pkg_version}${CT}#${version_e}${new_version}${CT}#"
 version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
-[ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${filtersfn}"
+[ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${propertiesfn}"
 [ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
 
-# TODO Changing filters...
+FLTA1="<filter root=\""
+FLTB1="<filter root=\""
+FLTA2="\"/>"
+FLTB2="\">(.*)</filter>"
+FLTB2R="\">\1</filter>"
+all_filters_to_change_f=""
+all_filters_to_change_d=""
+all_filters_to_remove_f=""
+all_filters_to_remove_d=""
 
+# FIXME order of rules should be sorted here
+#       from the longest to the quickest (more general)
+for filter in ${pkg_filters}
+do
+    filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
+    if [ -n "${filters_to_change}" ]
+    then
+        for filter_to_change in ${filters_to_change}
+        do
+            repl1="s#${FLTA1}${filter}${FLTA2}#${FLTA1}${filter_to_change}${FLTA2}#;"
+            repl2="s#${FLTB1}${filter}${FLTB2}#${FLTB1}${filter_to_change}${FLTB2R}#;"
+            repl3="s#root=\"${filter}\"#root=\"${filter_to_change}\"#;"
+            all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
+            all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
+            all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
+        done
+    else
+        repl1="s#${FLTA1}${filter}${FLTA2}##;"
+        repl2="s#${FLTB1}${filter}${FLTB2}##;"
+        repl3="s#<[^<]*root=\"${filter}\"[^>]*/>##;"
+        all_filters_to_remove_f="${all_filters_to_remove_f} ${repl1} ${repl2}"
+        all_filters_to_remove_d="${all_filters_to_remove_d} ${repl3}"
+    fi
+done
+
+printf "Filters to change:\n%s\n" "${all_filters_to_change_f}${all_filters_to_change_d}"
+printf "Filters to remove:\n%s\n" "${all_filters_to_remove_f}${all_filters_to_remove_d}"
+
+# TODO Minification of file: filter.xml (</filter> per line)
+# TODO applying above sed rules in place
+
+# TODO save:
 #find "${tempdir}"
 #cd "${tempdir}"
 #"${ZIP}" -q -r - ./ > "${zipfile}"
