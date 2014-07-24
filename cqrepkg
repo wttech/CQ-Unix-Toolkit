@@ -291,36 +291,53 @@ version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
 [ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${propertiesfn}"
 [ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
 
+FLTE="</filter>"
 FLTA1="<filter root=\""
 FLTB1="<filter root=\""
 FLTA2="\"/>"
-FLTB2="\">(.*)</filter>"
-FLTB2R="\">\1</filter>"
+FLTB2="\">(.*)${FLTE}"
+FLTB2R="\">\1${FLTE}"
+FLTB3="\">"
+
+DFLT1="<([^<]+)\""
+DFLT2="\"([^>]+)>"
+DFLT1R="<\1\""
+DFLT2R="\"\2>"
+
 all_filters_to_change_f=""
 all_filters_to_change_d=""
 all_filters_to_remove_f=""
 all_filters_to_remove_d=""
 
-# FIXME order of rules should be sorted here
-#       from the longest to the quickest (more general)
+
 for filter in ${pkg_filters}
 do
     filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
     if [ -n "${filters_to_change}" ]
     then
+        new_filters_f_short=""
+        new_filters_f_long=""        
+        new_filters_d=""
         for filter_to_change in ${filters_to_change}
         do
-            repl1="s#${FLTA1}${filter}${FLTA2}#${FLTA1}${filter_to_change}${FLTA2}#;"
-            repl2="s#${FLTB1}${filter}${FLTB2}#${FLTB1}${filter_to_change}${FLTB2R}#;"
-            repl3="s#root=\"${filter}\"#root=\"${filter_to_change}\"#;"
-            all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
-            all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
-            all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
+            new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2}"        
+            new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
+            new_filters_f_short="${new_filters_f_short}${new_filter_f_short}"
+            new_filters_f_long="${new_filters_f_long}${new_filter_f_long}"
+
+            new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
+            new_filters_d="${new_filters_d}${new_filter_d}"
         done
+        repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
+        repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
+        repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
+        all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
+        all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
+        all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
     else
         repl1="s#${FLTA1}${filter}${FLTA2}##;"
         repl2="s#${FLTB1}${filter}${FLTB2}##;"
-        repl3="s#<[^<]*root=\"${filter}\"[^>]*/>##;"
+        repl3="s#${DFLT1}${filter}${DFLT2}##;"
         all_filters_to_remove_f="${all_filters_to_remove_f} ${repl1} ${repl2}"
         all_filters_to_remove_d="${all_filters_to_remove_d} ${repl3}"
     fi
@@ -329,20 +346,28 @@ done
 printf "Filters to change:\n%s\n" "${all_filters_to_change_f}${all_filters_to_change_d}"
 printf "Filters to remove:\n%s\n" "${all_filters_to_remove_f}${all_filters_to_remove_d}"
 
-# TODO Minification of file: filter.xml (</filter> per line)
-# TODO applying above sed rules in place
 
-# TODO save:
-#find "${tempdir}"
-#cd "${tempdir}"
-#"${ZIP}" -q -r - ./ > "${zipfile}"
-#exitcode=${?}
-#cd "${dir}"
-#if [ ${exitcode} -ne 0 ]
-#then
-#    echo "Cannot create zip package properly." >&2
-#fi
-#rm -fr "${tempdir}/" >/dev/null
+TAB=$(printf '\t')
+cat "${filtersfn}" | tr -d '\t\n' | \
+    ${SEDX} "s#${FLTE}#${FLTE}${TAB}#" | tr '\t' '\n' > "${filtersfn}.new"
+cat "${filtersfn}.new" > "${filtersfn}"
+rm "${filtersfn}.new"
+
+${SEDX} -i "${all_filters_to_remove_d}${all_filters_to_change_d}" \
+    "${definitionfn}"
+
+${SEDX} -i "${all_filters_to_remove_f}${all_filters_to_change_f}" \
+    "${filtersfn}"
+
+# TODO check zipfile var
+cd "${tempdir}"
+"${ZIP}" -q -r - ./ > "${zipfile}"
+exitcode=${?}
+cd "${dir}"
+if [ ${exitcode} -ne 0 ]
+then
+    echo "Cannot create zip package properly." >&2
+fi
 _clean_up
 
 if [ ${exitcode} -eq 0 ]
