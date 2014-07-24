@@ -96,6 +96,136 @@ prepare_unpack_args()
     done
 }
 
+replace_properties()
+{
+    name_e="${ENO}name${ENC}"
+    name_r="s#${name_e}${pkg_name}${ENC2}#${name_e}${new_name}${ENC2}#"
+    name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
+    [ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${propertiesfn}"
+    [ -n "${new_name}" ] && ${SEDX} -i "${name_rd}" "${definitionfn}"
+
+    group_e="${ENO}group${ENC}"
+    group_r="s#${group_e}${pkg_group}${ENC2}#${group_e}${new_group}${ENC2}#"
+    group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
+    [ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${propertiesfn}"
+    [ -n "${new_group}" ] && ${SEDX} -i "${group_rd}" "${definitionfn}"
+
+    description_e="${ENO}description${ENC}"
+    description_r1="${description_e}${pkg_description}${ENC2}"
+    description_r2="${description_e}${new_description}${ENC2}"
+    description_r="s#${description_r1}#${description_r2}#"
+    description_rd1="description=\"${pkg_description}\""
+    description_rd2="description=\"${new_description}\""
+    description_rd="s#${description_rd1}#${description_rd2}#"
+    [ -n "${new_description}" ] && ${SEDX} -i "${description_r}" \
+        "${propertiesfn}"
+    [ -n "${new_description}" ] && ${SEDX} -i "${description_rd}" \
+        "${definitionfn}"
+
+    version_e="${ENO}version${ENC}"
+    version_r="s#${version_e}${pkg_version}${ENC2}#${version_e}${new_version}${ENC2}#"
+    version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
+    [ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${propertiesfn}"
+    [ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
+}
+
+
+change_filters()
+{
+    filter="${1}"
+    filters_to_change="${2}"
+    new_filters_f_short=""
+    new_filters_f_long=""
+    new_filters_d=""
+    for filter_to_change in ${filters_to_change}
+    do
+        new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2}"
+        new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
+        new_filters_f_short="${new_filters_f_short}${new_filter_f_short}"
+        new_filters_f_long="${new_filters_f_long}${new_filter_f_long}"
+
+        new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
+        new_filters_d="${new_filters_d}${new_filter_d}"
+    done
+    repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
+    repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
+    repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
+    all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
+    all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
+    all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
+}
+
+remove_filter()
+{
+    filter="${1}"
+    repl1="s#${FLTA1}${filter}${FLTA2}##;"
+    repl2="s#${FLTB1}${filter}${FLTB2}##;"
+    repl3="s#${DFLT1}${filter}${DFLT2}##;"
+    all_filters_to_remove_f="${all_filters_to_remove_f} ${repl1} ${repl2}"
+    all_filters_to_remove_d="${all_filters_to_remove_d} ${repl3}"
+}
+
+apply_changes_to_files()
+{
+    TAB=$(printf '\t')
+    tr -d '\t\n' < "${filtersfn}" | \
+        ${SEDX} "s#${FLTE}#${FLTE}${TAB}#" | tr '\t' '\n' > "${filtersfn}.new"
+    cat "${filtersfn}.new" > "${filtersfn}"
+    rm "${filtersfn}.new"
+
+    ${SEDX} -i "${all_filters_to_remove_d}${all_filters_to_change_d}" \
+        "${definitionfn}"
+
+    ${SEDX} -i "${all_filters_to_remove_f}${all_filters_to_change_f}" \
+        "${filtersfn}"
+}
+
+replace_filters()
+{
+    FLTE="</filter>"
+    FLTA1="<filter root=\""
+    FLTB1="<filter root=\""
+    FLTA2="\"/>"
+    FLTB2="\">(.*)${FLTE}"
+    FLTB2R="\">\1${FLTE}"
+
+    DFLT1="<([^<]+)\""
+    DFLT2="\"([^>]+)>"
+    DFLT1R="<\1\""
+    DFLT2R="\"\2>"
+
+    all_filters_to_change_f=""
+    all_filters_to_change_d=""
+    all_filters_to_remove_f=""
+    all_filters_to_remove_d=""
+
+
+    for filter in ${pkg_filters}
+    do
+        filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
+        if [ -n "${filters_to_change}" ]
+        then
+            change_filters "${filter}" "${filters_to_change}"
+        else
+            remove_filter "${filter}"
+        fi
+    done
+
+    apply_changes_to_files
+}
+
+save_rewritten_zip()
+{
+    cd "${tempdir}"
+    "${ZIP}" -q -r - ./ > "${full_dest_zip_fn}"
+    exitcode=${?}
+    cd "${dir}"
+    if [ ${exitcode} -ne 0 ]
+    then
+        echo "Cannot create zip package properly." >&2
+    fi
+}
+
 _clean_up()
 {
     tree_level=$(echo "${tempdir}" | tr -cd '/' | wc -c)
@@ -119,8 +249,7 @@ fi
 
 SEDX=$("${API}" -s)
 
-toolkit_version=$("${API}" -v)
-version="1.0"
+
 modify=0
 while getopts ":g:v:r:n:o:d:" opt
 do
@@ -155,20 +284,9 @@ if [ ${#} -ne 1 ]
 then
     _usage
 fi
-group_entry=$(cat <<EOT
-<entry key="group">${group}</entry>
-EOT
-)
+
 src_zip_fn=${1}
 dir=$(pwd)
-if [ -z "${dest_zip_fn}" ]
-then
-    full_dest_zip_fn="${dir}/${name}-${version}.zip"
-else
-    dir_dest_zip_fn=$(dirname "${dest_zip_fn}")
-    full_dest_zip_fn=$(cd "${dir_dest_zip_fn}"; \
-        pwd)/$(basename "${dest_zip_fn}")
-fi
 
 new_filters=${filter_definition}
 
@@ -180,8 +298,9 @@ FILTERS=$("${UNZIP}" -p "${src_zip_fn}" META-INF/vault/filter.xml 2>/dev/null)
 
 ENO="<entry key=\""
 ENC="\">"
+ENC2="</entry>"
 ENTXT="[^<]*"
-ENT="${ENC}(${ENTXT})</entry>"
+ENT="${ENC}(${ENTXT})${ENC2}"
 FO="<filter root=\""
 
 pkg_name=$(echo "${PROPS}" \
@@ -218,6 +337,19 @@ then
     exit 0
 fi
 
+[ -n "${new_name}" ] && zip_name="${new_name}" || zip_name="${pkg_name}"
+[ -n "${new_version}" ] && zip_version="${new_version}" \
+    || zip_version="${pkg_version}"
+
+if [ -z "${dest_zip_fn}" ]
+then
+    full_dest_zip_fn="${dir}/${zip_name}-${zip_version}-repkged.zip"
+else
+    dir_dest_zip_fn=$(dirname "${dest_zip_fn}")
+    full_dest_zip_fn=$(cd "${dir_dest_zip_fn}"; \
+        pwd)/$(basename "${dest_zip_fn}")
+fi
+
 
 # Modify
 ZIP=$(which zip)
@@ -234,7 +366,7 @@ then
     exit 1
 fi
 
-tempdir=$(readlink -f ${tempdir})
+tempdir=$(readlink -f "${tempdir}")
 exitcode=${?}
 if [ ${exitcode} -ne 0 ]
 then
@@ -245,6 +377,7 @@ fi
 
 vault="${tempdir}/META-INF/vault"
 prepare_unpack_args
+
 # shellcheck disable=SC2059
 printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
     "${src_zip_fn}"
@@ -259,121 +392,15 @@ fi
 filtersfn="${vault}/filter.xml"
 propertiesfn="${vault}/properties.xml"
 definitionfn="${vault}/definition/.content.xml"
-CT="</entry>"
-OT1="<entry key=\""
-OT2="\">"
 
-name_e="${OT1}name${OT2}"
-name_r="s#${name_e}${pkg_name}${CT}#${name_e}${new_name}${CT}#"
-name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
-[ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${propertiesfn}"
-[ -n "${new_name}" ] && ${SEDX} -i "${name_rd}" "${definitionfn}"
-
-group_e="${OT1}group${OT2}"
-group_r="s#${group_e}${pkg_group}${CT}#${group_e}${new_group}${CT}#"
-group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
-[ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${propertiesfn}"
-[ -n "${new_group}" ] && ${SEDX} -i "${group_rd}" "${definitionfn}"
-
-description_e="${OT1}description${OT2}"
-description_r1="${description_e}${pkg_description}${CT}"
-description_r2="${description_e}${new_description}${CT}"
-description_r="s#${description_r1}#${description_r2}#"
-description_rd1="description=\"${pkg_description}\""
-description_rd2="description=\"${new_description}\""
-description_rd="s#${description_rd1}#${description_rd2}#"
-[ -n "${new_description}" ] && ${SEDX} -i "${description_r}" "${propertiesfn}"
-[ -n "${new_description}" ] && ${SEDX} -i "${description_rd}" "${definitionfn}"
-
-version_e="${OT1}version${OT2}"
-version_r="s#${version_e}${pkg_version}${CT}#${version_e}${new_version}${CT}#"
-version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
-[ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${propertiesfn}"
-[ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
-
-FLTE="</filter>"
-FLTA1="<filter root=\""
-FLTB1="<filter root=\""
-FLTA2="\"/>"
-FLTB2="\">(.*)${FLTE}"
-FLTB2R="\">\1${FLTE}"
-FLTB3="\">"
-
-DFLT1="<([^<]+)\""
-DFLT2="\"([^>]+)>"
-DFLT1R="<\1\""
-DFLT2R="\"\2>"
-
-all_filters_to_change_f=""
-all_filters_to_change_d=""
-all_filters_to_remove_f=""
-all_filters_to_remove_d=""
-
-
-for filter in ${pkg_filters}
-do
-    filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
-    if [ -n "${filters_to_change}" ]
-    then
-        new_filters_f_short=""
-        new_filters_f_long=""        
-        new_filters_d=""
-        for filter_to_change in ${filters_to_change}
-        do
-            new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2}"        
-            new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
-            new_filters_f_short="${new_filters_f_short}${new_filter_f_short}"
-            new_filters_f_long="${new_filters_f_long}${new_filter_f_long}"
-
-            new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
-            new_filters_d="${new_filters_d}${new_filter_d}"
-        done
-        repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
-        repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
-        repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
-        all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
-        all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
-        all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
-    else
-        repl1="s#${FLTA1}${filter}${FLTA2}##;"
-        repl2="s#${FLTB1}${filter}${FLTB2}##;"
-        repl3="s#${DFLT1}${filter}${DFLT2}##;"
-        all_filters_to_remove_f="${all_filters_to_remove_f} ${repl1} ${repl2}"
-        all_filters_to_remove_d="${all_filters_to_remove_d} ${repl3}"
-    fi
-done
-
-printf "Filters to change:\n%s\n" "${all_filters_to_change_f}${all_filters_to_change_d}"
-printf "Filters to remove:\n%s\n" "${all_filters_to_remove_f}${all_filters_to_remove_d}"
-
-
-TAB=$(printf '\t')
-cat "${filtersfn}" | tr -d '\t\n' | \
-    ${SEDX} "s#${FLTE}#${FLTE}${TAB}#" | tr '\t' '\n' > "${filtersfn}.new"
-cat "${filtersfn}.new" > "${filtersfn}"
-rm "${filtersfn}.new"
-
-${SEDX} -i "${all_filters_to_remove_d}${all_filters_to_change_d}" \
-    "${definitionfn}"
-
-${SEDX} -i "${all_filters_to_remove_f}${all_filters_to_change_f}" \
-    "${filtersfn}"
-
-# TODO check zipfile var
-cd "${tempdir}"
-"${ZIP}" -q -r - ./ > "${zipfile}"
-exitcode=${?}
-cd "${dir}"
-if [ ${exitcode} -ne 0 ]
-then
-    echo "Cannot create zip package properly." >&2
-fi
+replace_properties
+replace_filters
+save_rewritten_zip
 _clean_up
 
 if [ ${exitcode} -eq 0 ]
 then
-    echo "OK"
-    #echo "Empty package created: '${zipfile}'"
+    echo "Package '${src_zip_fn}' rewritten into: '${full_dest_zip_fn}'"
 else
     exit 3
 fi
