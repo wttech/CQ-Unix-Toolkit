@@ -133,7 +133,7 @@ following cygwin packages:
   ![Marking curl package](doc/cygwin1-curl.png)
 * `curl` (required for almost all tools)
   ![Marking util-linux package](doc/cygwin2-util-linux.png)
-* `zip` (required for cqpkg tool)
+* `unzip`, `zip` (required for cqrepkg, cqpkg tools)
   ![Marking zip/unzip package](doc/cygwin3-zip.png)
 
 If you have any problems, please see [cygwin installation screencast](http://www.youtube.com/watch?v=11ilswbIjkg).
