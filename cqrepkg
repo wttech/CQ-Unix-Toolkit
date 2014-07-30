@@ -58,6 +58,8 @@ Options:
                         filters. This needs to be a subpath/subtree of currently
                         existing package.
   -o ZIPPATH            generates package in path specified by ZIPPATH
+  -P                    output raw xml file with package properties
+  -F                    output raw xml file with package filters
 
 
 EOT
@@ -287,10 +289,12 @@ SEDX=$("${API}" -s)
 
 
 modify=0
-while getopts ":g:v:r:n:o:d:" opt
+show_props=0
+show_filters=0
+while getopts ":g:v:r:n:o:d:PF" opt
 do
     case "${opt}" in
-        g)
+        n)
             modify=1
             new_name="${OPTARG}";;
         g)
@@ -308,6 +312,12 @@ do
         r)
             modify=1
             _add_filter "${OPTARG}";;
+        P)
+            raw=1
+            show_props=1;;
+        F)
+            raw=1
+            show_filters=1;;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
         :)
@@ -318,6 +328,14 @@ shift $((OPTIND-1))
 
 if [ ${#} -ne 1 ]
 then
+    _usage
+fi
+
+if [ "${modify}" -eq 1 -a "${raw}" -eq 1 ]
+then
+    MOD="-n/-g/-v/-d/-o/-r"
+    echo "Modification options ${MOD} and raw file output " \
+        "options -P/-F shouldn't be mixed" >&2
     _usage
 fi
 
@@ -347,8 +365,9 @@ PROPERTIES="properties.xml"
 P7ZIP=""
 if [ -n "${P7ZIP}" ]
 then
-    PROPS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
-        2>/dev/null | tr -d '\n')
+    PROPSN=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+        2>/dev/null)
+    PROPS=$(echo "${PROPSN}" | tr -d '\n')        
     FILTERS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
         2>/dev/null)
 else
@@ -358,7 +377,8 @@ else
         # shellcheck disable=SC2034
         hidden_output=$(cd "${readdir}" && "${JAR}" xf "${full_src_zip_fn}" \
             "${VAULT}/${PROPERTIES}" "${VAULT}/${FILTER}")
-        PROPS=$(tr -d '\n' < "${readdir}/${VAULT}/${PROPERTIES}")
+        PROPSN=$(cat "${readdir}/${VAULT}/${PROPERTIES}")
+        PROPS=$(echo "${PROPSN}" | tr -d '\n')
         FILTERS=$(cat "${readdir}/${VAULT}/${FILTER}")
         rm -f "${readdir}/${VAULT}/${FILTER}" 2>/dev/null
         rm -f "${readdir}/${VAULT}/${PROPERTIES}" 2>/dev/null
@@ -366,14 +386,17 @@ else
         rmdir "${readdir}/${METAINF}" 2>/dev/null
         rmdir "${readdir}" 2>/dev/null
     else
-        PROPS=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
-            2>/dev/null | tr -d '\n')
+        PROPSN=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+            2>/dev/null)
+        PROPS=$(echo "${PROPSN}" | tr -d '\n')
         FILTERS=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
             2>/dev/null)
     fi
 fi
 
-
+[ "${show_filters}" -eq 1 ] && echo "${FILTERS}"
+[ "${show_props}" -eq 1 ] && echo "${PROPSN}"
+[ "${raw}" -eq 1 ] && exit 0
 
 ENO="<entry key=\""
 ENC="\">"
