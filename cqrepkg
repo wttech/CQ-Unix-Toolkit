@@ -252,6 +252,7 @@ replace_filters()
 save_rewritten_zip()
 {
     cd "${tempdir}"
+    rm -f "${full_dest_zip_fn}" 2>/dev/null
     if [ -n "${P7ZIP}" ]
     then
         "${P7ZIP}" a -r "${full_dest_zip_fn}" ./ 2>/dev/null >/dev/null
@@ -510,8 +511,8 @@ if [ -n "${P7ZIP}" ]
 then
     # shellcheck disable=SC2059
     # shellcheck disable=SC2034
-    hidden_output=$(printf "${unpack_args}" | xargs -0 "${P7ZIP}" x -r \
-        -o"${tempdir}" "${full_src_zip_fn}")
+    hidden_output=$(printf "${unpack_args}" | tr -d '*' | xargs -0 "${P7ZIP}" \
+        x -o"${tempdir}" "${full_src_zip_fn}")
     exitcode=${?}
 else
     if [ -n "${JAR}" ]
