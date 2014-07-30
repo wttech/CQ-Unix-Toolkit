@@ -73,6 +73,30 @@ EOF
     )
 }
 
+detect_zip_tools()
+{
+    P7ZIP=$(which 7za 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${P7ZIP}" ]
+    then
+        P7ZIP=""
+    fi
+
+    JAR=$(which jar 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${JAR}" ]
+    then
+        JAR=""
+    fi
+
+    UNZIP=$(which unzip 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${UNZIP}" ]
+    then
+        UNZIP=""
+    fi
+}
+
 _prepare_intermediary_paths_for_unpack()
 {
     partial_path=""
@@ -217,8 +241,20 @@ replace_filters()
 save_rewritten_zip()
 {
     cd "${tempdir}"
-    "${ZIP}" -q -r - ./ > "${full_dest_zip_fn}"
-    exitcode=${?}
+    if [ -n "${P7ZIP}" ]
+    then
+        "${P7ZIP}" a -r "${full_dest_zip_fn}" ./ 2>/dev/null >/dev/null
+         exitcode=${?}
+    else
+        if [ -n "${JAR}" ]
+        then
+            "${JAR}" cf "${full_dest_zip_fn}" ./ 2>/dev/null
+            exitcode=${?}
+        else
+            "${ZIP}" -q -r - ./ > "${full_dest_zip_fn}" 2>/dev/null
+            exitcode=${?}
+        fi
+    fi
     cd "${dir}"
     if [ ${exitcode} -ne 0 ]
     then
@@ -288,13 +324,56 @@ fi
 src_zip_fn=${1}
 dir=$(pwd)
 
+dir_src_zip_fn=$(dirname "${src_zip_fn}")
+full_src_zip_fn=$(cd "${dir_src_zip_fn}"; pwd)/$(basename "${src_zip_fn}")
+
 new_filters=${filter_definition}
 
+# TODO if package size > 2G zip/unzip need to inform about that with force
+# option
+detect_zip_tools
+if [ -z "${UNZIP}" -a -z "${P7ZIP}" -a -z "${JAR}" ]
+then
+    echo "Cannot find any proper required unzip-like tool: 7za, jar, unzip." \
+        " Aborted" >&2
+    exit 1
+fi
 
-UNZIP=$(which unzip)
-PROPS=$("${UNZIP}" -p "${src_zip_fn}" META-INF/vault/properties.xml \
-    2>/dev/null | tr -d '\n')
-FILTERS=$("${UNZIP}" -p "${src_zip_fn}" META-INF/vault/filter.xml 2>/dev/null)
+
+METAINF="META-INF"
+VAULT="${METAINF}/vault"
+FILTER="filter.xml"
+PROPERTIES="properties.xml"
+P7ZIP=""
+if [ -n "${P7ZIP}" ]
+then
+    PROPS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+        2>/dev/null | tr -d '\n')
+    FILTERS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
+        2>/dev/null)
+else
+    if [ -n "${JAR}" ]
+    then
+        readdir=$(mktemp -d cqrepkgXXXXXXXXXX)
+        # shellcheck disable=SC2034
+        hidden_output=$(cd "${readdir}" && "${JAR}" xf "${full_src_zip_fn}" \
+            "${VAULT}/${PROPERTIES}" "${VAULT}/${FILTER}")
+        PROPS=$(tr -d '\n' < "${readdir}/${VAULT}/${PROPERTIES}")
+        FILTERS=$(cat "${readdir}/${VAULT}/${FILTER}")
+        rm -f "${readdir}/${VAULT}/${FILTER}" 2>/dev/null
+        rm -f "${readdir}/${VAULT}/${PROPERTIES}" 2>/dev/null
+        rmdir "${readdir}/${VAULT}" 2>/dev/null
+        rmdir "${readdir}/${METAINF}" 2>/dev/null
+        rmdir "${readdir}" 2>/dev/null
+    else
+        PROPS=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+            2>/dev/null | tr -d '\n')
+        FILTERS=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
+            2>/dev/null)
+    fi
+fi
+
+
 
 ENO="<entry key=\""
 ENC="\">"
@@ -341,6 +420,7 @@ fi
 [ -n "${new_version}" ] && zip_version="${new_version}" \
     || zip_version="${pkg_version}"
 
+
 if [ -z "${dest_zip_fn}" ]
 then
     full_dest_zip_fn="${dir}/${zip_name}-${zip_version}-repkged.zip"
@@ -355,9 +435,16 @@ fi
 ZIP=$(which zip)
 if [ ${?} -ne 0 -o -z "${ZIP}" ]
 then
-    echo "Cannot find zip packaging command-line tool. Aborted" >&2
+    ZIP=""
+fi
+
+if [ -z "${ZIP}" -a -z "${P7ZIP}" -a -z "${JAR}" ]
+then
+    echo "Cannot find any proper required zip-like tool: 7za, jar, zip." \
+        " Aborted" >&2
     exit 2
 fi
+
 tempdir=$(mktemp -d cqrepkgXXXXXXXXXX)
 exitcode=${?}
 if [ ${exitcode} -ne 0 ]
@@ -375,13 +462,33 @@ then
 fi
 
 
-vault="${tempdir}/META-INF/vault"
+vault="${tempdir}/${VAULT}"
 prepare_unpack_args
 
-# shellcheck disable=SC2059
-printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
-    "${src_zip_fn}"
-exitcode=${?}
+if [ -n "${P7ZIP}" ]
+then
+    # shellcheck disable=SC2059
+    # shellcheck disable=SC2034
+    hidden_output=$(printf "${unpack_args}" | xargs -0 "${P7ZIP}" x -r \
+        -o"${tempdir}" "${full_src_zip_fn}")
+    exitcode=${?}
+else
+    if [ -n "${JAR}" ]
+    then
+        cd "${tempdir}"
+        # shellcheck disable=SC2059
+        printf "${unpack_args}" | tr -d '*' \
+            | xargs -0 "${JAR}" xf "${full_src_zip_fn}"
+        exitcode=${?}
+        cd "${dir}"
+    else
+        # shellcheck disable=SC2059
+        printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
+            "${full_src_zip_fn}"
+        exitcode=${?}
+    fi
+fi
+
 if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot unpack CQ package properly." >&2
@@ -389,8 +496,8 @@ then
     exit 1
 fi
 
-filtersfn="${vault}/filter.xml"
-propertiesfn="${vault}/properties.xml"
+filtersfn="${vault}/${FILTER}"
+propertiesfn="${vault}/${PROPERTIES}"
 definitionfn="${vault}/definition/.content.xml"
 
 replace_properties
@@ -400,7 +507,7 @@ _clean_up
 
 if [ ${exitcode} -eq 0 ]
 then
-    echo "Package '${src_zip_fn}' rewritten into: '${full_dest_zip_fn}'"
+    echo "Package '${full_src_zip_fn}' rewritten into: '${full_dest_zip_fn}'"
 else
     exit 3
 fi
