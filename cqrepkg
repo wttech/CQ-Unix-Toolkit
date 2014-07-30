@@ -281,7 +281,7 @@ _clean_up()
         # shellcheck disable=SC2115
         rm -fr "${tempdir}/" >/dev/null
     else
-        echo "Covardly refused to clean up '${tempdir}' directory" >&2
+        echo "Covardly refused to clean up '${tempdir}' tmp directory" >&2
     fi
 }
 
@@ -348,11 +348,23 @@ then
     _usage
 fi
 
+if [ "${show_filters}" -eq 1 -a "${show_props}" -eq 1 ]
+then
+    echo "Options -P and -F cannot be used together" >&2
+    _usage
+fi
+
 src_zip_fn=${1}
 dir=$(pwd)
 
 dir_src_zip_fn=$(dirname "${src_zip_fn}")
 full_src_zip_fn=$(cd "${dir_src_zip_fn}"; pwd)/$(basename "${src_zip_fn}")
+
+if [ ! -f "${full_src_zip_fn}" ]
+then
+    printf "Cannot find file: '%s'\n" "${full_src_zip_fn}" >&2
+    exit 1
+fi
 
 new_filters=${filter_definition}
 
