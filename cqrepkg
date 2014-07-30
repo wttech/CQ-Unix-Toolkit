@@ -41,11 +41,20 @@ Examples:
                                       # that will hold currenly existing content
                                       # but with new metadata under it.
 
-  cqrepkg -r /content/dam/important   # Recreate dam-jpeg package containing
-        dam-jpeg                      # only subtree of /content/dam/important
+  cqrepkg -r /content/dam/important   # Recreate dam-jpeg.zip package containing
+        dam-jpeg.zip                  # only subtree of /content/dam/important
                                       # that holds .jpeg or .jpg nodes
                                       # with include/exclude filters previously
                                       # set based on /content/dam node.
+
+  cqrepkg -P big-content.zip          # List all package properties in raw XML
+                                      # mode from 'big-content.zip' file
+
+  cqrepkg  big-content.zip            # Display package details in tab separated
+                                      # list for 'big-content.zip' file
+
+  cqrepkg -F big-content.zip          # List all package filters in raw XML mode
+                                      # from 'big-content.zip' file
 
 Options:
 
