@@ -287,7 +287,7 @@ fi
 
 SEDX=$("${API}" -s)
 
-
+raw=0
 modify=0
 show_props=0
 show_filters=0
@@ -347,8 +347,6 @@ full_src_zip_fn=$(cd "${dir_src_zip_fn}"; pwd)/$(basename "${src_zip_fn}")
 
 new_filters=${filter_definition}
 
-# TODO if package size > 2G zip/unzip need to inform about that with force
-# option
 detect_zip_tools
 if [ -z "${UNZIP}" -a -z "${P7ZIP}" -a -z "${JAR}" ]
 then
@@ -357,12 +355,11 @@ then
     exit 1
 fi
 
-
 METAINF="META-INF"
 VAULT="${METAINF}/vault"
 FILTER="filter.xml"
 PROPERTIES="properties.xml"
-P7ZIP=""
+
 if [ -n "${P7ZIP}" ]
 then
     PROPSN=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
