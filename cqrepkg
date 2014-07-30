@@ -274,6 +274,33 @@ save_rewritten_zip()
     fi
 }
 
+extract_required_resources()
+{
+    if [ -n "${P7ZIP}" ]
+    then
+        # shellcheck disable=SC2059
+        # shellcheck disable=SC2034
+        hidden_output=$(printf "${unpack_args}" | tr -d '*' | xargs -0 \
+            "${P7ZIP}" x -o"${tempdir}" "${full_src_zip_fn}")
+        exitcode=${?}
+    else
+        if [ -n "${JAR}" ]
+        then
+            cd "${tempdir}"
+            # shellcheck disable=SC2059
+            printf "${unpack_args}" | tr -d '*' \
+                | xargs -0 "${JAR}" xf "${full_src_zip_fn}"
+            exitcode=${?}
+            cd "${dir}"
+        else
+            # shellcheck disable=SC2059
+            printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
+                "${full_src_zip_fn}"
+            exitcode=${?}
+        fi
+    fi
+}
+
 _clean_up()
 {
     tree_level=$(echo "${tempdir}" | tr -cd '/' | wc -c)
@@ -506,30 +533,7 @@ fi
 
 vault="${tempdir}/${VAULT}"
 prepare_unpack_args
-
-if [ -n "${P7ZIP}" ]
-then
-    # shellcheck disable=SC2059
-    # shellcheck disable=SC2034
-    hidden_output=$(printf "${unpack_args}" | tr -d '*' | xargs -0 "${P7ZIP}" \
-        x -o"${tempdir}" "${full_src_zip_fn}")
-    exitcode=${?}
-else
-    if [ -n "${JAR}" ]
-    then
-        cd "${tempdir}"
-        # shellcheck disable=SC2059
-        printf "${unpack_args}" | tr -d '*' \
-            | xargs -0 "${JAR}" xf "${full_src_zip_fn}"
-        exitcode=${?}
-        cd "${dir}"
-    else
-        # shellcheck disable=SC2059
-        printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq -ud "${tempdir}" \
-            "${full_src_zip_fn}"
-        exitcode=${?}
-    fi
-fi
+extract_required_resources
 
 if [ ${exitcode} -ne 0 ]
 then
