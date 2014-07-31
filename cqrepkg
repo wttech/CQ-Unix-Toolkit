@@ -84,6 +84,12 @@ EOF
     )
 }
 
+replace_with_new_file()
+{
+    cat "${1}.new" > "${1}"
+    rm "${1}.new"
+}
+
 detect_zip_tools()
 {
     P7ZIP=$(which 7za 2>/dev/null)
@@ -136,14 +142,18 @@ replace_properties()
     name_e="${ENO}name${ENC}"
     name_r="s#${name_e}${pkg_name}${ENC2}#${name_e}${new_name}${ENC2}#"
     name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
-    [ -n "${new_name}" ] && ${SEDX} -i "${name_r}" "${propertiesfn}"
-    [ -n "${new_name}" ] && ${SEDX} -i "${name_rd}" "${definitionfn}"
+    [ -n "${new_name}" ] && ${SEDX} "${name_r}" "${propertiesfn}" \
+        > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
+    [ -n "${new_name}" ] && ${SEDX} "${name_rd}" "${definitionfn}" \
+        > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 
     group_e="${ENO}group${ENC}"
     group_r="s#${group_e}${pkg_group}${ENC2}#${group_e}${new_group}${ENC2}#"
     group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
-    [ -n "${new_group}" ] && ${SEDX} -i "${group_r}" "${propertiesfn}"
-    [ -n "${new_group}" ] && ${SEDX} -i "${group_rd}" "${definitionfn}"
+    [ -n "${new_group}" ] && ${SEDX} "${group_r}" "${propertiesfn}" \
+        > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
+    [ -n "${new_group}" ] && ${SEDX} "${group_rd}" "${definitionfn}" \
+        > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 
     description_e="${ENO}description${ENC}"
     description_r1="${description_e}${pkg_description}${ENC2}"
@@ -152,16 +162,20 @@ replace_properties()
     description_rd1="description=\"${pkg_description}\""
     description_rd2="description=\"${new_description}\""
     description_rd="s#${description_rd1}#${description_rd2}#"
-    [ -n "${new_description}" ] && ${SEDX} -i "${description_r}" \
-        "${propertiesfn}"
-    [ -n "${new_description}" ] && ${SEDX} -i "${description_rd}" \
-        "${definitionfn}"
+    [ -n "${new_description}" ] && ${SEDX} "${description_r}" \
+        "${propertiesfn}" > "${propertiesfn}.new" \
+        && replace_with_new_file "${propertiesfn}"
+    [ -n "${new_description}" ] && ${SEDX} "${description_rd}" \
+        "${definitionfn}" > "${definitionfn}.new" \
+        && replace_with_new_file "${definitionfn}"
 
     version_e="${ENO}version${ENC}"
     version_r="s#${version_e}${pkg_version}${ENC2}#${version_e}${new_version}${ENC2}#"
     version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
-    [ -n "${new_version}" ] && ${SEDX} -i "${version_r}" "${propertiesfn}"
-    [ -n "${new_version}" ] && ${SEDX} -i "${version_rd}" "${definitionfn}"
+    [ -n "${new_version}" ] && ${SEDX} "${version_r}" "${propertiesfn}" \
+        > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
+    [ -n "${new_version}" ] && ${SEDX} "${version_rd}" "${definitionfn}" \
+        > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 }
 
 
@@ -208,11 +222,13 @@ apply_changes_to_files()
     cat "${filtersfn}.new" > "${filtersfn}"
     rm "${filtersfn}.new"
 
-    ${SEDX} -i "${all_filters_to_remove_d}${all_filters_to_change_d}" \
-        "${definitionfn}"
+    ${SEDX} "${all_filters_to_remove_d}${all_filters_to_change_d}" \
+        "${definitionfn}" > "${definitionfn}.new" \
+        && replace_with_new_file "${definitionfn}"
 
-    ${SEDX} -i "${all_filters_to_remove_f}${all_filters_to_change_f}" \
-        "${filtersfn}"
+    ${SEDX} "${all_filters_to_remove_f}${all_filters_to_change_f}" \
+        "${filtersfn}" > "${filtersfn}.new" \
+        && replace_with_new_file "${filtersfn}"
 }
 
 replace_filters()
