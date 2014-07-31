@@ -442,6 +442,13 @@ fi
 
 [ "${show_filters}" -eq 1 ] && echo "${FILTERS}"
 [ "${show_props}" -eq 1 ] && echo "${PROPSN}"
+
+if [ -z "${PROPS}" -o -z "${FILTERS}" ]
+then
+    echo "Incorrect source zip package: '${full_src_zip_fn}'." >&2
+    exit 2
+fi
+
 [ "${raw}" -eq 1 ] && exit 0
 
 ENO="<entry key=\""
