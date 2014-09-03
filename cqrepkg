@@ -137,47 +137,30 @@ prepare_unpack_args()
     done
 }
 
-replace_properties()
-{
-    name_e="${ENO}name${ENC}"
-    name_r="s#${name_e}${pkg_name}${ENC2}#${name_e}${new_name}${ENC2}#"
-    name_rd="s#name=\"${pkg_name}\"#name=\"${new_name}\"#"
-    [ -n "${new_name}" ] && ${SEDX} "${name_r}" "${propertiesfn}" \
-        > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
-    [ -n "${new_name}" ] && ${SEDX} "${name_rd}" "${definitionfn}" \
-        > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
+replace_property() {
+    prop=${1}
+    old=${2}
+    new=${3}
 
-    group_e="${ENO}group${ENC}"
-    group_r="s#${group_e}${pkg_group}${ENC2}#${group_e}${new_group}${ENC2}#"
-    group_rd="s#group=\"${pkg_group}\"#group=\"${new_group}\"#"
-    [ -n "${new_group}" ] && ${SEDX} "${group_r}" "${propertiesfn}" \
+    tag_open="${ENO}${prop}${ENC}"
+    tag_open_repl="${ENO}${prop}${ENCR}"
+    sed_op="s#${tag_open}${old}${ENC2}#${tag_open_repl}${new}${ENC2}#"
+    [ -n "${new}" ] && ${SEDX} "${sed_op}" "${propertiesfn}" \
         > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
-    [ -n "${new_group}" ] && ${SEDX} "${group_rd}" "${definitionfn}" \
-        > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 
-    description_e="${ENO}description${ENC}"
-    description_r1="${description_e}${pkg_description}${ENC2}"
-    description_r2="${description_e}${new_description}${ENC2}"
-    description_r="s#${description_r1}#${description_r2}#"
-    description_rd1="description=\"${pkg_description}\""
-    description_rd2="description=\"${new_description}\""
-    description_rd="s#${description_rd1}#${description_rd2}#"
-    [ -n "${new_description}" ] && ${SEDX} "${description_r}" \
-        "${propertiesfn}" > "${propertiesfn}.new" \
-        && replace_with_new_file "${propertiesfn}"
-    [ -n "${new_description}" ] && ${SEDX} "${description_rd}" \
-        "${definitionfn}" > "${definitionfn}.new" \
-        && replace_with_new_file "${definitionfn}"
-
-    version_e="${ENO}version${ENC}"
-    version_r="s#${version_e}${pkg_version}${ENC2}#${version_e}${new_version}${ENC2}#"
-    version_rd="s#version=\"${pkg_version}\"#version=\"${new_version}\"#"
-    [ -n "${new_version}" ] && ${SEDX} "${version_r}" "${propertiesfn}" \
-        > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
-    [ -n "${new_version}" ] && ${SEDX} "${version_rd}" "${definitionfn}" \
+    sed_op="s#name=\"${old}\"#name=\"${new}\"#"
+    [ -n "${new}" ] && ${SEDX} "${sed_op}" "${definitionfn}" \
         > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 }
 
+replace_properties()
+{
+    replace_property name "${pkg_name}" "${new_name}"
+    replace_property group "${pkg_group}" "${new_group}"
+    replace_property groupId "${pkg_group}" "${new_group}"
+    replace_property description "${pkg_description}" "${new_description}"
+    replace_property version "${pkg_version}" "${new_version}"
+}
 
 change_filters()
 {
@@ -190,18 +173,18 @@ change_filters()
     do
         new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2}"
         new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
-        new_filters_f_short="${new_filters_f_short}${new_filter_f_short}"
-        new_filters_f_long="${new_filters_f_long}${new_filter_f_long}"
+        new_filters_f_short=$(printf "%s%s" "${new_filters_f_short}" "${new_filter_f_short}")
+        new_filters_f_long=$(printf "%s%s" "${new_filters_f_long}" "${new_filter_f_long}")
 
         new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
-        new_filters_d="${new_filters_d}${new_filter_d}"
+        new_filters_d=$(printf "%s%s" "${new_filters_d}" "${new_filter_d}")
     done
     repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
     repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
     repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
-    all_filters_to_change_f="${all_filters_to_change_f} ${repl1}"
-    all_filters_to_change_f="${all_filters_to_change_f} ${repl2}"
-    all_filters_to_change_d="${all_filters_to_change_d} ${repl3}"
+    all_filters_to_change_f=$(printf "%s\n%s\n" "${all_filters_to_change_f}" "${repl1}")
+    all_filters_to_change_f=$(printf "%s\n%s\n" "${all_filters_to_change_f}" "${repl2}")
+    all_filters_to_change_d=$(printf "%s\n%s\n" "${all_filters_to_change_d}" "${repl3}")
 }
 
 remove_filter()
@@ -210,36 +193,54 @@ remove_filter()
     repl1="s#${FLTA1}${filter}${FLTA2}##;"
     repl2="s#${FLTB1}${filter}${FLTB2}##;"
     repl3="s#${DFLT1}${filter}${DFLT2}##;"
-    all_filters_to_remove_f="${all_filters_to_remove_f} ${repl1} ${repl2}"
-    all_filters_to_remove_d="${all_filters_to_remove_d} ${repl3}"
+    all_filters_to_remove_f=$(printf "%s\n%s\n%s\n" "${all_filters_to_remove_f}" "${repl1}" "${repl2}")
+    all_filters_to_remove_d=$(printf "%s\n%s\n" "${all_filters_to_remove_d}" "${repl3}")
 }
 
+add_filter()
+{
+    add_filter_f=$(printf "%s\n%s\n" "${add_filter_f}" \
+        "1a\\${FLTA1}${1}${FLTA2R}")
+    # TODO line number needs to be discovered
+#    add_filter_d=$(printf "%s\n%s\n" "${add_filter_d}" \
+#        "3a\\${FLTA1}${1}${FLTA2R}")
+}
+sanitize_filters()
+{
+    TAB=$(printf '\t')
+    tr -d '\t\n' \
+        | ${SEDX} "s#<!--#${TAB}<!--#g" \
+        | ${SEDX} "s#-->#-->${TAB}#g" \
+        | tr '\t' '\n' \
+        | ${SEDX} "s#<!--.*-->##g" \
+        | tr '\n' '\t' \
+        | ${SEDX} "s#(${TAB})+#${TAB}#g" \
+        | tr '\t' '\n'
+}
+group_into_filters()
+{
+    TAB=$(printf '\t')
+    tr -d '\t\n'  \
+        | ${SEDX} "s#${FLTA1}#${TAB}${FLTA1}#g" \
+        | ${SEDX} "s#${FLTE}#${FLTE}${TAB}#g" \
+        | ${SEDX} "s#${FLTA1}([^\"]+)${FLTA2}#${FLTA1}\1${FLTA2R}${TAB}#g" \
+        | tr '\t' '\n'
+}
 apply_changes_to_files()
 {
     TAB=$(printf '\t')
-    tr -d '\t\n' < "${filtersfn}" | \
-        ${SEDX} "s#${FLTE}#${FLTE}${TAB}#" | tr '\t' '\n' > "${filtersfn}.new"
-    cat "${filtersfn}.new" > "${filtersfn}"
-    rm "${filtersfn}.new"
-
-    ${SEDX} "${all_filters_to_remove_d}${all_filters_to_change_d}" \
-        "${definitionfn}" > "${definitionfn}.new" \
+    sanitize_filters < "${filtersfn}" | group_into_filters > "${filtersfn}.new" \
+        && replace_with_new_file "${filtersfn}"
+    echo "${all_filters_to_remove_d}${all_filters_to_change_d}${add_filter_d}" | ${SEDX}  \
+        -f /dev/stdin "${definitionfn}" > "${definitionfn}.new" \
         && replace_with_new_file "${definitionfn}"
-
-    ${SEDX} "${all_filters_to_remove_f}${all_filters_to_change_f}" \
-        "${filtersfn}" > "${filtersfn}.new" \
+    echo "${all_filters_to_remove_f}${all_filters_to_change_f}${add_filter_f}" | ${SEDX}  \
+        -f /dev/stdin "${filtersfn}" > "${filtersfn}.new" \
         && replace_with_new_file "${filtersfn}"
 }
 
 replace_filters()
 {
-    FLTE="</filter>"
-    FLTA1="<filter root=\""
-    FLTB1="<filter root=\""
-    FLTA2="\"/>"
-    FLTB2="\">(.*)${FLTE}"
-    FLTB2R="\">\1${FLTE}"
-
     DFLT1="<([^<]+)\""
     DFLT2="\"([^>]+)>"
     DFLT1R="<\1\""
@@ -249,7 +250,6 @@ replace_filters()
     all_filters_to_change_d=""
     all_filters_to_remove_f=""
     all_filters_to_remove_d=""
-
 
     for filter in ${pkg_filters}
     do
@@ -261,7 +261,14 @@ replace_filters()
             remove_filter "${filter}"
         fi
     done
-
+    for new_filter in ${new_filters}
+    do
+        filters_to_add=$(echo "${pkg_filters}" | grep -E "${new_filter}")
+        if [ -n "${filters_to_add}" ]
+        then
+            add_filter "${new_filter}"
+        fi
+    done
     apply_changes_to_files
 }
 
@@ -315,6 +322,13 @@ extract_required_resources()
             exitcode=${?}
         fi
     fi
+}
+
+get_property()
+{
+   prop=${1}
+   echo "${PROPS}" | grep -E -o "${ENO}${prop}${ENT}" \
+       | ${SEDX} "s#.*${ENO}${prop}${ENT}.*#\1#"
 }
 
 _clean_up()
@@ -468,29 +482,33 @@ fi
 [ "${raw}" -eq 1 ] && exit 0
 
 ENO="<entry key=\""
-ENC="\">"
+ENC="\"[ ]*>"
+ENCR="\">"
 ENC2="</entry>"
 ENTXT="[^<]*"
 ENT="${ENC}(${ENTXT})${ENC2}"
-FO="<filter root=\""
+FO="<filter\ *root=\""
+FLTE="</filter>"
+FLTA1="<filter root=\""
+FLTB1="<filter root=\""
+FLTA2="\"[ ]*/>"
+FLTA2R="\"/>"
+FLTB2="\"[ ]*>(.*)${FLTE}"
+FLTB2R="\">\1${FLTE}"
+FILTERS=$(echo "${FILTERS}" | sanitize_filters)
 
-pkg_name=$(echo "${PROPS}" \
-    | grep -E -o "${ENO}name${ENT}" \
-    | ${SEDX} "s#.*${ENO}name${ENT}.*#\1#")
-pkg_group=$(echo "${PROPS}" \
-    | grep -E -o "${ENO}group${ENT}" \
-    | ${SEDX} "s#.*${ENO}group${ENT}.*#\1#g")
-pkg_description=$(echo "${PROPS}" \
-    | grep -E -o "${ENO}description${ENT}" \
-    | ${SEDX} "s#.*${ENO}description${ENT}.*#\1#g")
-pkg_version=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}version${ENT}.*#\1#g")
-pkg_build=$(echo "${PROPS}" | ${SEDX} "s#.*${ENO}buildCount${ENT}.*#\1#g")
-pkg_created=$(echo "${PROPS}" | grep -E -o "${ENO}created${ENT}" \
-    | ${SEDX} "s#.*${ENO}created${ENT}.*#\1#g")
-pkg_modified=$(echo "${PROPS}" | grep -E -o "${ENO}lastModified${ENT}" \
-    | ${SEDX} "s#.*${ENO}lastModified${ENT}.*#\1#g")
-pkg_filters=$(echo "${FILTERS}" | grep -E "${FO}" \
-    | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
+pkg_name=$(get_property name)
+pkg_group=$(get_property group)
+pkg_description=$(get_property description)
+pkg_version=$(get_property version)
+pkg_build=$(get_property buildCount)
+pkg_created=$(get_property created)
+pkg_modified=$(get_property lastModified)
+
+TAB=$(printf '\t')
+pkg_filters=$(echo "${FILTERS}" | tr -d '\t\n' | ${SEDX} \
+    "s#${FLTE}#${FLTE}${TAB}#g" | ${SEDX} "s#${FLTA2}#${FLTA2R}${TAB}#g" \
+    | tr '\t' '\n' | grep -E "${FO}" | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
 
 if [ "${modify}" -eq 0 ]
 then
