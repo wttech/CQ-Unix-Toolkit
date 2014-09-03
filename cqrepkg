@@ -317,9 +317,8 @@ extract_required_resources()
             cd "${dir}"
         else
             # shellcheck disable=SC2059
-            # shellcheck disable=SC2034
-            hidden_output=$(printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
-                -ud "${tempdir}" "${full_src_zip_fn}")
+            printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
+                -ud "${tempdir}" "${full_src_zip_fn}" 2>/dev/null
             exitcode=${?}
         fi
     fi
