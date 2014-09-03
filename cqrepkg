@@ -199,8 +199,8 @@ remove_filter()
 
 add_filter()
 {
-    add_filter_f=$(printf "%s\n%s\n" "${add_filter_f}" \
-        "1a\\${FLTA1}${1}${FLTA2R}")
+    add_filter_f=$(printf "%s\n%s\n%s\n" "${add_filter_f}" \
+        "1a\\" "${FLTA1}${1}${FLTA2R}")
     # TODO line number needs to be discovered
 #    add_filter_d=$(printf "%s\n%s\n" "${add_filter_d}" \
 #        "3a\\${FLTA1}${1}${FLTA2R}")
