@@ -60,7 +60,9 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqbld` -- Builds remotely uploaded CQ package using connection parameters
 * `cqcp` -- Makes a copy of remote CQ package to your local environment
 * `cqget` -- Makes a copy of CQ resource to your local environment
-* `cqrun` -- Install uploaded CQ package on remote instanse
+* `cqrun` -- Install uploaded CQ package on remote instance
+* `cqrev` -- Revert previously installed CQ package on remote instance (if
+  still exists)
 * `cqdel` -- Remove completely remotely available CQ package
 * `cqput` -- Upload package from your local environment
 * `cqls` -- List packages uploaded/installed in remote CQ
