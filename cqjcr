@@ -423,7 +423,13 @@ then
     echo ""
     _usage
 fi
-
+root_valid=$(echo "${root}" | grep -c '^/')
+if [ "${root_valid}" -ne 1 ]
+then
+    echo "PATHSPEC argument needs to be valid JCR path, i.e. /content" >&2
+    echo ""
+    _usage
+fi
 AUTH="${username}:${password}"
 [ ${list} -eq 1 ] && _list_children
 [ ${properties} -eq 1 ] && _list_properties
