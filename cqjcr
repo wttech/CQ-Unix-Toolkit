@@ -157,15 +157,15 @@ _list_properties()
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%9999%#' \
         | ${SEDX} "s#${PROP_NUM}#${TAB}\1${TAB}#g" \
-        | tr '\t' '\n' \
+        | tr '\' '\n' \
         | ${SEDX} "s#${PROP_STR}#${TAB}\1${TAB}#g" \
         | tr '\t' '\n' \
         | ${SEDX} "s#${PROP_ARR}#${TAB}\1${TAB}#g" \
         | tr '\t' '\n' \
         | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR})" \
-        | ${SEDX} "s#.*${TOKENS_NUM}.*#\1\t\2#" \
-        | ${SEDX} "s#.*${TOKENS_STR}.*#\1\t\2#" \
-        | ${SEDX} "s#.*${TOKENS_ARR}.*#\1\t\2#" \
+        | ${SEDX} "s#.*${TOKENS_NUM}.*#\1${TAB}\2#" \
+        | ${SEDX} "s#.*${TOKENS_STR}.*#\1${TAB}\2#" \
+        | ${SEDX} "s#.*${TOKENS_ARR}.*#\1${TAB}\2#" \
         | ${SEDX} 's#%9999%#"#g')
 
     if [ "${machine_friendly}" -eq 0 ]
