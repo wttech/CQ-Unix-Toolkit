@@ -72,6 +72,7 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqmrg` -- Merge CQ TarPM indexes
 * `cqtpm` -- Deletes effectively removed content from TarPM CQ storage
 * `cqwfl` -- Display active (or broken) workflow instances
+* `cqjcr` -- Browse and modify JCR tree on nodes and properties level
 * `cqosgi` -- Display bundles list and manage them by starting/stopping on demand
 * `cqclr` -- Simulates activation on dispatcher to clear its cache. Use dispatcher
   URL, (not CQ one) as instance URL (-i option).
