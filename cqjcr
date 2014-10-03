@@ -16,7 +16,7 @@
 _usage()
 {
     cat << EOT
-Usage: $(basename "${0}") [OPTION...]
+Usage: $(basename "${0}") [OPTION...] OPERATION
 Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
 touch and mkdir commands
 
@@ -43,23 +43,28 @@ Examples:
   cqjcr -u admin -d /content/trash # Delete node 'trash' under '/content' for
                                    # local instance
 
+Operations:
+
+  -s PATHSPEC           show properties for specified JCR nodes 'PATHSPEC'
+  -d PATHSPEC           delete node specified by path 'PATHSPEC'
+  -l PATHSPEC           show JCR children nodes for specified 'PATHSPEC' node
+  -a PATHSPEC           create/modify node specified by 'PATHSPEC'
+  -c PATHSPEC           create empty node specified by 'PATHSPEC'
+                        Each non-exising element from path will be created
+
 Options:
 
   -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -s PATHSPEC           show properties for specified JCR nodes 'PATHSPEC'
+
   -m                    machine-friendly mode for -s option
-  -l PATHSPEC           show JCR children nodes for specified 'PATHSPEC' node
-                        Each non-exising element from path will be created
-  -c PATHSPEC           create empty node specified by 'PATHSPEC'
   -t JCRTYPE            in conjuction with -c allows to specify jcr:PrimaryType
-  -a PATHSPEC           create/modify node specified by 'PATHSPEC'
   -n NAME               in conjuction with -a allows to specify property name
                         (can be used many times but in pairs with -v)
   -v VALUE              in conjuction with -a allows to specify property value
                         (can be used many times but in pairs with -n)
-  -d PATHSPEC           delete node specified by path 'PATHSPEC'
+
 EOT
 exit 1
 }
@@ -275,6 +280,13 @@ _delete_node()
     echo "Deleted: ${root}"
 }
 
+_use_option_warning()
+{
+    echo "You need to choose one of the following operation:" >&2
+    echo " -l / -s / -c / -a" >&2
+    _usage
+}
+
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
@@ -362,10 +374,13 @@ shift $((OPTIND-1))
 
 if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
 then
-    echo "You need to choose one of the following operation:" >&2
-    echo " -l / -s / -c / -a" >&2
-    _usage
+    _use_option_warning
 fi
+if [ $((list+properties+create+delete+modify)) -ne 1 ]
+then
+    _use_option_warning
+fi
+
 if [ ${n_counter} -ne ${v_counter} ]
 then
     echo "Options: -n and -v are connected together. You need to specify" \
