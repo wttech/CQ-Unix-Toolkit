@@ -230,7 +230,8 @@ change `INSTALL_DIR` variable in script if you want to something else.
 Building an RPM package
 -----------------------
 
-Before building place `v1.1.0.tar.gz` file in SOURCES rpmbuild directory.
+Before building place `vX.Y.Z.tar.gz` file in SOURCES rpmbuild directory
+(X.Y.Z is the current version of CQ Unix Toolkit you would like to build).
 The correct URL from which file can be obtained is defined in spec file in
 `Source:` field.
 

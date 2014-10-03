@@ -14,17 +14,17 @@
 # limitations under the License.
 Summary: CQ Unix Toolkit
 Name: CQ-Unix-Toolkit
-Version: 1.1.1
+Version: 1.1.2
 Release: 0
 License: GPL
 Group: Tools/CQ
-Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.1.1.tar.gz
+Source: https://github.com/Cognifide/CQ-Unix-Toolkit/archive/v1.1.2.tar.gz
 URL: https://github.com/Cognifide/CQ-Unix-Toolkit
 Vendor: Cognifide Limited
 Packager: Arkadiusz Kita <arkadiusz.kita@cognifide.com>
 BuildArch: noarch
 
-# NOTE! Before building place v1.1.1.tar.gz file from above URL in SOURCES
+# NOTE! Before building place v1.1.2.tar.gz file from above URL in SOURCES
 # rpmbuild directory.
 
 %description
@@ -42,7 +42,7 @@ platform such as:
 
 %prep
 echo Building %{name}-%{version}-%{release}
-%setup -n CQ-Unix-Toolkit-1.1.1
+%setup -n CQ-Unix-Toolkit-1.1.2
 
 %build
 mkdir -p %buildroot/%{_bindir}/

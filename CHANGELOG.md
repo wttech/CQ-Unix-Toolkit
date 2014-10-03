@@ -1,6 +1,13 @@
 What's new in...
 ================
 
+1.1.2
+-----
+
+* Fixed incorrect total number of bundles shown for cqosgi
+* Fixed missing \n for cqosgi with -m option supplied
+* Fixed the issue: https://github.com/Cognifide/CQ-Unix-Toolkit/issues/17
+
 1.1.1
 -----
 
