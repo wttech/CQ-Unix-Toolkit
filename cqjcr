@@ -157,7 +157,7 @@ _list_properties()
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%9999%#' \
         | ${SEDX} "s#${PROP_NUM}#${TAB}\1${TAB}#g" \
-        | tr '\' '\n' \
+        | tr '\t' '\n' \
         | ${SEDX} "s#${PROP_STR}#${TAB}\1${TAB}#g" \
         | tr '\t' '\n' \
         | ${SEDX} "s#${PROP_ARR}#${TAB}\1${TAB}#g" \
