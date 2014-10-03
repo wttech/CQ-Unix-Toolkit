@@ -187,6 +187,11 @@ _list_properties()
 
 _modify_properties()
 {
+    if [ ${n_counter} -le 0 ]
+    then
+        echo "Use -n/-v to provide property name/value to add or modify." >&2
+        _usage
+    fi
     echo "Creating/modyfing ${root}"
     actions=""
     for operation in ${operations}
