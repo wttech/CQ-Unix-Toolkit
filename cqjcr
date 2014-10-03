@@ -145,11 +145,14 @@ _list_properties()
     NUMBER='-?[0-9\.]+'
     STRING='[^"]*'
     ARR='\[("[^"]*",?)*\]'
+    BOOL='(true|false)'
     QT='"'
     PROP_ARR="(${QT}${NODE_NAME}${QT}:${ARR},?)"
+    PROP_BOOL="(${QT}${NODE_NAME}${QT}:${BOOL},?)"
     PROP_STR="(${QT}${NODE_NAME}${QT}:${QT}${STRING}${QT},?)"
     PROP_NUM="(${QT}${NODE_NAME}${QT}:${NUMBER},?)"
     TOKENS_ARR="${QT}(${NODE_NAME})${QT}:(${ARR}),?"
+    TOKENS_BOOL="${QT}(${NODE_NAME})${QT}:(${BOOL}),?"
     TOKENS_STR="${QT}(${NODE_NAME})${QT}:${QT}(${STRING})${QT},?"
     TOKENS_NUM="${QT}(${NODE_NAME})${QT}:(${NUMBER}),?"
 
@@ -160,11 +163,14 @@ _list_properties()
         | tr '\t' '\n' \
         | ${SEDX} "s#${PROP_STR}#${TAB}\1${TAB}#g" \
         | tr '\t' '\n' \
+        | ${SEDX} "s#${PROP_BOOL}#${TAB}\1${TAB}#g" \
+        | tr '\t' '\n' \
         | ${SEDX} "s#${PROP_ARR}#${TAB}\1${TAB}#g" \
         | tr '\t' '\n' \
-        | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR})" \
+        | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR}|${PROP_BOOL})" \
         | ${SEDX} "s#.*${TOKENS_NUM}.*#\1${TAB}\2#" \
         | ${SEDX} "s#.*${TOKENS_STR}.*#\1${TAB}\2#" \
+        | ${SEDX} "s#.*${TOKENS_BOOL}.*#\1${TAB}\2#" \
         | ${SEDX} "s#.*${TOKENS_ARR}.*#\1${TAB}\2#" \
         | ${SEDX} 's#%9999%#"#g')
 
