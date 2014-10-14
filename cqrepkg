@@ -15,7 +15,7 @@
 # limitations under the License.
 _usage()
 {
-	cat <<EOT
+    cat <<EOT
 Usage: $(basename "${0}") [SPECIFICATION...] package-file
 Read or repackage CQ Vault zip package locally (without connecting to CQ)
 using provided specification. The new package will be regenerated next to
@@ -135,9 +135,16 @@ prepare_unpack_args()
         _prepare_intermediary_paths_for_unpack "${new_filter}"
         unpack_args="${unpack_args}\000jcr_root${new_filter}/*"
     done
+    filters_to_leave=$(printf "%s\n" "${delta}" | grep '^=' | cut -f2 -d ' ')
+    for filter_to_leave in ${filters_to_leave}
+    do
+        _prepare_intermediary_paths_for_unpack "${filter_to_leave}"
+        unpack_args="${unpack_args}\000jcr_root${filter_to_leave}/*"
+    done
 }
 
-replace_property() {
+replace_property()
+{
     prop=${1}
     old=${2}
     new=${3}
@@ -171,10 +178,12 @@ change_filters()
     new_filters_d=""
     for filter_to_change in ${filters_to_change}
     do
-        new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2}"
+        new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2R}"
         new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
-        new_filters_f_short=$(printf "%s%s" "${new_filters_f_short}" "${new_filter_f_short}")
-        new_filters_f_long=$(printf "%s%s" "${new_filters_f_long}" "${new_filter_f_long}")
+        new_filters_f_short=$(printf "%s%s" "${new_filters_f_short}" \
+            "${new_filter_f_short}")
+        new_filters_f_long=$(printf "%s%s" "${new_filters_f_long}" \
+            "${new_filter_f_long}")
 
         new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
         new_filters_d=$(printf "%s%s" "${new_filters_d}" "${new_filter_d}")
@@ -182,9 +191,7 @@ change_filters()
     repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
     repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
     repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
-    all_filters_to_change_f=$(printf "%s\n%s\n" "${all_filters_to_change_f}" "${repl1}")
-    all_filters_to_change_f=$(printf "%s\n%s\n" "${all_filters_to_change_f}" "${repl2}")
-    all_filters_to_change_d=$(printf "%s\n%s\n" "${all_filters_to_change_d}" "${repl3}")
+    printf "F %s\nF %s\nD %s\n" "${repl1}" "${repl2}" "${repl3}"
 }
 
 remove_filter()
@@ -193,18 +200,9 @@ remove_filter()
     repl1="s#${FLTA1}${filter}${FLTA2}##;"
     repl2="s#${FLTB1}${filter}${FLTB2}##;"
     repl3="s#${DFLT1}${filter}${DFLT2}##;"
-    all_filters_to_remove_f=$(printf "%s\n%s\n%s\n" "${all_filters_to_remove_f}" "${repl1}" "${repl2}")
-    all_filters_to_remove_d=$(printf "%s\n%s\n" "${all_filters_to_remove_d}" "${repl3}")
+    printf "F %s\nF %s\nD %s\n" "${repl1}" "${repl2}" "${repl3}"
 }
 
-add_filter()
-{
-    add_filter_f=$(printf "%s\n%s\n%s\n" "${add_filter_f}" \
-        "1a\\" "${FLTA1}${1}${FLTA2R}")
-    # TODO line number needs to be discovered
-#    add_filter_d=$(printf "%s\n%s\n" "${add_filter_d}" \
-#        "3a\\${FLTA1}${1}${FLTA2R}")
-}
 sanitize_filters()
 {
     TAB=$(printf '\t')
@@ -217,6 +215,7 @@ sanitize_filters()
         | ${SEDX} "s#(${TAB})+#${TAB}#g" \
         | tr '\t' '\n'
 }
+
 group_into_filters()
 {
     TAB=$(printf '\t')
@@ -226,50 +225,175 @@ group_into_filters()
         | ${SEDX} "s#${FLTA1}([^\"]+)${FLTA2}#${FLTA1}\1${FLTA2R}${TAB}#g" \
         | tr '\t' '\n'
 }
-apply_changes_to_files()
+
+replace_filters()
 {
     TAB=$(printf '\t')
     sanitize_filters < "${filtersfn}" | group_into_filters > "${filtersfn}.new" \
         && replace_with_new_file "${filtersfn}"
-    echo "${all_filters_to_remove_d}${all_filters_to_change_d}${add_filter_d}" | ${SEDX}  \
+    echo "${seds_def}" | ${SEDX}  \
         -f /dev/stdin "${definitionfn}" > "${definitionfn}.new" \
         && replace_with_new_file "${definitionfn}"
-    echo "${all_filters_to_remove_f}${all_filters_to_change_f}${add_filter_f}" | ${SEDX}  \
-        -f /dev/stdin "${filtersfn}" > "${filtersfn}.new" \
+    echo "${seds_flt}" | ${SEDX}  \
+        -f /dev/stdin "${filtersfn}" | tr -s '\n' | uniq > "${filtersfn}.new" \
         && replace_with_new_file "${filtersfn}"
 }
 
-replace_filters()
+process_delta_item()
+{
+    op=$(echo "${1}" | cut -c1)
+    filter=$(echo "${1}" | cut -f2 -d ' ')
+    new_filter=$(echo "${1}" | cut -f4- -d ' ')
+    if [ "${op}" == "R" ]
+    then
+        remove_filter "${filter}"
+    fi
+    if [ "${op}" == "M" ]
+    then
+        change_filters "${filter}" "${new_filter}"
+    fi
+}
+
+display_last()
+{
+    if [ -n "${1}" ]
+    then
+        echo "Y${1}"
+    fi
+}
+
+compact_item()
+{
+    op=$(echo "${1}" | cut -c1)
+    last_item=$(echo "${2}" | grep -e '^N' | cut -c2-)
+
+    filter=$(echo "${1}" | cut -f2 -d ' ')
+    new_filter=$(echo "${1}" | cut -f4- -d ' ')
+    last_op=$(echo "${last_item}" | cut -c1)
+    last_filter=$(echo "${last_item}" | cut -f2 -d ' ')
+    last_new_filters=$(echo "${last_item}" | cut -f4- -d ' ')
+
+    if [ "${op}" == "F" ]
+    then
+        display_last "${last_item}"
+    fi
+    if [ "${op}" == "R" -o "${op}" == "=" ]
+    then
+        echo "Y${1}"
+        display_last "${last_item}"
+    fi
+    if [ "${op}" == "M" ]
+    then
+        if [ "${last_op}" == "M" -a "${filter}" == "${last_filter}" ]
+        then
+            printf "N%s %s -> %s %s\n" "${op}" "${filter}" "${new_filter}" \
+                "${last_new_filters}"
+        else
+            echo "N${1}"
+            display_last "${last_item}"
+        fi
+    fi
+}
+
+compact_delta()
+{
+    printf "%s\nF\n" "${delta}" \
+        | while read item; do \
+        compacted=$(compact_item "${item}" "${compacted}"); \
+        echo "${compacted}" | grep -E '^Y' | cut -c2- ; \
+        compacted=$(echo "${compacted}" | grep -E -v '^Y'); \
+        done
+}
+
+process_delta()
 {
     DFLT1="<([^<]+)\""
     DFLT2="\"([^>]+)>"
     DFLT1R="<\1\""
     DFLT2R="\"\2>"
 
-    all_filters_to_change_f=""
-    all_filters_to_change_d=""
-    all_filters_to_remove_f=""
-    all_filters_to_remove_d=""
+    removal_count=$(echo "${delta}" | grep -c '^R')
+    leave_count=$(echo "${delta}" | grep -c '^=')
+    change_count=$(echo "${delta}" | grep -c '^M')
 
+    compacted_delta=$(compact_delta "${delta}")
+    printf "%s\n" "${compacted_delta}"
+
+    seds_flt=$(echo "${compacted_delta}" \
+        | while read item; do process_delta_item "${item}"; done \
+        | grep '^F' | cut -f2- -d ' ')
+    seds_def=$(echo "${compacted_delta}" \
+        | while read item; do process_delta_item "${item}"; done \
+        | grep '^D' | cut -f2- -d ' ')
+
+    if [ "${change_count}" -eq 0 -a "${leave_count}" -eq 0 ]
+    then
+        MSG="Cannot repackage: effective target package will be empty."
+        echo "${MSG}" >&2
+        _clean_up
+        exit 1
+    fi
+}
+
+update_delta()
+{
+    delta="""${1}
+${delta}"""
+}
+
+preprocess_filters()
+{
     for filter in ${pkg_filters}
     do
+        pts=$(echo "${filter}" | wc -c)
         filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
         if [ -n "${filters_to_change}" ]
         then
-            change_filters "${filter}" "${filters_to_change}"
-        else
-            remove_filter "${filter}"
+            for flt in ${filters_to_change}
+            do
+                changes="""${changes}
+${flt}${TAB}${pts}${TAB}${filter}"""
+            done
         fi
     done
-    for new_filter in ${new_filters}
+
+
+    for filter in ${new_filters}
     do
-        filters_to_add=$(echo "${pkg_filters}" | grep -E "${new_filter}")
-        if [ -n "${filters_to_add}" ]
+        my_changes=$(echo "${changes}" | grep -E "^${filter}${TAB}" | sort -nr\
+            -k2)
+        to_change=$(echo "${my_changes}" | head -1 | cut -f 3)
+        if [ "${to_change}" = "${filter}" ]
         then
-            add_filter "${new_filter}"
+            update_delta "= ${to_change}"
+        else
+            if [ -n "${to_change}" -a -n "${filter}" ]
+            then
+                update_delta "M ${to_change} -> ${filter}"
+            fi
+        fi
+        for old_filter in ${pkg_filters}
+        do
+            to_leave=$(echo "${old_filter}" | grep -E "^${filter}")
+            if [ -n "${to_leave}" ]
+            then
+                update_delta "= ${to_leave}"
+            fi
+        done
+    done
+
+    delta=$(echo "${delta}" | sort | uniq)
+    for old_filter in ${pkg_filters}
+    do
+        to_remove=$(echo "${delta}" | grep -Ev '^R ' | cut -f2 -d ' ' \
+            | grep -c "^${old_filter}")
+        if [ "${to_remove}" -eq 0 ]
+        then
+            update_delta "R ${old_filter}"
         fi
     done
-    apply_changes_to_files
+
+    delta=$(echo "${delta}" | grep -v '^$')
 }
 
 save_rewritten_zip()
@@ -443,7 +567,7 @@ if [ -n "${P7ZIP}" ]
 then
     PROPSN=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
         2>/dev/null)
-    PROPS=$(echo "${PROPSN}" | tr -d '\n')        
+    PROPS=$(echo "${PROPSN}" | tr -d '\n')
     FILTERS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
         2>/dev/null)
 else
@@ -506,9 +630,8 @@ pkg_created=$(get_property created)
 pkg_modified=$(get_property lastModified)
 
 TAB=$(printf '\t')
-pkg_filters=$(echo "${FILTERS}" | tr -d '\t\n' | ${SEDX} \
-    "s#${FLTE}#${FLTE}${TAB}#g" | ${SEDX} "s#${FLTA2}#${FLTA2R}${TAB}#g" \
-    | tr '\t' '\n' | grep -E "${FO}" | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
+pkg_filters=$(echo "${FILTERS}" | group_into_filters \
+    | grep -E "${FO}" | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
 
 if [ "${modify}" -eq 0 ]
 then
@@ -574,6 +697,8 @@ fi
 
 
 vault="${tempdir}/${VAULT}"
+preprocess_filters
+process_delta
 prepare_unpack_args
 extract_required_resources
 
