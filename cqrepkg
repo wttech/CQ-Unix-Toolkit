@@ -487,6 +487,7 @@ raw=0
 modify=0
 show_props=0
 show_filters=0
+change_only_properties=1
 while getopts ":g:v:r:n:o:d:PFX:" opt
 do
     case "${opt}" in
@@ -507,6 +508,7 @@ do
             dest_zip_fn="${OPTARG}";;
         r)
             modify=1
+            change_only_properties=0
             _add_filter "${OPTARG}";;
         P)
             raw=1
@@ -717,9 +719,14 @@ fi
 
 
 vault="${tempdir}/${VAULT}"
-preprocess_filters
-process_delta
-prepare_unpack_args
+if [ "${change_only_properties}" -eq 0 ]
+then
+    preprocess_filters
+    process_delta
+    prepare_unpack_args
+else
+    unpack_args=""
+fi
 extract_required_resources
 
 if [ ${exitcode} -ne 0 ]
@@ -734,7 +741,10 @@ propertiesfn="${vault}/${PROPERTIES}"
 definitionfn="${vault}/definition/.content.xml"
 
 replace_properties
-replace_filters
+if [ "${change_only_properties}" -eq 0 ]
+then
+    replace_filters
+fi
 save_rewritten_zip
 _clean_up
 
