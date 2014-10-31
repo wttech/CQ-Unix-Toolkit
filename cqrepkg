@@ -69,8 +69,8 @@ Options:
   -o ZIPPATH            generates package in path specified by ZIPPATH
   -P                    output raw xml file with package properties
   -F                    output raw xml file with package filters
-
-
+  -X EXTRACT_TOOL_NAME  force usage of specified tool for package extraction
+                        (allowed values: jar, unzip, 7za)
 EOT
 exit 1
 }
@@ -112,6 +112,12 @@ detect_zip_tools()
     then
         UNZIP=""
     fi
+
+    case "${force_extractor_name}" in
+        jar) UNZIP=""; P7ZIP="";;
+        unzip) JAR=""; P7ZIP="";;
+        7za) JAR=""; UNZIP="";;
+    esac
 }
 
 _prepare_intermediary_paths_for_unpack()
@@ -482,7 +488,7 @@ raw=0
 modify=0
 show_props=0
 show_filters=0
-while getopts ":g:v:r:n:o:d:PF" opt
+while getopts ":g:v:r:n:o:d:PFX:" opt
 do
     case "${opt}" in
         n)
@@ -509,6 +515,8 @@ do
         F)
             raw=1
             show_filters=1;;
+        X)
+            force_extractor_name="${OPTARG}";;
         \?)
             echo "Invalid option: -${OPTARG}" >&2; _usage;;
         :)
@@ -533,6 +541,19 @@ fi
 if [ "${show_filters}" -eq 1 -a "${show_props}" -eq 1 ]
 then
     echo "Options -P and -F cannot be used together" >&2
+    _usage
+fi
+
+if [ "${force_extractor_name}" != "" \
+    -a "${force_extractor_name}" != "jar" \
+    -a "${force_extractor_name}" != "unzip" \
+    -a "${force_extractor_name}" != "7za" ]
+then
+    echo "Specify the correct extraction tool (only one) for -X option:" >&2
+    echo "      jar"  >&2
+    echo "      unzip"  >&2
+    echo "      7za"  >&2
+    echo >&2
     _usage
 fi
 
