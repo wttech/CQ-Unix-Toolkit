@@ -250,11 +250,11 @@ process_delta_item()
     op=$(echo "${1}" | cut -c1)
     filter=$(echo "${1}" | cut -f2 -d ' ')
     new_filter=$(echo "${1}" | cut -f4- -d ' ')
-    if [ "${op}" == "R" ]
+    if [ "${op}" = "R" ]
     then
         remove_filter "${filter}"
     fi
-    if [ "${op}" == "M" ]
+    if [ "${op}" = "M" ]
     then
         change_filters "${filter}" "${new_filter}"
     fi
@@ -279,18 +279,18 @@ compact_item()
     last_filter=$(echo "${last_item}" | cut -f2 -d ' ')
     last_new_filters=$(echo "${last_item}" | cut -f4- -d ' ')
 
-    if [ "${op}" == "F" ]
+    if [ "${op}" = "F" ]
     then
         display_last "${last_item}"
     fi
-    if [ "${op}" == "R" -o "${op}" == "=" ]
+    if [ "${op}" = "R" -o "${op}" = "=" ]
     then
         echo "Y${1}"
         display_last "${last_item}"
     fi
-    if [ "${op}" == "M" ]
+    if [ "${op}" = "M" ]
     then
-        if [ "${last_op}" == "M" -a "${filter}" == "${last_filter}" ]
+        if [ "${last_op}" = "M" -a "${filter}" = "${last_filter}" ]
         then
             printf "N%s %s -> %s %s\n" "${op}" "${filter}" "${new_filter}" \
                 "${last_new_filters}"
@@ -318,7 +318,6 @@ process_delta()
     DFLT1R="<\1\""
     DFLT2R="\"\2>"
 
-    removal_count=$(echo "${delta}" | grep -c '^R')
     leave_count=$(echo "${delta}" | grep -c '^=')
     change_count=$(echo "${delta}" | grep -c '^M')
 
@@ -343,22 +342,22 @@ process_delta()
 
 update_delta()
 {
-    delta="""${1}
-${delta}"""
+    delta="${1}
+${delta}"
 }
 
 preprocess_filters()
 {
     for filter in ${pkg_filters}
     do
-        pts=$(echo "${filter}" | wc -c)
+        pts="${#filter}"
         filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
         if [ -n "${filters_to_change}" ]
         then
             for flt in ${filters_to_change}
             do
-                changes="""${changes}
-${flt}${TAB}${pts}${TAB}${filter}"""
+                changes="${changes}
+${flt}${TAB}${pts}${TAB}${filter}"
             done
         fi
     done
