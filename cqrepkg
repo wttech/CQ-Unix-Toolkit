@@ -428,6 +428,7 @@ save_rewritten_zip()
 
 extract_required_resources()
 {
+    unzip_used=0
     if [ -n "${P7ZIP}" ]
     then
         # shellcheck disable=SC2059
@@ -449,6 +450,7 @@ extract_required_resources()
             debugging=$(printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
                 -ud "${tempdir}" "${full_src_zip_fn}" 2>&1)
             exitcode=${?}
+            unzip_used=1
         fi
     fi
 }
@@ -731,12 +733,21 @@ extract_required_resources
 
 if [ ${exitcode} -ne 0 ]
 then
-    echo "Cannot unpack CQ package properly." >&2
-    echo >&2
-    echo "Debugging log for extraction:" >&2
-    echo "${debugging}" >&2
-    _clean_up
-    exit 1
+    if [ "${unzip_used}" -eq 0 ]
+    then
+        echo "Cannot unpack CQ package properly." >&2
+        echo >&2
+    fi
+    if [ -n "${debugging}" ]
+    then
+        echo "Extraction log:" >&2
+        echo "${debugging}" >&2
+    fi
+    if [ "${unzip_used}" -eq 0 ]
+    then
+        _clean_up
+        exit 1
+    fi
 fi
 
 filtersfn="${vault}/${FILTER}"
