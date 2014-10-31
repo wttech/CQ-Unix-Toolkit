@@ -432,7 +432,7 @@ extract_required_resources()
     then
         # shellcheck disable=SC2059
         # shellcheck disable=SC2034
-        hidden_output=$(printf "${unpack_args}" | tr -d '*' | xargs -0 \
+        debugging=$(printf "${unpack_args}" | tr -d '*' | xargs -0 \
             "${P7ZIP}" x -o"${tempdir}" "${full_src_zip_fn}")
         exitcode=${?}
     else
@@ -440,14 +440,14 @@ extract_required_resources()
         then
             cd "${tempdir}"
             # shellcheck disable=SC2059
-            printf "${unpack_args}" | tr -d '*' \
-                | xargs -0 "${JAR}" xf "${full_src_zip_fn}"
+            debugging=$(printf "${unpack_args}" | tr -d '*' \
+                | xargs -0 "${JAR}" xf "${full_src_zip_fn}")
             exitcode=${?}
             cd "${dir}"
         else
             # shellcheck disable=SC2059
-            printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
-                -ud "${tempdir}" "${full_src_zip_fn}" 2>/dev/null
+            debugging=$(printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
+                -ud "${tempdir}" "${full_src_zip_fn}" 2>&1)
             exitcode=${?}
         fi
     fi
@@ -732,6 +732,9 @@ extract_required_resources
 if [ ${exitcode} -ne 0 ]
 then
     echo "Cannot unpack CQ package properly." >&2
+    echo >&2
+    echo "Debugging log for extraction:" >&2
+    echo "${debugging}" >&2
     _clean_up
     exit 1
 fi
