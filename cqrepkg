@@ -154,14 +154,18 @@ replace_property()
     prop=${1}
     old=${2}
     new=${3}
+    esc1='s#\\#\\\\#g; s#\$#\\$#g; s#{#\\{#g; s#}#\\}#g; s#\*#\\*#g;'
+    esc2='s#\.#\\.#g; s#\?#\\?#g; s#\^#\\^#g; s#\[#\\[#g; s#\]#\\]#g;'
+    esc3='s#|#\\|#g; s#(#\\(#g; s#)#\\)#g; s#\+#\\+#g'
+    old_esc=$(echo "${old}" | sed "${esc1}${esc2}${esc3}")
 
     tag_open="${ENO}${prop}${ENC}"
     tag_open_repl="${ENO}${prop}${ENCR}"
-    sed_op="s#${tag_open}${old}${ENC2}#${tag_open_repl}${new}${ENC2}#"
+    sed_op="s#${tag_open}${old_esc}${ENC2}#${tag_open_repl}${new}${ENC2}#"
     [ -n "${new}" ] && ${SEDX} "${sed_op}" "${propertiesfn}" \
         > "${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
 
-    sed_op="s#name=\"${old}\"#name=\"${new}\"#"
+    sed_op="s#name=\"${old_esc}\"#name=\"${new}\"#"
     [ -n "${new}" ] && ${SEDX} "${sed_op}" "${definitionfn}" \
         > "${definitionfn}.new" && replace_with_new_file "${definitionfn}"
 }
