@@ -26,7 +26,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -1                    list only package names without summary
@@ -107,7 +107,7 @@ _print_preformatted()
     total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
     if [ "${machine}" -eq 0 ]
     then
-        printf "%s package\n\n" "${total}"
+        printf "%s packages\n\n" "${total}"
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
         H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
