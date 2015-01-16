@@ -104,7 +104,7 @@ _print_preformatted()
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
         | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" \
         | cut -f1-${fields_num})
-    total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
+    total=$(printf "%s\n" "${items}" | wc -l | tr -d ' ')
     if [ "${machine}" -eq 0 ]
     then
         printf "%s packages\n\n" "${total}"
@@ -126,7 +126,7 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" \
+        printf "%s\n" "${output}" | tr '\t' "${SEP}" \
             | ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
