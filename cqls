@@ -118,7 +118,7 @@ _print_preformatted()
     fi
     if [ "${machine}" -eq 1 ]
     then
-        printf "%s" "${output}"
+        printf "%s\n" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
