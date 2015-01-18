@@ -74,7 +74,7 @@ _print_preformatted()
         | grep -E "${REGEXP}" \
         | ${SEDX} "s#${REGEXP}#${REPLACEMENT}#" \
         | cut -f 1-${fields_num})
-    total=$(printf "%s" "${items}" | wc -l | tr -d ' ' )
+    total=$(printf "%s\n" "${items}" | wc -l | tr -d ' ' )
 
     if [ "${machine_friendly}" -eq 0 ]
     then
@@ -97,7 +97,7 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt \
+        printf "%s\n" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt \
             -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
