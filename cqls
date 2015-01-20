@@ -26,7 +26,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -1                    list only package names without summary
@@ -104,10 +104,10 @@ _print_preformatted()
         | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
         | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" \
         | cut -f1-${fields_num})
-    total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
+    total=$(printf "%s\n" "${items}" | wc -l | tr -d ' ')
     if [ "${machine}" -eq 0 ]
     then
-        printf "%s package\n\n" "${total}"
+        printf "%s packages\n\n" "${total}"
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
         H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
@@ -118,7 +118,7 @@ _print_preformatted()
     fi
     if [ "${machine}" -eq 1 ]
     then
-        printf "%s" "${output}"
+        printf "%s\n" "${output}"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -126,7 +126,7 @@ _print_preformatted()
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" \
+        printf "%s\n" "${output}" | tr '\t' "${SEP}" \
             | ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
