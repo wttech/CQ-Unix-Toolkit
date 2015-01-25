@@ -81,11 +81,14 @@ _print_general_info()
     D2='"title":"([^"]*)"'
     D3='"description":"([^"]*)"'
     D4='"bundleLocation":"([^"]*)"'
-    PID=$(echo "${DETAILS}" | grep -E -o "${D1}" | ${SEDX} "s#.*${D1}.*#\1#")
-    TITLE=$(echo "${DETAILS}" | grep -E -o "${D2}" | ${SEDX} "s#.*${D2}.*#\1#")
+    PID=$(echo "${DETAILS}" | grep -E -o "${D1}" \
+        | ${SEDX} "s#.*${D1}.*#\1#")
+    TITLE=$(echo "${DETAILS}" | grep -E -o "${D2}" \
+        | ${SEDX} "s#.*${D2}.*#\1#")
     DESCRIPTION=$(echo "${DETAILS}" | grep -E -o "${D3}" \
         | ${SEDX} "s#.*${D3}.*#\1#")
-    BUNDLE=$(echo "${DETAILS}" | grep -E -o "${D4}" | ${SEDX} "s#.*${D4}.*#\1#")
+    BUNDLE=$(echo "${DETAILS}" | grep -E -o "${D4}" \
+        | ${SEDX} "s#.*${D4}.*#\1#")
 
     if [ "${machine_friendly}" -eq 0 ]
     then
@@ -99,15 +102,17 @@ _print_general_info()
 
     if [ "${machine_friendly}" -eq 0 -o "${info}" -eq 1 ]
     then
-        echo "${output}" | "${API}" -F "${machine_friendly}"
+        printf "%s\n" "${output}" | "${API}" -F "${machine_friendly}"
     fi
 }
 
 _print_properties()
 {
+    T=$(printf '\t')
     PROP_ENTRY_REGEXP='("[^"]+":\{"name":)'
     PROP_ENTRIES=$(echo "${PROPERTIES}" \
-        | ${SEDX} "s#${PROP_ENTRY_REGEXP}#\n\1#g")
+        | ${SEDX} "s#${PROP_ENTRY_REGEXP}#${T}\1#g" \
+        | tr '\t' '\n')
 
     PR12='"([^"]+)":\{"name":"([^"]*)",'
     PR3='"type":(.*),'
@@ -119,23 +124,23 @@ _print_properties()
     PR5=',"description":"([^"]*)"}'
 
     VALUES_RG='\{"labels":\[.*\],"values":(\[.*\])\},?'
-    SWAPRG='(.*)\t(.*)\t(.*)\t(.*)\t(.*)}?'
-    TYPE_ID_RG='(.*)\t(.*)\t(.*)\t(.*)\t([0-9]+,?).*'
+    SWAPRG="(.*)${T}(.*)${T}(.*)${T}(.*)${T}(.*)}?"
+    TYPE_ID_RG="(.*)${T}(.*)${T}(.*)${T}(.*)${T}([0-9]+,?).*"
     PROPS_BASIC_ROWS=$(echo "${PROP_ENTRIES}" | \
         grep -E "${PR12}" \
-        | ${SEDX} "s#${PR12}${PR3S}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4N}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3A}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4A}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4}${PR5}#\1\t\4\t\2\t\5\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3S}${PR4}#\1\t\4\t\2\t\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4N}#\1\t\4\t\2\t\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3A}${PR4A}#\1\t\4\t\2\t\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4A}#\1\t\4\t\2\t\t\3#" \
-        | ${SEDX} "s#${PR12}${PR3}${PR4}#\1\t\4\t\2\t\t\3#" \
+        | ${SEDX} "s#${PR12}${PR3S}${PR4}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4N}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3A}${PR4A}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4A}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3S}${PR4}#\1${T}\4${T}\2${T}${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4N}#\1${T}\4${T}\2${T}${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3A}${PR4A}#\1${T}\4${T}\2${T}${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4A}#\1${T}\4${T}\2${T}${T}\3#" \
+        | ${SEDX} "s#${PR12}${PR3}${PR4}#\1${T}\4${T}\2${T}${T}\3#" \
         | ${SEDX} "s#${VALUES_RG}#\1#" \
-        | ${SEDX} "s#${TYPE_ID_RG}#\1\t\2\t\3\t\4\t#" \
-        | ${SEDX} "s#${SWAPRG}#\1\t\2\t\3\t\5\t\4#" \
+        | ${SEDX} "s#${TYPE_ID_RG}#\1${T}\2${T}\3${T}\4${T}#" \
+        | ${SEDX} "s#${SWAPRG}#\1${T}\2${T}\3${T}\5${T}\4#" \
         | ${SEDX} 's#%22#"#g')
 
     output="${PROPS_BASIC_ROWS}"
@@ -145,11 +150,11 @@ _print_properties()
     fi
     if [ "${long}" -eq 0 ]
     then
-        output=$(printf "%s" "${output}" | cut -f1-4)
+        output=$(printf "%s\n" "${output}" | cut -f1-4)
     fi
     if [ "${machine_friendly}" -eq 0 -o "${info}" -eq 0 ]
     then
-        echo "${output}" | "${API}" -F "${machine_friendly}"
+        printf "%s\n" "${output}" | "${API}" -F "${machine_friendly}"
     fi
 }
 
