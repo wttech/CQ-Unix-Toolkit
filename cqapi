@@ -351,14 +351,13 @@ _urlencode()
 
 _format_output()
 {
-    ECHO=$(which echo)
-    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
     SEP='|'
     machine_friendly=${1}
     output=$(cat -)
+    output=$(echo "${output}" | sed 's#%#%%#g')
     if [ "${machine_friendly}" -eq 1 ]
     then
-        ${ECHO} "${output}"
+        printf "${output}\n"
     else
         COLUMN=$(which column)
         if [ ${?} -ne 0 -o -z "${COLUMN}" ]
@@ -366,36 +365,12 @@ _format_output()
             echo "Cannot find column utility"
             exit 1
         fi
-        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -s "${SEP}"
+        printf "${output}\n" | tr '\t' "${SEP}" \
+            | sed "s#${SEP}${SEP}#${SEP} ${SEP}#g" \
+            | column -xt -s "${SEP}" 2>/dev/null
     fi
     exit
 }
-
-
-
-
-_format_output()
-{
-    ECHO=$(which echo)
-    [ ${?} -ne 0 -o -z "${ECHO}" ] && ECHO="echo" || ECHO="${ECHO} -e "
-    SEP='|'
-    machine_friendly=${1}
-    output=$(cat -)
-    if [ "${machine_friendly}" -eq 1 ]
-    then
-        ${ECHO} "${output}"
-    else
-        COLUMN=$(which column)
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
-            echo "Cannot find column utility"
-            exit 1
-        fi
-        ${ECHO} "${output}" | tr '\t' "${SEP}" | column -xt -s "${SEP}"
-    fi
-    exit
-}
-
 
 
 OPTIONS=":Pu:p:i:csC:H:fF:Evwe-:"
