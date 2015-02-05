@@ -228,21 +228,31 @@ _modify_configuration()
     PROPERTIES="&propertylist="
     REFERERHEADER="Referer: ${instance}${FILEPATH}"
     first=1
+    UNIQUE_PROPERTIES=""
     for operation in ${operations}
     do
-            propname=$(echo "${operation}" | cut -f1 -d '=')
-            propvalue=$(echo "${operation}" | cut -f2- -d '=' |\
-                sed 's# #%20#g' | "${API}" -f)
+        propname=$(echo "${operation}" | cut -f1 -d '=')
+        propvalue=$(echo "${operation}" | cut -f2- -d '=' |\
+            sed 's# #%20#g' | "${API}" -f)
 
-            prop_original_value=$(echo "${operation}" | cut -f2- -d '=' |\
-                sed 's#%20# #g')
-            echo "  Setting '${propname}' to: '${prop_original_value}' "
+        prop_original_value=$(echo "${operation}" | cut -f2- -d '=' |\
+            sed 's#%20# #g')
+        echo "  Setting '${propname}' to: '${prop_original_value}' "
 
-            [ "${first}" -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
-            REQ_ACTION="${REQ_ACTION}${propname}=${propvalue}"
-            [ "${first}" -eq 0 ] && PROPERTIES="${PROPERTIES}%2C"
-            PROPERTIES="${PROPERTIES}${propname}"
-            first=0
+        [ "${first}" -eq 0 ] && REQ_ACTION="${REQ_ACTION}&"
+        REQ_ACTION="${REQ_ACTION}${propname}=${propvalue}"
+        UNIQUE_PROPERTIES=$(printf "%s\n%s\n" "${UNIQUE_PROPERTIES}"\
+            "${propname}")
+        first=0
+    done
+    UNIQUE_PROPERTIES=$(printf "%s\n" "${UNIQUE_PROPERTIES}" | sort | \
+        uniq )
+    first=1
+    for property in ${UNIQUE_PROPERTIES}
+    do
+        [ "${first}" -eq 0 ] && PROPERTIES="${PROPERTIES}%2C"
+        PROPERTIES="${PROPERTIES}${property}"
+        first=0
     done
     QUERYSTRING="${CONST_PARAMS}${REQ_ACTION}${PROPERTIES}"
     URL="${instance}${FILEPATH}${QUERYSTRING}"
