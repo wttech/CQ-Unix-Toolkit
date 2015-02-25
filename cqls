@@ -109,7 +109,7 @@ _print_preformatted()
     then
         printf "%s packages\n\n" "${total}"
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
-        H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
+        H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BY|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
         output=$(printf "%s\n" "${header}" | cut -f1-${fields_num} -d '|')
         output=$(printf "%s\n%s" "${output}" "${items}")
