@@ -1,6 +1,7 @@
 CQ-Unix-Toolkit
 ===============
 
+![CQ Unix Toolkit logo](logo.png)
 
 Table of contents
 -----------------
@@ -21,8 +22,8 @@ Introduction
 CQ Unix Toolkit is a set of POSIX shell tools that calls curl and other 3rd
 party commands to perform some different tasks on Adobe CQ platform such as:
 
-* Create, Build, upload, list, download, install and deletion of CRX zip
-  packages
+* Create, build, rewrite, upload, list, download, install and deletion of CRX
+  zip packages
 * Maintenance tasks: consistency checks, TarPM compaction and index merge,
   DataStore garbage collection
 * Clear/invalidate dispatcher cache for subtree specified by `/statfilelevel`
@@ -57,10 +58,14 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqpkg` -- Creates empty zip package on local filesystem using provided
   specification (name, group, version, paths, filters) which is valid
   and minimal CRX FileVault package. CQ connection not required.
+* `cqrepkg`-- Read or rewrite package definition and/or content i.e. name,
+  group etc and JCR filters
 * `cqbld` -- Builds remotely uploaded CQ package using connection parameters
 * `cqcp` -- Makes a copy of remote CQ package to your local environment
 * `cqget` -- Makes a copy of CQ resource to your local environment
-* `cqrun` -- Install uploaded CQ package on remote instanse
+* `cqrun` -- Install uploaded CQ package on remote instance
+* `cqrev` -- Revert previously installed CQ package on remote instance (if
+  still exists)
 * `cqdel` -- Remove completely remotely available CQ package
 * `cqput` -- Upload package from your local environment
 * `cqls` -- List packages uploaded/installed in remote CQ
@@ -72,7 +77,12 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqwfl` -- Display active (or broken) workflow instances
 * `cqmon` -- Monitor Sling requests flow and repository sessions as well as
   replication queues
+* `cqjcr` -- Browse and modify JCR tree on nodes and properties level
 * `cqosgi` -- Display bundles list and manage them by starting/stopping on demand
+* `cqcfgls` -- List configured or available (but non configured) OSGI
+  configurations
+* `cqcfg` -- Return details or modify specified OSGI configuration remotly
+* `cqcfgdel` -- Delete specified OSGI configuration
 * `cqclr` -- Simulates activation on dispatcher to clear its cache. Use dispatcher
   URL, (not CQ one) as instance URL (-i option).
 
@@ -129,9 +139,14 @@ Notes on Windows/Cygwin compatibility
 In order to use toolkit on cygwin make sure you have marked/installed the
 following cygwin packages:
 
-* `util-linux` (required for all tools)
+* `util-linux` (required for all tools) 
+  ![Marking curl package](doc/cygwin1-curl.png)
 * `curl` (required for almost all tools)
-* `zip` (required for cqpkg tool)
+  ![Marking util-linux package](doc/cygwin2-util-linux.png)
+* `unzip`, `zip` (required for cqrepkg, cqpkg tools)
+  ![Marking zip/unzip package](doc/cygwin3-zip.png)
+
+If you have any problems, please see [cygwin installation screencast](http://www.youtube.com/watch?v=11ilswbIjkg).
 
 To test commands just type in command line the following expressions and
 compare results:

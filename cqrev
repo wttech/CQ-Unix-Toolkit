@@ -1,0 +1,121 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat <<EOT
+Usage: $(basename "${0}") [OPTION...] package-name
+Uninstallation of given package.
+Revert (rollback) all changes made after installing package identifided by group
+id and name in CQ Package Manager using given instance URL.
+
+Examples:
+  cqrev -u admin pack            # Revert package named pack
+  cqrev -u admin -g GRP pack     # Revert package named pack in group GRP
+  cqrev -i http://localhost:5510 # Revert package for localhost instance on tcp
+        -g com.group stuff       # port 5510 named stuff in group:com.group
+        -p secret                # with password provided: secret
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -g                    locate package by additional group ID
+
+
+EOT
+exit 1
+}
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+# API common options
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
+
+# Custom arguments
+while getopts ":g:${apigetopts}" opt
+do
+    case ${opt} in
+        g)
+            group="${OPTARG}";;
+        \?)
+            echo "Invalid option: -${OPTARG}" >&2; _usage;;
+        :)
+            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
+then
+    _usage
+fi
+
+name=${1}
+
+if [ -z "${group}" ]
+then
+    group_switch=""
+    group_arg=""
+else
+    group_switch="-F"
+    group_arg="group=${group}"
+fi
+
+
+REFERER="${instance}/crx/packmgr"
+AUTH="${username}:${password}"
+FILEPATH="/crx/packmgr/service.jsp"
+REFERERHEADER="Referer: ${REFERER}"
+
+STATUS=$(${CURLBIN} \
+    -s \
+    --write-out "%{http_code}" \
+    -u "${AUTH}" \
+    -H "${REFERERHEADER}" \
+    -F cmd=uninst \
+    ${group_switch} "${group_arg}" \
+    -F "name=${name}" \
+    "${instance}${FILEPATH}")
+
+EXITCODE=${?}
+"${API}" -C ${EXITCODE}
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+STATUS=$(echo "${STATUS}" | sed '$d')
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=${?}
+echo "${STATUS}"
+exit $((EXITCODE + EXITCODE2))
+
