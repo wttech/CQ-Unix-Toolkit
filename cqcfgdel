@@ -1,0 +1,128 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2013 Cognifide Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage()
+{
+    cat << EOT
+Usage: $(basename "${0}") [OPTION...] configuration-id
+Delete specified OSGI configuration from instance passed as -i URL option.
+Please be cautious before deletion unknown configuration. This may harm your
+CQ instance and make it unusable.
+
+Examples:
+  cqcfgdel -u admin                 # Delete CRXDEServlet OSGI configuration
+    -i http://localhost:5510        # from localhost instance on tcp port 5510
+    com.day.crx.ide.CRXDEServlet    # This is only an example. Don't delete it
+                                    # in real life.
+
+  cqcfgdel -u admin                 # Delete CRXDEServlet OSGI configuration
+    com.day.crx.ide.CRXDEServlet    # This is only an example. Don't delete it
+                                    # in real life.
+
+Options:
+
+  -u                    use specified username for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+
+EOT
+exit 1
+}
+
+_delete_configuration()
+{
+    CONFIGMGR="/system/console/configMgr/"
+    original_config_id=$(echo "${config_id}" | sed 's#%20# #g')
+
+    echo "Deleting '${original_config_id}'."
+    FILEPATH="${CONFIGMGR}${config_id}"
+
+    CONST_PARAMS="?apply=true&delete=true"
+    REFERERHEADER="Referer: ${instance}${FILEPATH}"
+
+    QUERYSTRING="${CONST_PARAMS}"
+    URL="${instance}${FILEPATH}${QUERYSTRING}"
+    STATUS=$(${CURLBIN} \
+        -s \
+        --write-out "%{http_code}" \
+        -u "$AUTH" \
+        -H "$REFERERHEADER" \
+        -X POST \
+        "${URL}")
+
+    EXITCODE=${?}
+    "${API}" -C $EXITCODE
+    if [ ${EXITCODE} -ne 0 ]
+    then
+        exit ${EXITCODE}
+    fi
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1)
+    "${API}" -H "${STATUSCODE}"
+    EXITCODE2=$?
+    if [ ${EXITCODE2} -ne 0 ]
+    then
+        exit ${EXITCODE2}
+    fi
+    exit
+}
+
+
+CWD=$(dirname "${0}")
+API="$CWD/cqapi"
+"${API}" -P >/dev/null 2>/dev/null
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]
+then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+
+# API common options
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
+
+# Custom arguments
+while getopts ":${apigetopts}" opt; do
+  case "${opt}" in
+     \?)
+      echo "Invalid option: -${OPTARG}" >&2; _usage;;
+     :)
+      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+  esac
+done
+shift $((OPTIND-1))
+
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
+then
+    _usage
+fi
+
+config_id="${1}"
+config_id=$(echo "${config_id}" | sed 's# #%20#g')
+AUTH="${username}:${password}"
+
+_delete_configuration
+

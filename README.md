@@ -76,6 +76,10 @@ Below there is a list of separate tools and short purpose phrase for each one:
 * `cqwfl` -- Display active (or broken) workflow instances
 * `cqjcr` -- Browse and modify JCR tree on nodes and properties level
 * `cqosgi` -- Display bundles list and manage them by starting/stopping on demand
+* `cqcfgls` -- List configured or available (but non configured) OSGI
+  configurations
+* `cqcfg` -- Return details or modify specified OSGI configuration remotly
+* `cqcfgdel` -- Delete specified OSGI configuration
 * `cqclr` -- Simulates activation on dispatcher to clear its cache. Use dispatcher
   URL, (not CQ one) as instance URL (-i option).
 
