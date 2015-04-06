@@ -73,7 +73,7 @@ _list_configurations()
 
     STATUS=$(${CURLBIN} \
         -s \
-        --write-out "%{http_code}" \
+        --write-out "\n%{http_code}\n" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
         "${URL}")
@@ -92,7 +92,7 @@ _list_configurations()
         exit ${EXITCODE2}
     fi
 
-    STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+    STATUS=$(echo "${STATUS}" | ${SEDX} '$d')
     CLEARED_STATUS2=$(echo "${STATUS}" | grep '^PID' | ${SEDX} 's#&nbsp;# #g' \
         | ${SEDX} 's#<br/>##g' | cut -f2- -d '=' \
         | ${SEDX} 's#^[ ]+##; s#[ ]+$##')
