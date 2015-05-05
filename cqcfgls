@@ -92,7 +92,7 @@ _list_configurations()
         exit ${EXITCODE2}
     fi
 
-    STATUS=$(echo "${STATUS}" | ${SEDX} '$d')
+    STATUS=$(echo "${STATUS}" | sed '$d')
     CLEARED_STATUS2=$(echo "${STATUS}" | grep '^PID' | ${SEDX} 's#&nbsp;# #g' \
         | ${SEDX} 's#<br/>##g' | cut -f2- -d '=' \
         | ${SEDX} 's#^[ ]+##; s#[ ]+$##')
