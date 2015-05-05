@@ -232,8 +232,7 @@ _modify_configuration()
     for operation in ${operations}
     do
         propname=$(echo "${operation}" | cut -f1 -d '=')
-        propvalue=$(echo "${operation}" | cut -f2- -d '=' |\
-            sed 's# #%20#g' | "${API}" -f)
+        propvalue=$(echo "${operation}" | cut -f2- -d '=' | "${API}" -f)
 
         prop_original_value=$(echo "${operation}" | cut -f2- -d '=' |\
             sed 's#%20# #g')
