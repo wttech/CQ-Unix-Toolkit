@@ -322,32 +322,32 @@ _urlencode()
 {
     output=$(cat -)
     output=$(echo "${output}"  \
-        | sed 's#%20# #g'      \
-        | sed 's#%#%25#g'      \
-        | sed 's# #%20#g'      \
-        | sed 's#!#%21#g'      \
+        | sed 's#%20# #g'       \
+        | sed 's#%#%25#g'       \
+        | sed 's# #%20#g'       \
+        | sed 's#!#%21#g'       \
         | ${SEDX} 's#\\#%23#g'  \
-        | ${SEDX} 's#\$#%24#g' \
-        | sed 's#&#%26#g'      \
-        | sed "s#'#%27#g"      \
-        | sed 's#(#%28#g'      \
-        | sed 's#)#%29#g'      \
-        | sed 's#\*#%2A#g'     \
-        | sed 's#\+#%2B#g'     \
-        | sed 's#,#%2C#g'      \
-        | sed 's#\/#%2F#g'     \
-        | sed 's#:#%3A#g'      \
-        | sed 's#\;#%3B#g'     \
-        | sed 's#=#%3D#g'      \
-        | sed 's#\?#%3F#g'     \
-        | sed 's#@#%40#g'      \
-        | sed 's#\[#%5B#g'     \
-        | sed 's#\]#%5D#g'     \
-        | sed 's#\^#%5E#g'     \
-        | sed 's#\##%23#g'     \
-        | sed 's#{#%7B#g'     \
-        | sed 's#}#%7D#g'     \
-        | sed 's#<#%3C#g'     \
+        | ${SEDX} 's#\$#%24#g'  \
+        | sed 's#&#%26#g'       \
+        | sed "s#'#%27#g"       \
+        | sed 's#(#%28#g'       \
+        | sed 's#)#%29#g'       \
+        | sed 's#\*#%2A#g'      \
+        | sed 's#\+#%2B#g'      \
+        | sed 's#,#%2C#g'       \
+        | sed 's#\/#%2F#g'      \
+        | sed 's#:#%3A#g'       \
+        | sed 's#\;#%3B#g'      \
+        | sed 's#=#%3D#g'       \
+        | sed 's#\?#%3F#g'      \
+        | sed 's#@#%40#g'       \
+        | sed 's#\[#%5B#g'      \
+        | sed 's#\]#%5D#g'      \
+        | sed 's#\^#%5E#g'      \
+        | sed 's#\##%23#g'      \
+        | sed 's#{#%7B#g'       \
+        | sed 's#}#%7D#g'       \
+        | sed 's#<#%3C#g'       \
         | sed 's#>#%3E#g'
     )
     echo "${output}"
