@@ -343,6 +343,12 @@ _urlencode()
         | sed 's#@#%40#g'      \
         | sed 's#\[#%5B#g'     \
         | sed 's#\]#%5D#g'     \
+        | sed 's#\^#%5E#g'     \
+        | sed 's#\##%23#g'     \
+        | sed 's#{#%7B#g'     \
+        | sed 's#}#%7D#g'     \
+        | sed 's#<#%3C#g'     \
+        | sed 's#>#%3E#g'
     )
     echo "${output}"
     exit
