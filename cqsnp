@@ -163,6 +163,24 @@ then
     outfile="/dev/null"
 fi
 
+SNAPSHOT_ID="[G=${group_name}:N=${name}:V=${version}]"
+STATUS=$("${CURLBIN}" \
+        -s \
+        -I \
+        --write-out "\n%{http_code}\n" \
+        -u "${AUTH}" \
+        -H "${REFERER_HEADER}" \
+        -o /dev/null \
+        "${URL}")
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+EXITCODE=$?
+[ ${EXITCODE} -ne 0 ] && { \
+    echo "Cannot find snapshot for: ${SNAPSHOT_ID}" >&2; \
+    exit ${EXITCODE}; \
+}
+
+
 
 STATUS=$("${CURLBIN}" \
         -s \
@@ -171,7 +189,6 @@ STATUS=$("${CURLBIN}" \
         -H "${REFERER_HEADER}" \
         -o "${outfile}" \
         "${URL}")
-
 EXITCODE=${?}
 "${API}" -C "${EXITCODE}"
 STATUSCODE=$(echo "${STATUS}" | tail -n 1)
@@ -202,14 +219,19 @@ then
         EXITCODE2=$?
         if [ ${EXITCODE} -eq 0 -a ${EXITCODE2} -eq 0 ]
         then
-            echo "Snapshot dropped: ${name}-${version}"
+            echo "Snapshot dropped: ${SNAPSHOT_ID}"
         fi
     fi
 fi
 
 if [ "${STATUSCODE}" = "404" ]
 then
-    echo "Cannot find snapshot for: [G=${group_name}:N=${name}:V=${version}]" >&2
+    echo "Getting snapshot failed: ${SNAPSHOT_ID}" >&2
+    if [ ${null} -eq 0 ]
+    then
+        echo "File: ${outfile} is possibly corrupted ZIP." >&2
+        echo "Verify and delete it" >&2
+    fi
 fi
 
 exit $((EXITCODE + EXITCODE2))
