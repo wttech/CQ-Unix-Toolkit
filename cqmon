@@ -58,7 +58,7 @@ _jcr_sessions()
 
     STATUS=$(${CURLBIN} \
         -s \
-        --write-out "%{http_code}" \
+        --write-out "\n%{http_code}\n" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
         "${instance}${FILEPATH}")
@@ -69,18 +69,19 @@ _jcr_sessions()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '^[0-9]{3}$' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=${?}
     if [ ${EXITCODE2} -ne 0 ]
     then
         exit ${EXITCODE2}
     fi
-    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    STATUS=$(echo "${STATUS}" | sed '$d')
     VAR="ValuePerSecond"
-    ARR="[0-9\", ]*"    
-    SESSIONS=$(echo "${STATUS}" | tr -d '\n' \
-        | ${SEDX} "s#.*${TR}${TD}${VAR}${NTD}${TD}(${ARR})${NTD}${NTR}.*#\1#")
+    ARR="[0-9\", ]*"
+    REGEXP="${TR}${TD}${VAR}${NTD}${TD}(${ARR})${NTD}${NTR}"
+    SESSIONS=$(echo "${STATUS}" | tr -d '\n' | grep -E "${REGEXP}" | \
+        ${SEDX} "s#.*${REGEXP}.*#\1#")
     SESSION=$(echo "${SESSIONS}" | tr -d ' ' | tr ',' '\n' | tail -1)
     echo ${SESSION}
     exit 0
@@ -96,7 +97,7 @@ _sling_stats()
 
     STATUS=$(${CURLBIN} \
         -s \
-        --write-out "%{http_code}" \
+        --write-out "\n%{http_code}\n" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
         "${instance}${FILEPATH}")
@@ -107,25 +108,30 @@ _sling_stats()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    STATUSCODE=$(echo "${STATUS}" | grep -E '^[0-9]{3}$' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=${?}
     if [ ${EXITCODE2} -ne 0 ]
     then
         exit ${EXITCODE2}
     fi
-    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
+    STATUS=$(echo "${STATUS}" | sed '$d')
     NUM="[-0-9\.NaN]*"
     VAR1="${TR}${TD}StandardDeviationDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
     VAR2="${TR}${TD}RequestsCount${NTD}${TD}(${NUM})${NTD}${NTR}"
     VAR3="${TR}${TD}MinRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
     VAR4="${TR}${TD}MaxRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
     VAR5="${TR}${TD}MeanRequestDurationMsec${NTD}${TD}(${NUM})${NTD}${NTR}"
-    V1=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR1}.*#\1#")
-    V2=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR2}.*#\1#")
-    V3=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR3}.*#\1#")
-    V4=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR4}.*#\1#")
-    V5=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR5}.*#\1#")    
+    V1=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR1}" | \
+        ${SEDX} "s#.*${VAR1}.*#\1#")
+    V2=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR2}" | \
+        ${SEDX} "s#.*${VAR2}.*#\1#")
+    V3=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR3}" | \
+        ${SEDX} "s#.*${VAR3}.*#\1#")
+    V4=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR4}" | \
+        ${SEDX} "s#.*${VAR4}.*#\1#")
+    V5=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR5}" | \
+        ${SEDX} "s#.*${VAR5}.*#\1#")
     
     row1=$(printf "Number of requests\t%s" "${V2}")
     row2=$(printf "Min duration in miliseconds\t%s" "${V3}")
@@ -150,7 +156,7 @@ _replication_queue()
 
     STATUS=$(${CURLBIN} \
         -s \
-        --write-out "%{http_code}" \
+        --write-out "\n%{http_code}\n" \
         -u "${AUTH}" \
         -H "${REFERERHEADER}" \
         "${instance}${FILEPATH}")
@@ -161,15 +167,15 @@ _replication_queue()
     then
         exit ${EXITCODE}
     fi
-    STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
+    STATUSCODE=$(echo "${STATUS}" | grep -o -E '^[0-9]{3}$' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=${?}
     if [ ${EXITCODE2} -ne 0 ]
     then
         exit ${EXITCODE2}
     fi
-    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
-    CHR="[-0-9\nA-Za-z:\+ ]*"
+    STATUS=$(echo "${STATUS}" | sed '$d')
+    CHR="[-0-9\nA-Za-z:\+ _%!@]*"
     FORM="<form[^<]*>.*</form>"
     NULL="<null>"
     VAR1="${TR}${TD}Id${NTD}${TD}(${CHR})${NTD}${NTR}"
@@ -182,16 +188,26 @@ _replication_queue()
     VAR8="${TR}${TD}QueueNextRetryTime${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"
     VAR9="${TR}${TD}QueueProcessingSince${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"
     VAR10="${TR}${TD}QueueLastProcessTime${NTD}${TD}(${CHR})(${NULL})?${NTD}${NTR}"    
-    V1=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR1}.*#\1#")
-    V2=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR2}.*#\1#")
-    V3=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR3}.*#\1#")
-    V4=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR4}.*#\1#")
-    V5=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR5}.*#\1#")
-    V6=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR6}.*#\1#")
-    V7=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR7}.*#\1#")
-    V8=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR8}.*#\1#")
-    V9=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR9}.*#\1#")
-    V10=$(echo "${STATUS}" | tr -d '\n' | ${SEDX} "s#.*${VAR10}.*#\1#")
+    V1=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR1}" | \
+        ${SEDX} "s#.*${VAR1}.*#\1#")
+    V2=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR2}" | \
+        ${SEDX} "s#.*${VAR2}.*#\1#")
+    V3=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR3}" | \
+        ${SEDX} "s#.*${VAR3}.*#\1#")
+    V4=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR4}" | \
+        ${SEDX} "s#.*${VAR4}.*#\1#")
+    V5=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR5}" | \
+        ${SEDX} "s#.*${VAR5}.*#\1#")
+    V6=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR6}" | \
+        ${SEDX} "s#.*${VAR6}.*#\1#")
+    V7=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR7}" | \
+        ${SEDX} "s#.*${VAR7}.*#\1#")
+    V8=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR8}" | \
+        ${SEDX} "s#.*${VAR8}.*#\1#")
+    V9=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR9}" | \
+        ${SEDX} "s#.*${VAR9}.*#\1#")
+    V10=$(echo "${STATUS}" | tr -d '\n' | grep -E "${VAR10}" | \
+        ${SEDX} "s#.*${VAR10}.*#\1#")
     row1=$(printf "ID\t%s" "${V1}")
     row2=$(printf "Valid?\t%s" "${V2}")
     row3=$(printf "Enabled\t%s" "${V3}")
