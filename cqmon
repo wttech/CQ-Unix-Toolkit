@@ -39,7 +39,13 @@ Options:
   -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
-  -r AGENTID            show agent queue stats
+  -r AGENTID            show agent queue stats.
+                        Use:
+                          cqjcr [CQ OPTIONS] -l /etc/replication/agents.author
+                        for list of replication agents on author.
+                        Use:
+                          cqjcr [CQ OPTIONS] -l /etc/replication/agents.publish
+                        for list of replication agents on publish.
   -m                    machine-friendly mode
   -s                    sling stats
   -S                    current jcr sessions
