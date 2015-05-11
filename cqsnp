@@ -51,6 +51,7 @@ Options:
 
   -u                    use specified usernamed for connection
   -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
   -o                    saves remote resource using provided path or file name
   -g                    specify package group (default is no group)
   -v                    specify package version (by default 1.0)
