@@ -37,7 +37,7 @@ Examples:
   cqapi -v                       # Returns toolkit version
   cqapi -s                       # Returns command and parameter required for
                                  # sed extended mode (extended regexp) to
-                                 # be compatible with BSD/Mac OS X.
+                                 # be compatible with BSD/Mac OS X
   echo " " | cqapi -f            # Convert space into URL-encoded format
   echo "Col1\tCol2" | cqapi -F 0 # Format tab-separated columns into
   echo "Col1\tCol2" | cqapi -F 1 # fully-aligned output (0)
@@ -72,11 +72,6 @@ _sedpath()
     exit
 }
 
-_echopath()
-{
-    echo "printf"
-    exit
-}
 
 _curlpath()
 {
@@ -379,7 +374,7 @@ _format_output()
 }
 
 
-OPTIONS=":Pu:p:i:csC:H:fF:Evwe-:"
+OPTIONS=":Pu:p:i:csC:H:fF:Eve-:"
 PARSE_OPTIONS="u:p:i:"
 
 sed --version >/dev/null 2>/dev/null
