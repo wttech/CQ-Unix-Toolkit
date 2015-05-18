@@ -254,6 +254,22 @@ _parse()
     exit
 }
 
+_get_nth_argument()
+{
+    num=${1}
+    shift $((num))
+    echo "${1}"
+}
+
+_check_stand_alone_option()
+{
+    option=${1}
+    OPTARG=${2}
+    actual_option=${3}
+    [ "-${option}${OPTARG}" = "${actual_option}" ]
+    return ${?}
+}
+
 _process_parse_mode()
 {
     instance="http://localhost:5410"
@@ -265,21 +281,34 @@ _process_parse_mode()
         while getopts ":${PARSE_OPTIONS}" option
         do
             getopts_failed=0
-            case "${option}" in
-                u) 
-                    username=${OPTARG}; 
-                    explicit_option=1;;
-                p) 
-                    password=${OPTARG}; 
-                    explicit_option=1;;
-                i) 
-                    instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
-                    explicit_option=1;;
-            esac
+            this_arg=$(_get_nth_argument $((OPTIND-1)) "${@}")
+            _check_stand_alone_option "${option}" "${OPTARG}" "${this_arg}"
+            is_stand_alone="${?}"
+            if [ "${is_stand_alone}" -eq 1 ]
+            then
+                case "${option}" in
+                    u)
+                        username=${OPTARG}
+                        explicit_option=1;;
+                    p)
+                        password=${OPTARG}
+                        explicit_option=1;;
+                    i)
+                        instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+                        explicit_option=1;;
+                esac
+            fi
         done
         if [ ${getopts_failed} -eq 1 ]
         then
-            shift
+            shift_num=$((OPTIND-1))
+            if [ ${shift_num} -le 0 ]
+            then
+                shift 1
+            else
+                shift $((OPTIND-1))
+            fi
+            OPTIND=1
         fi
     done
 
@@ -390,8 +419,8 @@ while getopts "${OPTIONS}" option
 do
     mode=${option}
     case ${option} in
-        P) 
-            cq_api_output=$(_process_parse_mode "${@}"); 
+        P)
+            cq_api_output=$(_process_parse_mode "${@}");
             printf "%s\n" "${cq_api_output}"
             exit ${?};;
         u) username=${OPTARG}; explicit_option=1;;
