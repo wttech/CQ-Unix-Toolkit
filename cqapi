@@ -387,6 +387,7 @@ _format_output()
     output=$(echo "${output}" | sed 's#%#%%#g')
     if [ "${machine_friendly}" -eq 1 ]
     then
+        # shellcheck disable=SC2059
         printf "${output}\n"
     else
         COLUMN=$(which column)
@@ -395,6 +396,7 @@ _format_output()
             echo "Cannot find column utility"
             exit 1
         fi
+        # shellcheck disable=SC2059
         printf "${output}\n" | tr '\t' "${SEP}" \
             | sed "s#${SEP}${SEP}#${SEP} ${SEP}#g" \
             | column -xt -s "${SEP}" 2>/dev/null
@@ -412,8 +414,8 @@ BSDSED=${?}
 
 explicit_option=0
 parse_mode=0
-mode=?
-argument=?
+mode="?"
+argument="?"
 
 while getopts "${OPTIONS}" option
 do
