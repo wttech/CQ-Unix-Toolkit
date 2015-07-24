@@ -24,7 +24,7 @@ Examples:
   cqjcr -u admin -l /              # Return JCR child nodes for '/' existing on
                                    # the local instance
   cqjcr -i http://localhost:5510   # Return JCR child nodes for '/content' for
-        -l /conten -p secret       # localhost instance on tcp port 5510 with
+        -l /content -p secret      # localhost instance on tcp port 5510 with
                                    # password provided: 'secret'
   cqjcr -u admin -s /              # Show JCR properties for '/' node in pretty
                                    # format
