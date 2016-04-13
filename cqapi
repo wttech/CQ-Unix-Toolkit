@@ -29,6 +29,7 @@ Examples:
                                  # CQ
   cqapi -c                       # Get curl binary path
   cqapi -P -u admin              # Enable parse mode for common arguments
+  cqapi -L -u admin -p xxx       # Defines environmental variables for auto-login
   cqapi -C 2                     # Get curl error for exit code: 2
   cqapi -H 401                   # Get HTTP textual error for HTTP 401 error
                                  # code
@@ -52,6 +53,9 @@ Options:
   -s                    Print sed path with -r option
   -P                    Enable parse mode for API common arguments. This must
                         be first parameter.
+  -L                    Defines auto-login parameters for all future commands 
+                        Use the following structure in your shell: 
+                        eval "cqapi -L -u username -p password -i http://localhost:5511"
   -C                    Get curl friendly error for specified exit code.
   -H                    Get HTTP friendly error response instead of code
   -E                    Return on stdout only exception message skipping
@@ -272,9 +276,13 @@ _check_stand_alone_option()
 
 _process_parse_mode()
 {
-    instance="http://localhost:5410"
-    username=admin
-    password=admin
+    [ -n "${CQ_AUTOLOGIN_INSTANCE}${CQ_AUTOLOGIN_USERNAME}${CQ_AUTOLOGIN_PASSWORD}" ] && explicit_option=1
+    [ -z "${CQ_AUTOLOGIN_INSTANCE}" ] && instance="http://localhost:5410" \
+        || instance="${CQ_AUTOLOGIN_INSTANCE}"
+    [ -z "${CQ_AUTOLOGIN_USERNAME}" ] && username=admin \
+        || username="${CQ_AUTOLOGIN_USERNAME}"
+    [ -z "${CQ_AUTOLOGIN_PASSWORD}" ] && password=admin \
+        || password="${CQ_AUTOLOGIN_PASSWORD}"
     while [ ${#} -ne 0 ]
     do
         getopts_failed=1
@@ -404,8 +412,59 @@ _format_output()
     exit
 }
 
+_generate_env_exports()
+{
+    username=${1}
+    password=${2}
+    instance=${3}
+    printf "# To store auto-login credentials in your current shell"
+    printf "# You can use the output of this command using 'eval \$(...)'\n\n"
+    printf "# Example: eval \$(cqapi -L -u %s -p %s -i %s)\n\n" "${username}" ${password} "${instance}"
+    printf "# The beginning of the shell code\n"
+    printf "export CQ_AUTOLOGIN_USERNAME='%s'\n" "${username}"
+    printf "export CQ_AUTOLOGIN_PASSWORD='%s'\n" "${password}"
+    printf "export CQ_AUTOLOGIN_INSTANCE='%s'\n" "${instance}"
+    printf "# The end of the shell code\n"
+}
 
-OPTIONS=":Pu:p:i:csC:H:fF:Eve-:"
+_generate_autologin_environmental_variables()
+{
+    instance="http://localhost:5410"
+    username=admin
+    password=admin
+    while [ ${#} -ne 0 ]
+    do
+        getopts_failed=1
+        while getopts ":${PARSE_OPTIONS}" option
+        do
+            case "${option}" in
+                u)
+                   username=${OPTARG};;
+                p)
+                   password=${OPTARG};;
+                i)
+                   instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');;
+            esac
+        done
+        if [ ${getopts_failed} -eq 1 ]
+        then
+            shift_num=$((OPTIND-1))
+            if [ ${shift_num} -le 0 ]
+            then
+                shift 1
+            else
+                shift $((OPTIND-1))
+            fi
+            OPTIND=1
+        fi
+    done
+    _generate_env_exports "${username}" "${password}" "${instance}"
+    exit 0
+}
+
+
+
+OPTIONS=":Pu:p:i:csC:H:fF:ELve-:"
 PARSE_OPTIONS="u:p:i:"
 
 sed --version >/dev/null 2>/dev/null
@@ -423,6 +482,10 @@ do
     case ${option} in
         P)
             cq_api_output=$(_process_parse_mode "${@}");
+            printf "%s\n" "${cq_api_output}"
+            exit ${?};;
+        L)
+            cq_api_output=$(_generate_autologin_environmental_variables "${@}");
             printf "%s\n" "${cq_api_output}"
             exit ${?};;
         u) username=${OPTARG}; explicit_option=1;;

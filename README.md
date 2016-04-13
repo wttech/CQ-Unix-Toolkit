@@ -46,8 +46,22 @@ is performed by toolkit using three basic options:
    * -p (password)
    * -i (URL to instance) i.e. https://localhost:5510
 
-In the future we want to provide ability to configure so called connection
-profiles which will improve passing URL/username/password in easier manner.
+*Please note* that there is a way to avoid the need to enter -u/-p/-i options
+each time by executing the following command in the current shell environment:
+
+    $ eval $(cqapi -L -u username -p password -i UR)
+
+Please also note that *the password is saved in plain text* as environmental
+variable so every process can steal that information so such mode should be
+used only in development environment or in restricted shell process
+
+The following example should be self descriptive:
+
+    $ eval $(cqapi -L -u admin -p admin -i http://localhost:4502)
+
+After you execute this command in your current shell in all cqXXX commands you
+don't need to specify anything.
+
 
 Which for what?
 ===============
