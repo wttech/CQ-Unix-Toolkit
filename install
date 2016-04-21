@@ -45,8 +45,7 @@ fi
 
 dir=$(dirname "${0}")
 parent_dir_to_dir=$(dirname "${dir}")
-full_path_to_dir=$(cd "${parent_dir_to_dir}"; pwd)/$(basename "${dir}")
-basedir=$(readlink -f "${dir}")
+basedir=$(cd "${parent_dir_to_dir}"; pwd)/$(basename "${dir}")
 ${ECHOX} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
 if [ ! -d "${INSTALL_DIR}" ] 
 then
@@ -68,7 +67,7 @@ do
         then
             if [ -L "${INSTALL_DIR}/${cmd}" ]
             then
-                target=$(readlink -f "${INSTALL_DIR}/${cmd}")
+                target=$(cd "${INSTALL_DIR}"; pwd)/${cmd}"
                 output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
             else
                 output="${INSTALL_DIR}/${cmd} (binary file)\n"
