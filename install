@@ -67,7 +67,7 @@ do
         then
             if [ -L "${INSTALL_DIR}/${cmd}" ]
             then
-                target=$(cd "${INSTALL_DIR}"; pwd)/${cmd}"
+                target=$(cd "${INSTALL_DIR}"; pwd)/${cmd}
                 output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
             else
                 output="${INSTALL_DIR}/${cmd} (binary file)\n"
