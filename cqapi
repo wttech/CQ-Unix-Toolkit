@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 VERSION=1.2.0
+CMDEXEC="${0}"
 _usage()
 {
     cat <<EOT
@@ -417,14 +418,12 @@ _generate_env_exports()
     username=${1}
     password=${2}
     instance=${3}
-    printf "# To store auto-login credentials in your current shell"
-    printf "# You can use the output of this command using 'eval \$(...)'\n\n"
-    printf "# Example: eval \$(cqapi -L -u %s -p %s -i %s)\n\n" "${username}" ${password} "${instance}"
-    printf "# The beginning of the shell code\n"
-    printf "export CQ_AUTOLOGIN_USERNAME='%s'\n" "${username}"
-    printf "export CQ_AUTOLOGIN_PASSWORD='%s'\n" "${password}"
-    printf "export CQ_AUTOLOGIN_INSTANCE='%s'\n" "${instance}"
-    printf "# The end of the shell code\n"
+    printf "printf 'If you see below *export* commands: please run this command in command line: eval \$(%s -L -u %s -p %s -i %s)                \\\\n';\n" \
+     "${CMDEXEC}" "${username}" "${password}" "${instance}"
+    printf "export CQ_AUTOLOGIN_USERNAME='%s';\n" "${username}"
+    printf "export CQ_AUTOLOGIN_PASSWORD='%s';\n" "${password}"
+    printf "export CQ_AUTOLOGIN_INSTANCE='%s';\n" "${instance}"
+    printf "printf 'Auto login exported successfully. Use now cqX commands without -u/-p/-i options.\\\\n';\n"
 }
 
 _generate_autologin_environmental_variables()
