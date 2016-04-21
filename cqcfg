@@ -186,7 +186,7 @@ _print_configuration()
         exit ${EXITCODE2}
     fi
 
-    STATUS=$(echo "${STATUS}" | sed -r 's#[0-9]{3}$##')
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
 
     if [ "${original}" -eq 1 ]
     then
