@@ -44,6 +44,8 @@ else
 fi
 
 dir=$(dirname "${0}")
+parent_dir_to_dir=$(dirname "${dir}")
+full_path_to_dir=$(cd "${parent_dir_to_dir}"; pwd)/$(basename "${dir}")
 basedir=$(readlink -f "${dir}")
 ${ECHOX} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
 if [ ! -d "${INSTALL_DIR}" ] 
