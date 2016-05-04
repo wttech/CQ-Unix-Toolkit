@@ -115,6 +115,9 @@ _print_properties()
         | tr '\t' '\n')
 
     PR12='"([^"]+)":\{"name":"([^"]*)",'
+    OPTIONAL='"optional":(true|false),'
+    ISSET='"is_set":(true|false),'
+    PR_OPT="${OPTIONAL}${ISSET}"
     PR3='"type":(.*),'
     PR3S='"type":([0-9]+),'
     PR3A='"type":(1),'
@@ -128,6 +131,16 @@ _print_properties()
     TYPE_ID_RG="(.*)${T}(.*)${T}(.*)${T}(.*)${T}([0-9]+,?).*"
     PROPS_BASIC_ROWS=$(echo "${PROP_ENTRIES}" | \
         grep -E "${PR12}" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3S}${PR4}${PR5}#\1${T}\6${T}\2${T}\7${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4N}${PR5}#\1${T}\6${T}\2${T}\7${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3A}${PR4A}${PR5}#\1${T}\6${T}\2${T}\7${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4A}${PR5}#\1${T}\6${T}\2${T}\7${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4}${PR5}#\1${T}\6${T}\2${T}\7${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3S}${PR4}#\1${T}\6${T}\2${T}${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4N}#\1${T}\6${T}\2${T}${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3A}${PR4A}#\1${T}\6${T}\2${T}${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4A}#\1${T}\6${T}\2${T}${T}\5#" \
+        | ${SEDX} "s#${PR12}${PR_OPT}${PR3}${PR4}#\1${T}\6${T}\2${T}${T}\5#" \
         | ${SEDX} "s#${PR12}${PR3S}${PR4}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
         | ${SEDX} "s#${PR12}${PR3}${PR4N}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
         | ${SEDX} "s#${PR12}${PR3A}${PR4A}${PR5}#\1${T}\4${T}\2${T}\5${T}\3#" \
