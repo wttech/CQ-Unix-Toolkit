@@ -1,6 +1,6 @@
 #!/bin/sh
 # CQ Unix Toolkit
-# Copyright (C) 2013 Cognifide Limited
+# Copyright (C) 2021 Wunderman Thompson Technology
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-VERSION=1.1.2
-_usage()
-{
+VERSION=1.2.0
+CMDEXEC="${0}"
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 CQ UNIX Toolkit API command.
@@ -29,6 +29,7 @@ Examples:
                                  # CQ
   cqapi -c                       # Get curl binary path
   cqapi -P -u admin              # Enable parse mode for common arguments
+  cqapi -L -u admin -p xxx       # Defines environmental variables for auto-login
   cqapi -C 2                     # Get curl error for exit code: 2
   cqapi -H 401                   # Get HTTP textual error for HTTP 401 error
                                  # code
@@ -37,12 +38,11 @@ Examples:
   cqapi -v                       # Returns toolkit version
   cqapi -s                       # Returns command and parameter required for
                                  # sed extended mode (extended regexp) to
-                                 # be compatible with BSD/Mac OS X.
-  cqapi -w                       # Returns command and parameter required for
-                                 # extended printing purposes (interpreting
-                                 # escape sequences) to be compatible
-                                 # with BSD/Mac OS X.
-
+                                 # be compatible with BSD/Mac OS X
+  echo " " | cqapi -f            # Convert space into URL-encoded format
+  echo "Col1\tCol2" | cqapi -F 0 # Format tab-separated columns into
+  echo "Col1\tCol2" | cqapi -F 1 # fully-aligned output (0)
+                                 # or tab separated output (1)
 
 Options:
 
@@ -53,41 +53,35 @@ Options:
   -s                    Print sed path with -r option
   -P                    Enable parse mode for API common arguments. This must
                         be first parameter.
+  -L                    Defines auto-login parameters for all future commands 
+                        Use the following structure in your shell: 
+                        eval "cqapi -L -u username -p password -i http://localhost:5511"
   -C                    Get curl friendly error for specified exit code.
   -H                    Get HTTP friendly error response instead of code
   -E                    Return on stdout only exception message skipping
                         stack trace at the same time
   -e                    Detect if on stdin thereis exception stacktrace
   -v                    Provides toolkit version
-  -w                    Print echo command line or path with escaped sequences
-                        turned on
+  -f                    Encode text into URL-friendly format (percent enc)
+  -F                    Preformatting of columns (filled with tabs for
+                        machine-readable format)
 
 EOT
-exit 1
+    exit 1
 }
 
-_sedpath()
-{
+_sedpath() {
     echo "${SEDX}"
     exit
 }
 
-_echopath()
-{
-    echo "printf"
-    exit
-}
-
-_curlpath()
-{
+_curlpath() {
     WHEREIS=$(whereis whereis 2>/dev/null | cut -f2 -d ' ')
     EXITCODE=${?}
-    if [ ${EXITCODE} -ne 0 -o -z "${WHEREIS}" ]
-    then
+    if [ ${EXITCODE} -ne 0 -o -z "${WHEREIS}" ]; then
         CURLBIN=$(which curl)
         EXITCODE=${?}
-        if [ ${EXITCODE} -ne 0 -o -z "${CURLBIN}" ]
-        then
+        if [ ${EXITCODE} -ne 0 -o -z "${CURLBIN}" ]; then
             echo "Cannot locate required command: curl (using which/whereis\
              method)." >&2
             exit 1
@@ -96,14 +90,12 @@ _curlpath()
         exit 0
     fi
     CURLBIN=$(${WHEREIS} -b curl 2>/dev/null | cut -f2 -d ' ')
-    if [ -z "${CURLBIN}" ]
-    then
+    if [ -z "${CURLBIN}" ]; then
         CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
     fi
 
     EXITCODE=${?}
-    if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]
-    then
+    if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]; then
         echo "Cannot locate required command: curl." >&2
         exit 1
     fi
@@ -111,13 +103,12 @@ _curlpath()
     exit
 }
 
-_curlcode()
-{
-    if [ -z "${1}" -o "${1}" -eq 0 ]
-    then
+_curlcode() {
+    if [ -z "${1}" -o "${1}" -eq 0 ]; then
         exit 0
     fi
-    codes=$(cat <<-'EOF'
+    codes=$(
+        cat <<-'EOF'
     1 Unsupported protocol. This build of curl has no support for this protocol.
     2 Failed to initialize.
     3 URL malformed. The syntax was not correct.
@@ -197,23 +188,24 @@ _curlcode()
         '
 EOF
     )
-    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
-        | cut -f2- -d ' ')
-    if [ -z "${msg}" ]
-    then
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " |
+        cut -f2- -d ' ')
+    if [ -z "${msg}" ]; then
         msg="Unknown code"
     fi
     echo "CURL ERROR ${1}: ${msg}" >&2
     exit ${EXITCODE}
 }
 
-_httpcode()
-{
-    if [ -z "${1}" -o "${1}" = "200" ]
-    then
-        exit 0
-    fi
-    codes=$(cat <<-'EOF'
+_httpcode() {
+    case "${1}" in
+    "") exit 0 ;;
+    200) exit 0 ;;
+    201) exit 0 ;;
+    204) exit 0 ;;
+    esac
+    codes=$(
+        cat <<-'EOF'
     301 Resource has been moved permanently
     302 Resource has been moved temporarily
     400 HTTP Bad request
@@ -227,62 +219,85 @@ _httpcode()
     503 Internal CQ error
 EOF
     )
-    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
-        | cut -f2- -d ' ')
-    if [ -z "${msg}" ]
-    then
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " |
+        cut -f2- -d ' ')
+    if [ -z "${msg}" ]; then
         msg="Unknown response"
     fi
     echo "HTTP RESPONSE ${1}: ${msg}" >&2
     exit 1
 }
 
-
-_java_exception()
-{
+_java_exception() {
     head -n 1 | cut -f2 -d ':' | ${SEDX} 's#^[ ]+##'
     exit
 }
 
-_java_exception_detection()
-{
+_java_exception_detection() {
     grep -Ec "(^[\.[:alnum:]]+Exception:.*\$|^[[:space:]]+at[[:space:]][\.\
         [:alnum:]]+(\(.+\))?)"
     exit
 }
 
-_parse()
-{
+_parse() {
     printf "%s\t%s\t%s\t%s\t%s" "${1}" "${2}" "${3}" "${4}" "${5}"
     exit
 }
 
-_process_parse_mode()
-{
-    instance="http://localhost:5410"
-    username=admin
-    password=admin
-    while [ ${#} -ne 0 ]
-    do
+_get_nth_argument() {
+    num=${1}
+    shift $((num))
+    echo "${1}"
+}
+
+_check_stand_alone_option() {
+    option=${1}
+    OPTARG=${2}
+    actual_option=${3}
+    [ "-${option}${OPTARG}" = "${actual_option}" ]
+    return ${?}
+}
+
+_process_parse_mode() {
+    [ -n "${CQ_AUTOLOGIN_INSTANCE}${CQ_AUTOLOGIN_USERNAME}${CQ_AUTOLOGIN_PASSWORD}" ] && explicit_option=1
+    [ -z "${CQ_AUTOLOGIN_INSTANCE}" ] && instance="http://localhost:5410" ||
+        instance="${CQ_AUTOLOGIN_INSTANCE}"
+    [ -z "${CQ_AUTOLOGIN_USERNAME}" ] && username=admin ||
+        username="${CQ_AUTOLOGIN_USERNAME}"
+    [ -z "${CQ_AUTOLOGIN_PASSWORD}" ] && password=admin ||
+        password="${CQ_AUTOLOGIN_PASSWORD}"
+    while [ ${#} -ne 0 ]; do
         getopts_failed=1
-        while getopts ":${PARSE_OPTIONS}" option
-        do
+        while getopts ":${PARSE_OPTIONS}" option; do
             getopts_failed=0
-            case "${option}" in
-                u) 
-                    username=${OPTARG}; 
-                    explicit_option=1;;
-                p) 
-                    password=${OPTARG}; 
-                    explicit_option=1;;
-                i) 
-                    instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
-                    explicit_option=1;;
-            esac
+            this_arg=$(_get_nth_argument $((OPTIND - 1)) "${@}")
+            _check_stand_alone_option "${option}" "${OPTARG}" "${this_arg}"
+            is_stand_alone="${?}"
+            if [ "${is_stand_alone}" -eq 1 ]; then
+                case "${option}" in
+                u)
+                    username=${OPTARG}
+                    explicit_option=1
+                    ;;
+                p)
+                    password=${OPTARG}
+                    explicit_option=1
+                    ;;
+                i)
+                    instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+                    explicit_option=1
+                    ;;
+                esac
+            fi
         done
-        if [ ${getopts_failed} -eq 1 ]
-        then
-            shift
+        if [ ${getopts_failed} -eq 1 ]; then
+            shift_num=$((OPTIND - 1))
+            if [ ${shift_num} -le 0 ]; then
+                shift 1
+            else
+                shift $((OPTIND - 1))
+            fi
+            OPTIND=1
         fi
     done
 
@@ -291,33 +306,129 @@ _process_parse_mode()
     exit 0
 }
 
-
-_invalid_option()
-{
-    if [ "${1}" -ne 1 ]
-    then
+_invalid_option() {
+    if [ "${1}" -ne 1 ]; then
         echo "Invalid option: -${2}" >&2
         _usage
     fi
 }
 
-_missing_argument()
-{
-    if [ "${1}" -eq 0 ]
-    then
+_missing_argument() {
+    if [ "${1}" -eq 0 ]; then
         echo "Option -${2} requires an argument." >&2
         _usage
     fi
 }
 
-_version()
-{
+_version() {
     echo ${VERSION}
     exit
 }
 
+_urlencode() {
+    output=$(cat -)
+    output=$(
+        echo "${output}" |
+            sed 's#%20# #g' |
+            sed 's#%#%25#g' |
+            sed 's# #%20#g' |
+            sed 's#!#%21#g' |
+            ${SEDX} 's#\\#%5C#g' |
+            ${SEDX} 's#\$#%24#g' |
+            sed 's#&#%26#g' |
+            sed "s#'#%27#g" |
+            sed 's#(#%28#g' |
+            sed 's#)#%29#g' |
+            sed 's#\*#%2A#g' |
+            sed 's#\+#%2B#g' |
+            sed 's#,#%2C#g' |
+            sed 's#\/#%2F#g' |
+            sed 's#:#%3A#g' |
+            sed 's#\;#%3B#g' |
+            sed 's#=#%3D#g' |
+            sed 's#\?#%3F#g' |
+            sed 's#@#%40#g' |
+            sed 's#\[#%5B#g' |
+            sed 's#\]#%5D#g' |
+            sed 's#\^#%5E#g' |
+            sed 's#\##%23#g' |
+            sed 's#{#%7B#g' |
+            sed 's#}#%7D#g' |
+            sed 's#<#%3C#g' |
+            sed 's#>#%3E#g'
+    )
+    echo "${output}"
+    exit
+}
 
-OPTIONS=":Pu:p:i:csC:H:Evwe-:"
+_format_output() {
+    SEP='|'
+    machine_friendly=${1}
+    output=$(cat -)
+    output=$(echo "${output}" | sed 's#%#%%#g')
+    if [ "${machine_friendly}" -eq 1 ]; then
+        # shellcheck disable=SC2059
+        printf "${output}\n"
+    else
+        COLUMN=$(which column)
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]; then
+            echo "Cannot find column utility"
+            exit 1
+        fi
+        # shellcheck disable=SC2059
+        printf "${output}\n" | tr '\t' "${SEP}" |
+            sed "s#${SEP}${SEP}#${SEP} ${SEP}#g" |
+            column -xt -s "${SEP}" 2>/dev/null
+    fi
+    exit
+}
+
+_generate_env_exports() {
+    username=${1}
+    password=${2}
+    instance=${3}
+    printf "printf 'If you see below *export* commands: please run this command in command line: eval \$(%s -L -u %s -p %s -i %s)                \\\\n';\n" \
+        "${CMDEXEC}" "${username}" "${password}" "${instance}"
+    printf "export CQ_AUTOLOGIN_USERNAME='%s';\n" "${username}"
+    printf "export CQ_AUTOLOGIN_PASSWORD='%s';\n" "${password}"
+    printf "export CQ_AUTOLOGIN_INSTANCE='%s';\n" "${instance}"
+    printf "printf 'Auto login exported successfully. Use now cqX commands without -u/-p/-i options.\\\\n';\n"
+}
+
+_generate_autologin_environmental_variables() {
+    instance="http://localhost:5410"
+    username=admin
+    password=admin
+    while [ ${#} -ne 0 ]; do
+        getopts_failed=1
+        while getopts ":${PARSE_OPTIONS}" option; do
+            case "${option}" in
+            u)
+                username=${OPTARG}
+                ;;
+            p)
+                password=${OPTARG}
+                ;;
+            i)
+                instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+                ;;
+            esac
+        done
+        if [ ${getopts_failed} -eq 1 ]; then
+            shift_num=$((OPTIND - 1))
+            if [ ${shift_num} -le 0 ]; then
+                shift 1
+            else
+                shift $((OPTIND - 1))
+            fi
+            OPTIND=1
+        fi
+    done
+    _generate_env_exports "${username}" "${password}" "${instance}"
+    exit 0
+}
+
+OPTIONS=":Pu:p:i:csC:H:fF:ELve-:"
 PARSE_OPTIONS="u:p:i:"
 
 sed --version >/dev/null 2>/dev/null
@@ -326,42 +437,55 @@ BSDSED=${?}
 
 explicit_option=0
 parse_mode=0
-mode=?
-argument=?
+mode="?"
+argument="?"
 
-while getopts "${OPTIONS}" option
-do
+while getopts "${OPTIONS}" option; do
     mode=${option}
     case ${option} in
-        P) 
-            cq_api_output=$(_process_parse_mode "${@}"); 
-            printf "%s\n" "${cq_api_output}"
-            exit ${?};;
-        u) username=${OPTARG}; explicit_option=1;;
-        p) password=${OPTARG}; explicit_option=1;;
-        i) instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
-           explicit_option=1;;
-        C) argument=${OPTARG};;
-        H) argument=${OPTARG};;
-        \?) _invalid_option ${parse_mode} "${OPTARG}";;
-        :) _missing_argument ${parse_mode} "${OPTARG}";;
+    P)
+        cq_api_output=$(_process_parse_mode "${@}")
+        printf "%s\n" "${cq_api_output}"
+        exit ${?}
+        ;;
+    L)
+        cq_api_output=$(_generate_autologin_environmental_variables "${@}")
+        printf "%s\n" "${cq_api_output}"
+        exit ${?}
+        ;;
+    u)
+        username=${OPTARG}
+        explicit_option=1
+        ;;
+    p)
+        password=${OPTARG}
+        explicit_option=1
+        ;;
+    i)
+        instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+        explicit_option=1
+        ;;
+    C) argument=${OPTARG} ;;
+    H) argument=${OPTARG} ;;
+    F) argument=${OPTARG} ;;
+    \?) _invalid_option ${parse_mode} "${OPTARG}" ;;
+    :) _missing_argument ${parse_mode} "${OPTARG}" ;;
     esac
 done
 
-shift $((OPTIND-1))
-
+shift $((OPTIND - 1))
 
 # cqapi normal modes
 case "${mode}" in
-  c) _curlpath;;
-  s) _sedpath;;
-  C) _curlcode "${argument}";;
-  H) _httpcode "${argument}";;
-  E) _java_exception;;
-  e) _java_exception_detection;;
-  v) _version;;
-  w) _echopath;;
+c) _curlpath ;;
+s) _sedpath ;;
+C) _curlcode "${argument}" ;;
+H) _httpcode "${argument}" ;;
+E) _java_exception ;;
+e) _java_exception_detection ;;
+v) _version ;;
+f) _urlencode ;;
+F) _format_output "${argument}" ;;
 esac
 
 _usage
-

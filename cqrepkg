@@ -1,0 +1,719 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2021 Wunderman Thompson Technology
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage() {
+    cat <<EOT
+Usage: $(basename "${0}") [SPECIFICATION...] package-file
+Read or repackage CQ Vault zip package locally (without connecting to CQ)
+using provided specification. The new package will be regenerated next to
+the original package. That behavior can be overridden. Without any specification
+the package general details will be displayed (read behavior instead of rewrite)
+
+Examples:
+  cqrepkg -r /content/item            # Create package 'content-1.0-repkged.zip'
+        content.zip                   # in current working directory named
+                                      # 'content2' that holds '/content/item' 
+                                      # node and all subnodes under it.
+
+  cqrepkg -r /content/1               # Create new package 'pack.zip' in '/tmp'
+        -o /tmp/pack.zip content.zip  # directory based on on 'content.zip' files
+                                      # that will hold '/content/1' node
+                                      # and all subnodes under it.
+
+  cqrepkg -g mynewpackages -n subtree # Create a new package 
+        -v 2.0 -d 'My new desc'       # 'content-2.0-repked.zip' named 'subtree'
+         content.zip                  # with new version 2.0 with group 
+                                      # 'mynewpackages' (as namespace)
+                                      # with 'My new desc' description
+                                      # that will hold currenly existing content
+                                      # but with new metadata under it.
+
+  cqrepkg -r /content/dam/important   # Recreate dam-jpeg.zip package containing
+        dam-jpeg.zip                  # only subtree of /content/dam/important
+                                      # that holds .jpeg or .jpg nodes
+                                      # with include/exclude filters previously
+                                      # set based on /content/dam node.
+
+  cqrepkg -P big-content.zip          # List all package properties in raw XML
+                                      # mode from 'big-content.zip' file
+
+  cqrepkg  big-content.zip            # Display package details in tab separated
+                                      # list for 'big-content.zip' file
+
+  cqrepkg -F big-content.zip          # List all package filters in raw XML mode
+                                      # from 'big-content.zip' file
+
+Options:
+
+  -g GROUP              define Vault *NEW* group/namespace for package
+  -v VERSION            define new version for package
+  -n NAME               define new package name
+  -d DESCRIPTION        define *NEW* user-friendly package description
+  -r JCRPATH            redefine *new* filter root JCR path (allowed many times)
+                        that will crop accordingly package content and package
+                        filters. This needs to be a subpath/subtree of currently
+                        existing package.
+  -o ZIPPATH            generates package in path specified by ZIPPATH
+  -P                    output raw xml file with package properties
+  -F                    output raw xml file with package filters
+  -X EXTRACT_TOOL_NAME  force usage of specified tool for package extraction
+                        (allowed values: jar, unzip, 7za)
+EOT
+    exit 1
+}
+
+_add_filter() {
+    filter_definition=$(
+        cat <<EOF
+${filter_definition}
+${1}
+EOF
+    )
+}
+
+replace_with_new_file() {
+    cat "${1}.new" >"${1}"
+    rm "${1}.new"
+}
+
+detect_zip_tools() {
+    P7ZIP=$(which 7za 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${P7ZIP}" ]; then
+        P7ZIP=""
+    fi
+
+    JAR=$(which jar 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${JAR}" ]; then
+        JAR=""
+    fi
+
+    UNZIP=$(which unzip 2>/dev/null)
+    exitcode=${?}
+    if [ ${exitcode} -ne 0 -o -z "${UNZIP}" ]; then
+        UNZIP=""
+    fi
+
+    case "${force_extractor_name}" in
+    jar)
+        UNZIP=""
+        P7ZIP=""
+        ;;
+    unzip)
+        JAR=""
+        P7ZIP=""
+        ;;
+    7za)
+        JAR=""
+        UNZIP=""
+        ;;
+    esac
+}
+
+_prepare_intermediary_paths_for_unpack() {
+    partial_path=""
+    for path_element in $(echo "${1}" | tr '/' ' '); do
+        partial_path="${partial_path}/${path_element}"
+        if [ "${partial_path}" != "${1}" ]; then
+            unpack_args="${unpack_args}\000jcr_root${partial_path}/.content.xml"
+        fi
+    done
+}
+
+prepare_unpack_args() {
+    unpack_args="META-INF/*\000jcr_root/.content.xml"
+    for new_filter in ${new_filters}; do
+        _prepare_intermediary_paths_for_unpack "${new_filter}"
+        unpack_args="${unpack_args}\000jcr_root${new_filter}/*"
+    done
+    filters_to_leave=$(printf "%s\n" "${delta}" | grep '^=' | cut -f2 -d ' ')
+    for filter_to_leave in ${filters_to_leave}; do
+        _prepare_intermediary_paths_for_unpack "${filter_to_leave}"
+        unpack_args="${unpack_args}\000jcr_root${filter_to_leave}/*"
+    done
+}
+
+replace_property() {
+    prop=${1}
+    old=${2}
+    new=${3}
+    esc1='s#\\#\\\\#g; s#\$#\\$#g; s#{#\\{#g; s#}#\\}#g; s#\*#\\*#g;'
+    esc2='s#\.#\\.#g; s#\?#\\?#g; s#\^#\\^#g; s#\[#\\[#g; s#\]#\\]#g;'
+    esc3='s#|#\\|#g; s#(#\\(#g; s#)#\\)#g; s#\+#\\+#g'
+    old_esc=$(echo "${old}" | sed "${esc1}${esc2}${esc3}")
+
+    tag_open="${ENO}${prop}${ENC}"
+    tag_open_repl="${ENO}${prop}${ENCR}"
+    sed_op="s#${tag_open}${old_esc}${ENC2}#${tag_open_repl}${new}${ENC2}#"
+    [ -n "${new}" ] && ${SEDX} "${sed_op}" "${propertiesfn}" \
+        >"${propertiesfn}.new" && replace_with_new_file "${propertiesfn}"
+
+    sed_op="s#name=\"${old_esc}\"#name=\"${new}\"#"
+    [ -n "${new}" ] && ${SEDX} "${sed_op}" "${definitionfn}" \
+        >"${definitionfn}.new" && replace_with_new_file "${definitionfn}"
+}
+
+replace_properties() {
+    replace_property name "${pkg_name}" "${new_name}"
+    replace_property group "${pkg_group}" "${new_group}"
+    replace_property groupId "${pkg_group}" "${new_group}"
+    replace_property description "${pkg_description}" "${new_description}"
+    replace_property version "${pkg_version}" "${new_version}"
+}
+
+change_filters() {
+    filter="${1}"
+    filters_to_change="${2}"
+    new_filters_f_short=""
+    new_filters_f_long=""
+    new_filters_d=""
+    for filter_to_change in ${filters_to_change}; do
+        new_filter_f_short="${FLTA1}${filter_to_change}${FLTA2R}"
+        new_filter_f_long="${FLTB1}${filter_to_change}${FLTB2R}"
+        new_filters_f_short=$(printf "%s%s" "${new_filters_f_short}" \
+            "${new_filter_f_short}")
+        new_filters_f_long=$(printf "%s%s" "${new_filters_f_long}" \
+            "${new_filter_f_long}")
+
+        new_filter_d="${DFLT1R}${filter_to_change}${DFLT2R}"
+        new_filters_d=$(printf "%s%s" "${new_filters_d}" "${new_filter_d}")
+    done
+    repl1="s#${FLTA1}${filter}${FLTA2}#${new_filters_f_short}#;"
+    repl2="s#${FLTB1}${filter}${FLTB2}#${new_filters_f_long}#;"
+    repl3="s#${DFLT1}${filter}${DFLT2}#${new_filters_d}#;"
+    printf "F %s\nF %s\nD %s\n" "${repl1}" "${repl2}" "${repl3}"
+}
+
+remove_filter() {
+    filter="${1}"
+    repl1="s#${FLTA1}${filter}${FLTA2}##;"
+    repl2="s#${FLTB1}${filter}${FLTB2}##;"
+    repl3="s#${DFLT1}${filter}${DFLT2}##;"
+    printf "F %s\nF %s\nD %s\n" "${repl1}" "${repl2}" "${repl3}"
+}
+
+sanitize_filters() {
+    TAB=$(printf '\t')
+    tr -d '\t\n' |
+        ${SEDX} "s#<!--#${TAB}<!--#g" |
+        ${SEDX} "s#-->#-->${TAB}#g" |
+        tr '\t' '\n' |
+        ${SEDX} "s#<!--.*-->##g" |
+        tr '\n' '\t' |
+        ${SEDX} "s#(${TAB})+#${TAB}#g" |
+        tr '\t' '\n'
+}
+
+group_into_filters() {
+    TAB=$(printf '\t')
+    tr -d '\t\n' |
+        ${SEDX} "s#${FLTA1}#${TAB}${FLTA1}#g" |
+        ${SEDX} "s#${FLTE}#${FLTE}${TAB}#g" |
+        ${SEDX} "s#${FLTA1}([^\"]+)${FLTA2}#${FLTA1}\1${FLTA2R}${TAB}#g" |
+        tr '\t' '\n'
+}
+
+replace_filters() {
+    TAB=$(printf '\t')
+    sanitize_filters <"${filtersfn}" | group_into_filters >"${filtersfn}.new" &&
+        replace_with_new_file "${filtersfn}"
+    echo "${seds_def}" | ${SEDX} \
+        -f /dev/stdin "${definitionfn}" >"${definitionfn}.new" &&
+        replace_with_new_file "${definitionfn}"
+    echo "${seds_flt}" | ${SEDX} \
+        -f /dev/stdin "${filtersfn}" | tr -s '\n' | uniq >"${filtersfn}.new" &&
+        replace_with_new_file "${filtersfn}"
+}
+
+process_delta_item() {
+    op=$(echo "${1}" | cut -c1)
+    filter=$(echo "${1}" | cut -f2 -d ' ')
+    new_filter=$(echo "${1}" | cut -f4- -d ' ')
+    if [ "${op}" = "R" ]; then
+        remove_filter "${filter}"
+    fi
+    if [ "${op}" = "M" ]; then
+        change_filters "${filter}" "${new_filter}"
+    fi
+}
+
+display_last() {
+    if [ -n "${1}" ]; then
+        echo "Y${1}"
+    fi
+}
+
+compact_item() {
+    op=$(echo "${1}" | cut -c1)
+    last_item=$(echo "${2}" | grep -e '^N' | cut -c2-)
+
+    filter=$(echo "${1}" | cut -f2 -d ' ')
+    new_filter=$(echo "${1}" | cut -f4- -d ' ')
+    last_op=$(echo "${last_item}" | cut -c1)
+    last_filter=$(echo "${last_item}" | cut -f2 -d ' ')
+    last_new_filters=$(echo "${last_item}" | cut -f4- -d ' ')
+
+    if [ "${op}" = "F" ]; then
+        display_last "${last_item}"
+    fi
+    if [ "${op}" = "R" -o "${op}" = "=" ]; then
+        echo "Y${1}"
+        display_last "${last_item}"
+    fi
+    if [ "${op}" = "M" ]; then
+        if [ "${last_op}" = "M" -a "${filter}" = "${last_filter}" ]; then
+            printf "N%s %s -> %s %s\n" "${op}" "${filter}" "${new_filter}" \
+                "${last_new_filters}"
+        else
+            echo "N${1}"
+            display_last "${last_item}"
+        fi
+    fi
+}
+
+compact_delta() {
+    printf "%s\nF\n" "${delta}" |
+        while read item; do
+            compacted=$(compact_item "${item}" "${compacted}")
+            echo "${compacted}" | grep -E '^Y' | cut -c2-
+            compacted=$(echo "${compacted}" | grep -E -v '^Y')
+        done
+}
+
+process_delta() {
+    DFLT1="<([^<]+)\""
+    DFLT2="\"([^>]+)>"
+    DFLT1R="<\1\""
+    DFLT2R="\"\2>"
+
+    leave_count=$(echo "${delta}" | grep -c '^=')
+    change_count=$(echo "${delta}" | grep -c '^M')
+
+    compacted_delta=$(compact_delta "${delta}")
+    printf "%s\n" "${compacted_delta}"
+
+    seds_flt=$(echo "${compacted_delta}" |
+        while read item; do process_delta_item "${item}"; done |
+        grep '^F' | cut -f2- -d ' ')
+    seds_def=$(echo "${compacted_delta}" |
+        while read item; do process_delta_item "${item}"; done |
+        grep '^D' | cut -f2- -d ' ')
+
+    if [ "${change_count}" -eq 0 -a "${leave_count}" -eq 0 ]; then
+        MSG="Cannot repackage: effective target package will be empty."
+        echo "${MSG}" >&2
+        _clean_up
+        exit 1
+    fi
+}
+
+update_delta() {
+    delta="${1}
+${delta}"
+}
+
+preprocess_filters() {
+    for filter in ${pkg_filters}; do
+        pts="${#filter}"
+        filters_to_change=$(echo "${new_filters}" | grep -E "${filter}")
+        if [ -n "${filters_to_change}" ]; then
+            for flt in ${filters_to_change}; do
+                changes="${changes}
+${flt}${TAB}${pts}${TAB}${filter}"
+            done
+        fi
+    done
+
+    for filter in ${new_filters}; do
+        my_changes=$(echo "${changes}" | grep -E "^${filter}${TAB}" | sort -nr -k2)
+        to_change=$(echo "${my_changes}" | head -1 | cut -f 3)
+        if [ "${to_change}" = "${filter}" ]; then
+            update_delta "= ${to_change}"
+        else
+            if [ -n "${to_change}" -a -n "${filter}" ]; then
+                update_delta "M ${to_change} -> ${filter}"
+            fi
+        fi
+        for old_filter in ${pkg_filters}; do
+            to_leave=$(echo "${old_filter}" | grep -E "^${filter}")
+            if [ -n "${to_leave}" ]; then
+                update_delta "= ${to_leave}"
+            fi
+        done
+    done
+
+    delta=$(echo "${delta}" | sort | uniq)
+    for old_filter in ${pkg_filters}; do
+        to_remove=$(echo "${delta}" | grep -Ev '^R ' | cut -f2 -d ' ' |
+            grep -c "^${old_filter}")
+        if [ "${to_remove}" -eq 0 ]; then
+            update_delta "R ${old_filter}"
+        fi
+    done
+
+    delta=$(echo "${delta}" | grep -v '^$')
+}
+
+save_rewritten_zip() {
+    cd "${tempdir}"
+    rm -f "${full_dest_zip_fn}" 2>/dev/null
+    if [ -n "${P7ZIP}" ]; then
+        "${P7ZIP}" a -r "${full_dest_zip_fn}" ./ 2>/dev/null >/dev/null
+        exitcode=${?}
+    else
+        if [ -n "${JAR}" ]; then
+            "${JAR}" cf "${full_dest_zip_fn}" ./ 2>/dev/null
+            exitcode=${?}
+        else
+            "${ZIP}" -q -r - ./ >"${full_dest_zip_fn}" 2>/dev/null
+            exitcode=${?}
+        fi
+    fi
+    cd "${dir}"
+    if [ ${exitcode} -ne 0 ]; then
+        echo "Cannot create zip package properly." >&2
+    fi
+}
+
+extract_required_resources() {
+    unzip_used=0
+    if [ -n "${P7ZIP}" ]; then
+        # shellcheck disable=SC2059
+        # shellcheck disable=SC2034
+        debugging=$(printf "${unpack_args}" | tr -d '*' | xargs -0 \
+            "${P7ZIP}" x -o"${tempdir}" "${full_src_zip_fn}")
+        exitcode=${?}
+    else
+        if [ -n "${JAR}" ]; then
+            cd "${tempdir}"
+            # shellcheck disable=SC2059
+            debugging=$(printf "${unpack_args}" | tr -d '*' |
+                xargs -0 "${JAR}" xf "${full_src_zip_fn}")
+            exitcode=${?}
+            cd "${dir}"
+        else
+            # shellcheck disable=SC2059
+            debugging=$(printf "${unpack_args}" | xargs -0 "${UNZIP}" -qq \
+                -ud "${tempdir}" "${full_src_zip_fn}" 2>&1)
+            exitcode=${?}
+            unzip_used=1
+        fi
+    fi
+}
+
+get_property() {
+    prop=${1}
+    echo "${PROPS}" | grep -E -o "${ENO}${prop}${ENT}" |
+        ${SEDX} "s#.*${ENO}${prop}${ENT}.*#\1#"
+}
+
+_clean_up() {
+    tree_level=$(echo "${tempdir}" | tr -cd '/' | wc -c)
+    if [ -n "${tempdir}" -a "${tree_level}" -gt 1 ]; then
+        # shellcheck disable=SC2115
+        rm -fr "${tempdir}/" >/dev/null
+    else
+        echo "Covardly refused to clean up '${tempdir}' tmp directory" >&2
+    fi
+}
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P >/dev/null
+if [ ${?} -ne 0 ]; then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+SEDX=$("${API}" -s)
+
+raw=0
+modify=0
+show_props=0
+show_filters=0
+change_only_properties=1
+while getopts ":g:v:r:n:o:d:PFX:" opt; do
+    case "${opt}" in
+    n)
+        modify=1
+        new_name="${OPTARG}"
+        ;;
+    g)
+        modify=1
+        new_group="${OPTARG}"
+        ;;
+    v)
+        modify=1
+        new_version="${OPTARG}"
+        ;;
+    d)
+        modify=1
+        new_description="${OPTARG}"
+        ;;
+    o)
+        modify=1
+        dest_zip_fn="${OPTARG}"
+        ;;
+    r)
+        modify=1
+        change_only_properties=0
+        _add_filter "${OPTARG}"
+        ;;
+    P)
+        raw=1
+        show_props=1
+        ;;
+    F)
+        raw=1
+        show_filters=1
+        ;;
+    X)
+        force_extractor_name="${OPTARG}"
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ ${#} -ne 1 ]; then
+    _usage
+fi
+
+if [ "${modify}" -eq 1 -a "${raw}" -eq 1 ]; then
+    MOD="-n/-g/-v/-d/-o/-r"
+    echo "Modification options ${MOD} and raw file output " \
+        "options -P/-F shouldn't be mixed" >&2
+    _usage
+fi
+
+if [ "${show_filters}" -eq 1 -a "${show_props}" -eq 1 ]; then
+    echo "Options -P and -F cannot be used together" >&2
+    _usage
+fi
+
+if [ "${force_extractor_name}" != "" \
+    -a "${force_extractor_name}" != "jar" \
+    -a "${force_extractor_name}" != "unzip" \
+    -a "${force_extractor_name}" != "7za" ]; then
+    echo "Specify the correct extraction tool (only one) for -X option:" >&2
+    echo "      jar" >&2
+    echo "      unzip" >&2
+    echo "      7za" >&2
+    echo >&2
+    _usage
+fi
+
+src_zip_fn=${1}
+dir=$(pwd)
+
+dir_src_zip_fn=$(dirname "${src_zip_fn}")
+full_src_zip_fn=$(
+    cd "${dir_src_zip_fn}"
+    pwd
+)/$(basename "${src_zip_fn}")
+
+if [ ! -f "${full_src_zip_fn}" ]; then
+    printf "Cannot find file: '%s'\n" "${full_src_zip_fn}" >&2
+    exit 1
+fi
+
+new_filters=${filter_definition}
+
+detect_zip_tools
+if [ -z "${UNZIP}" -a -z "${P7ZIP}" -a -z "${JAR}" ]; then
+    echo "Cannot find any proper required unzip-like tool: 7za, jar, unzip." \
+        " Aborted" >&2
+    exit 1
+fi
+
+METAINF="META-INF"
+VAULT="${METAINF}/vault"
+FILTER="filter.xml"
+PROPERTIES="properties.xml"
+
+if [ -n "${P7ZIP}" ]; then
+    PROPSN=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+        2>/dev/null)
+    PROPS=$(echo "${PROPSN}" | tr -d '\n')
+    FILTERS=$("${P7ZIP}" x -so "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
+        2>/dev/null)
+else
+    if [ -n "${JAR}" ]; then
+        readdir=$(mktemp -d cqrepkgXXXXXXXXXX)
+        # shellcheck disable=SC2034
+        hidden_output=$(cd "${readdir}" && "${JAR}" xf "${full_src_zip_fn}" \
+            "${VAULT}/${PROPERTIES}" "${VAULT}/${FILTER}")
+        PROPSN=$(cat "${readdir}/${VAULT}/${PROPERTIES}")
+        PROPS=$(echo "${PROPSN}" | tr -d '\n')
+        FILTERS=$(cat "${readdir}/${VAULT}/${FILTER}")
+        rm -f "${readdir}/${VAULT}/${FILTER}" 2>/dev/null
+        rm -f "${readdir}/${VAULT}/${PROPERTIES}" 2>/dev/null
+        rmdir "${readdir}/${VAULT}" 2>/dev/null
+        rmdir "${readdir}/${METAINF}" 2>/dev/null
+        rmdir "${readdir}" 2>/dev/null
+    else
+        PROPSN=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${PROPERTIES}" \
+            2>/dev/null)
+        PROPS=$(echo "${PROPSN}" | tr -d '\n')
+        FILTERS=$("${UNZIP}" -p "${full_src_zip_fn}" "${VAULT}/${FILTER}" \
+            2>/dev/null)
+    fi
+fi
+
+[ "${show_filters}" -eq 1 ] && echo "${FILTERS}"
+[ "${show_props}" -eq 1 ] && echo "${PROPSN}"
+
+if [ -z "${PROPS}" -o -z "${FILTERS}" ]; then
+    echo "Incorrect source zip package: '${full_src_zip_fn}'." >&2
+    exit 2
+fi
+
+[ "${raw}" -eq 1 ] && exit 0
+
+ENO="<entry key=\""
+ENC="\"[ ]*>"
+ENCR="\">"
+ENC2="</entry>"
+ENTXT="[^<]*"
+ENT="${ENC}(${ENTXT})${ENC2}"
+FO="<filter\ *root=\""
+FLTE="</filter>"
+FLTA1="<filter root=\""
+FLTB1="<filter root=\""
+FLTA2="\"[ ]*/>"
+FLTA2R="\"/>"
+FLTB2="\"[ ]*>(.*)${FLTE}"
+FLTB2R="\">\1${FLTE}"
+FILTERS=$(echo "${FILTERS}" | sanitize_filters)
+
+pkg_name=$(get_property name)
+pkg_group=$(get_property group)
+pkg_description=$(get_property description)
+pkg_version=$(get_property version)
+pkg_build=$(get_property buildCount)
+pkg_created=$(get_property created)
+pkg_modified=$(get_property lastModified)
+
+TAB=$(printf '\t')
+pkg_filters=$(echo "${FILTERS}" | group_into_filters |
+    grep -E "${FO}" | ${SEDX} "s#.*${FO}([^\"]*).*#\1#g")
+
+if [ "${modify}" -eq 0 ]; then
+    printf "Name\t\t%s\n" "${pkg_name}"
+    printf "Group\t\t%s\n" "${pkg_group}"
+    printf "Version\t\t%s\n" "${pkg_version}"
+    printf "Descr\t\t%s\n" "${pkg_description}"
+    printf "Build\t\t%s\n" "${pkg_build}"
+    printf "Create\t\t%s\n" "${pkg_created}"
+    printf "Modify\t\t%s\n\n" "${pkg_modified}"
+    for filter in ${pkg_filters}; do
+        printf "Filter\t\t%s\n" "${filter}"
+    done
+    exit 0
+fi
+
+[ -n "${new_name}" ] && zip_name="${new_name}" || zip_name="${pkg_name}"
+[ -n "${new_version}" ] && zip_version="${new_version}" ||
+    zip_version="${pkg_version}"
+
+if [ -z "${dest_zip_fn}" ]; then
+    full_dest_zip_fn="${dir}/${zip_name}-${zip_version}-repkged.zip"
+else
+    dir_dest_zip_fn=$(dirname "${dest_zip_fn}")
+    full_dest_zip_fn=$(
+        cd "${dir_dest_zip_fn}"
+        pwd
+    )/$(basename "${dest_zip_fn}")
+fi
+
+# Modify
+ZIP=$(which zip)
+if [ ${?} -ne 0 -o -z "${ZIP}" ]; then
+    ZIP=""
+fi
+
+if [ -z "${ZIP}" -a -z "${P7ZIP}" -a -z "${JAR}" ]; then
+    echo "Cannot find any proper required zip-like tool: 7za, jar, zip." \
+        " Aborted" >&2
+    exit 2
+fi
+
+tempdir=$(mktemp -d cqrepkgXXXXXXXXXX)
+exitcode=${?}
+if [ ${exitcode} -ne 0 ]; then
+    echo "Cannot create temporary directory ${tempdir}. Aborted" >&2
+    exit 1
+fi
+
+parenttempdir=$(dirname "${tempdir}")
+tempdir=$(
+    cd "${parenttempdir}"
+    pwd
+)/$(basename "${tempdir}")
+exitcode=${?}
+if [ ${exitcode} -ne 0 ]; then
+    echo "Cannot detect full path for temporary directory ${tempdir}" >&2
+    exit 1
+fi
+
+vault="${tempdir}/${VAULT}"
+if [ "${change_only_properties}" -eq 0 ]; then
+    preprocess_filters
+    process_delta
+    prepare_unpack_args
+else
+    unpack_args=""
+fi
+extract_required_resources
+
+if [ ${exitcode} -ne 0 ]; then
+    if [ "${unzip_used}" -eq 0 ]; then
+        echo "Cannot unpack CQ package properly." >&2
+        echo >&2
+    fi
+    if [ -n "${debugging}" ]; then
+        echo "Extraction log:" >&2
+        echo "${debugging}" >&2
+    fi
+    if [ "${unzip_used}" -eq 0 ]; then
+        _clean_up
+        exit 1
+    fi
+fi
+
+filtersfn="${vault}/${FILTER}"
+propertiesfn="${vault}/${PROPERTIES}"
+definitionfn="${vault}/definition/.content.xml"
+
+replace_properties
+if [ "${change_only_properties}" -eq 0 ]; then
+    replace_filters
+fi
+save_rewritten_zip
+_clean_up
+
+if [ ${exitcode} -eq 0 ]; then
+    echo "Package '${full_src_zip_fn}' rewritten into: '${full_dest_zip_fn}'"
+else
+    exit 3
+fi

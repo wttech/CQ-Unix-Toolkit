@@ -1,6 +1,6 @@
 #!/bin/sh
 # CQ Unix Toolkit
-# Copyright (C) 2013 Cognifide Limited
+# Copyright (C) 2021 Wunderman Thompson Technology
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 List all packages in CQ Package Manager using instance URL.
@@ -26,7 +25,7 @@ Examples:
 
 Options:
 
-  -u                    use specified usernamed for connection
+  -u                    use specified username for connection
   -p                    use provided password for authentication
   -i                    use specified instance URL to connect
   -1                    list only package names without summary
@@ -37,12 +36,10 @@ Options:
                         fastest one)
 
 EOT
-exit 1
+    exit 1
 }
 
-
-_print_preformatted()
-{
+_print_preformatted() {
     SEP='|'
     TB=$(printf "\t")
     STATUS=${1}
@@ -50,12 +47,15 @@ _print_preformatted()
     machine=${3}
     fields_num=11
     case ${mode} in
-        1)
-            fields_num=1;;
-        2)
-            fields_num=5;;
-        3)
-            fields_num=11;;
+    1)
+        fields_num=1
+        ;;
+    2)
+        fields_num=5
+        ;;
+    3)
+        fields_num=11
+        ;;
     esac
     PLACEHOLDER=">([^\<]*)</"
     NONPLACEHOLDER=">[^\<]*</"
@@ -97,52 +97,47 @@ _print_preformatted()
     REGEXP2="(.*)${G2}${G3}${G4}${G5}${G6}${G7}.*"
     ORDERING2="\1\2${TB}\3${TB}\4${TB}\5${TB}\6${TB}\7"
 
-    filtered_items=$(printf "%s" "${STATUS}" | tr -d '\n' \
-        | sed "s/<package>/${TB}<package>/g" | tr '\t' '\n' \
-        | ${SEDX} 's/> +</></g' | grep -E "${REGEXP1}")
-    items=$(printf "%s" "${filtered_items}" \
-        | ${SEDX} "s#${REGEXP1}#${ORDERING1}#" \
-        | ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" \
-        | cut -f1-${fields_num})
-    total=$(printf "%s" "${items}" | wc -l | tr -d ' ')
-    if [ "${machine}" -eq 0 ]
-    then
-        printf "%s package\n\n" "${total}"
+    filtered_items=$(printf "%s" "${STATUS}" | tr -d '\n' |
+        sed "s/<package>/${TB}<package>/g" | tr '\t' '\n' |
+        ${SEDX} 's/> +</></g' | grep -E "${REGEXP1}")
+    items=$(printf "%s" "${filtered_items}" |
+        ${SEDX} "s#${REGEXP1}#${ORDERING1}#" |
+        ${SEDX} "s#${REGEXP2}#${ORDERING2}#" | sort -nk1 -t "${TB}" |
+        cut -f1-${fields_num})
+    total=$(printf "%s\n" "${items}" | wc -l | tr -d ' ')
+    if [ "${machine}" -eq 0 ]; then
+        printf "%s packages\n\n" "${total}"
         H1="NAME|GROUP|VERSION|SIZE|DOWNLOAD_NAME"
-        H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BV|INSTALLED|INSTALLED_BY"
+        H2="|CREATED|CREATED_BY|MODIFIED|MODIFIED_BY|INSTALLED|INSTALLED_BY"
         header="${H1}${H2}"
         output=$(printf "%s\n" "${header}" | cut -f1-${fields_num} -d '|')
         output=$(printf "%s\n%s" "${output}" "${items}")
     else
         output="${items}"
     fi
-    if [ "${machine}" -eq 1 ]
-    then
-        printf "%s" "${output}"
+    if [ "${machine}" -eq 1 ]; then
+        printf "%s\n" "${output}"
     else
         COLUMN=$(which column)
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]; then
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" \
-            | ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
+        printf "%s\n" "${output}" | tr '\t' "${SEP}" |
+            ${COLUMN} -xt -c ${fields_num} -s "${SEP}" 2>/dev/null
     fi
 }
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -162,43 +157,47 @@ listing_names=0
 listing_machine=0
 listing_mode=2
 listing_original=0
-while getopts ":l1mx${apigetopts}" opt
-do
+while getopts ":l1mx${apigetopts}" opt; do
     case ${opt} in
-        l)
-            listing_long=1
-            listing_mode=3;;
-        1)
-            listing_names=1
-            listing_mode=1;;
-        m)
-            listing_machine=1;;
-        x)
-            listing_original=1;;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    l)
+        listing_long=1
+        listing_mode=3
+        ;;
+    1)
+        listing_names=1
+        listing_mode=1
+        ;;
+    m)
+        listing_machine=1
+        ;;
+    x)
+        listing_original=1
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-validation1=$((listing_long+listing_names+listing_original))
-if [ ${validation1} -ge 2 ]
-then
+validation1=$((listing_long + listing_names + listing_original))
+if [ ${validation1} -ge 2 ]; then
     echo "Listing options -l, -1, and -x cannot be used together. Choose one."
     _usage
 fi
 
-validation2=$((listing_original+listing_machine))
-if [ ${validation2} -eq 2 ]
-then
+validation2=$((listing_original + listing_machine))
+if [ ${validation2} -eq 2 ]; then
     echo "Listing options -m and -x cannot be used together. Choose one."
     _usage
 fi
 
-if [ ${#} -gt 0 -o "${passed}" -eq 0 ];
-then
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]; then
     _usage
 fi
 
@@ -217,8 +216,7 @@ STATUS=$(${CURLBIN} \
 
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     echo "Couldn't get packages list" >&2
     exit ${EXITCODE}
 fi
@@ -226,18 +224,15 @@ fi
 STATUSCODE=$(echo "${STATUS}" | tail -n 1)
 "${API}" -H "${STATUSCODE}"
 EXITCODE2=${?}
-if [ ${EXITCODE2} -ne 0 ]
-then
+if [ ${EXITCODE2} -ne 0 ]; then
     echo "Couldn't get packages list" >&2
     exit ${EXITCODE2}
 fi
 
 STATUS=$(echo "${STATUS}" | sed '$d')
-if [ ${listing_original} -eq 1 ]
-then
+if [ ${listing_original} -eq 1 ]; then
     echo "${STATUS}"
 else
     _print_preformatted "${STATUS}" ${listing_mode} ${listing_machine}
 fi
 exit 0
-

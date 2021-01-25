@@ -1,6 +1,6 @@
 #!/bin/sh
 # CQ Unix Toolkit
-# Copyright (C) 2013 Cognifide Limited
+# Copyright (C) 2021 Wunderman Thompson Technology
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,7 +44,8 @@ else
 fi
 
 dir=$(dirname "${0}")
-basedir=$(readlink -f "${dir}")
+parent_dir_to_dir=$(dirname "${dir}")
+basedir=$(cd "${parent_dir_to_dir}"; pwd)/$(basename "${dir}")
 ${ECHOX} "I assume that CQ UNIX toolkit are in: '${basedir}'\n"
 if [ ! -d "${INSTALL_DIR}" ] 
 then
@@ -66,7 +67,7 @@ do
         then
             if [ -L "${INSTALL_DIR}/${cmd}" ]
             then
-                target=$(readlink -f "${INSTALL_DIR}/${cmd}")
+                target=$(cd "${INSTALL_DIR}"; pwd)/${cmd}
                 output="${INSTALL_DIR}/${cmd} --> ${target} (symbolic link)\n"
             else
                 output="${INSTALL_DIR}/${cmd} (binary file)\n"

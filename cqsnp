@@ -1,0 +1,228 @@
+#!/bin/sh
+# CQ Unix Toolkit
+# Copyright (C) 2021 Wunderman Thompson Technology
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+_usage() {
+    cat <<EOT
+Usage: $(basename "${0}") [OPTION...] package-name
+Download installation snapshot specified by package name and optionally group
+and version. Optionally package can be dropped from CQ after downloading.
+
+Examples:
+  cqsnp -u admin my-app          # Get original content overwritten by
+                                 # installing package called 'my-app' in 1.0
+                                 # version without group specified in form
+                                 # of package that can be reused. Locally
+                                 # the package will be saved to:
+                                 # 'my-app-1.0-undo.zip'
+  cqsnp -d -u admin my-app       # Get and drop original content overwritten by
+                                 # installing package called 'my-app' in 1.0
+                                 # version without group specified in form
+                                 # of package 'my-app-1.0-undo.zip' that can be
+                                 # reused.
+  cqsnp -u admin -g GRP -v 2.0   # Get original content overwritten after
+        pack                     # installing package 'pack' in group 'GRP'
+                                 # with version specified to 2.0
+                                 # in form of package: 'pack-2.0-undo.zip'
+  cqsnp -i http://localhost:5510 # Get original content from local host instance
+        -g com.group stuff       # on tcp port 5510 named stuff in group:
+        -p secret                # 'com.group' with password provided: 'secret'
+                                 # in form of package 'stuff-1.0.zip'
+  cqsnp -u admin my-app          # Get original content overwritten by
+        -o rescue-package.zip    # installing package called 'my-app' in 1.0
+                                 # version without group specified in form
+                                 # of package saved to 'rescue-package.zip'
+                                 # filename that can be reused later for
+                                 # uninstalling original package: 'my-app'
+
+Options:
+
+  -u                    use specified usernamed for connection
+  -p                    use provided password for authentication
+  -i                    use specified instance URL to connect
+  -o                    saves remote resource using provided path or file name
+  -g                    specify package group (default is no group)
+  -v                    specify package version (by default 1.0)
+  -d                    get installation snapshot locally and drop it from CQ
+                        instance
+  -0                    only in conjunction with -d package is not saved at all
+
+EOT
+    exit 1
+}
+
+CWD=$(dirname "${0}")
+API="${CWD}/cqapi"
+"${API}" -P 2>/dev/null >/dev/null
+if [ ${?} -ne 0 ]; then
+    echo "Fatal: cannot find or test cqapi command" >&2
+    exit 1
+fi
+
+CURLBIN=$("${API}" -c)
+if [ ${?} -ne 0 ]; then
+    echo "Fatal: cannot find curl" >&2
+    exit 1
+fi
+
+# API common options
+cmdapi=$("${API}" -P "${@}")
+username=$(echo "${cmdapi}" | cut -f1)
+password=$(echo "${cmdapi}" | cut -f2)
+instance=$(echo "${cmdapi}" | cut -f3)
+passed=$(echo "${cmdapi}" | cut -f4)
+apigetopts=$(echo "${cmdapi}" | cut -f5)
+
+# Custom arguments
+drop=0
+null=0
+file=0
+version="1.0"
+while getopts ":o:dv:g:0${apigetopts}" opt; do
+    case "${opt}" in
+    o)
+        outfile="${OPTARG}"
+        file=1
+        ;;
+    g)
+        group_name="${OPTARG}"
+        ;;
+    v)
+        version="${OPTARG}"
+        ;;
+    d)
+        drop=1
+        ;;
+    0)
+        null=1
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]; then
+    _usage
+fi
+
+if [ ${drop} -eq 0 -a ${null} -eq 1 ]; then
+    echo "Option -0 requires to pass -d explicitly." >&2
+    _usage
+fi
+
+if [ ${null} -eq 1 -a ${file} -eq 1 ]; then
+    echo "Option -o cannot be used together with -0." >&2
+    echo "What is your intention?" >&2
+    echo " 1) save snapshot before dropping it from CQ (-o)" >&2
+    echo " 2) lose it forever (-0)" >&2
+    _usage
+fi
+
+name="${1}"
+INSTANCE_URL="${instance}"
+PACKAGES_PATH="/etc/packages"
+SNAPSHOT_NODE=".snapshot"
+EXTENSION=".zip"
+
+[ -z "${group_name}" ] && GROUP_PATH="" || GROUP_PATH="/${group_name}"
+
+CQ_PKG_URL="${INSTANCE_URL}${PACKAGES_PATH}"
+
+[ -z "${version}" ] && verspec="" || verspec="-${version}"
+
+URL="${CQ_PKG_URL}${GROUP_PATH}/${SNAPSHOT_NODE}/${name}${verspec}${EXTENSION}"
+
+REFERER="${CQ_PKG_URL}"
+AUTH="${username}:${password}"
+REFERER_HEADER="Referer: ${REFERER}"
+
+if [ -z "${outfile}" ]; then
+    outfile="${name}${verspec}-undo${EXTENSION}"
+fi
+
+if [ ${null} -eq 1 ]; then
+    outfile="/dev/null"
+fi
+
+SNAPSHOT_ID="[G=${group_name}:N=${name}:V=${version}]"
+STATUS=$("${CURLBIN}" \
+    -s \
+    -I \
+    --write-out "\n%{http_code}\n" \
+    -u "${AUTH}" \
+    -H "${REFERER_HEADER}" \
+    -o /dev/null \
+    "${URL}")
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+EXITCODE=$?
+[ ${EXITCODE} -ne 0 ] && {
+    echo "Cannot find snapshot for: ${SNAPSHOT_ID}" >&2
+    exit ${EXITCODE}
+}
+
+STATUS=$("${CURLBIN}" \
+    -s \
+    --write-out "%{http_code}" \
+    -u "${AUTH}" \
+    -H "${REFERER_HEADER}" \
+    -o "${outfile}" \
+    "${URL}")
+EXITCODE=${?}
+"${API}" -C "${EXITCODE}"
+STATUSCODE=$(echo "${STATUS}" | tail -n 1)
+"${API}" -H "${STATUSCODE}"
+EXITCODE2=$?
+if [ ${EXITCODE} -eq 0 -a ${EXITCODE2} -eq 0 ]; then
+    if [ ! -z "${outfile}" -a "${null}" -ne 1 ]; then
+        fullfile=$(readlink -f "${outfile}")
+        echo "Uninstall snapshot saved as: ${fullfile}"
+    fi
+
+    if [ ${drop} -eq 1 ]; then
+        STATUS=$(${CURLBIN} \
+            -s \
+            --write-out "%{http_code}" \
+            -u "${AUTH}" \
+            -H "${REFERER_HEADER}" \
+            -X DELETE \
+            -f \
+            "${URL}")
+        EXITCODE=$?
+        "${API}" -C ${EXITCODE}
+        STATUSCODE=$(echo "$STATUS" | tail -n 1)
+        "${API}" -H "${STATUSCODE}"
+        EXITCODE2=$?
+        if [ ${EXITCODE} -eq 0 -a ${EXITCODE2} -eq 0 ]; then
+            echo "Snapshot dropped: ${SNAPSHOT_ID}"
+        fi
+    fi
+fi
+
+if [ "${STATUSCODE}" = "404" ]; then
+    echo "Getting snapshot failed: ${SNAPSHOT_ID}" >&2
+    if [ ${null} -eq 0 ]; then
+        echo "File: ${outfile} is possibly corrupted ZIP." >&2
+        echo "Verify and delete it" >&2
+    fi
+fi
+
+exit $((EXITCODE + EXITCODE2))

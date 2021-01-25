@@ -1,6 +1,6 @@
 #!/bin/sh
 # CQ Unix Toolkit
-# Copyright (C) 2013 Cognifide Limited
+# Copyright (C) 2021 Wunderman Thompson Technology
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Returns CQ instance OSGI bundles list and its states in pretty-printed form
@@ -47,12 +46,10 @@ Options:
   -r                    run (start) specified bundle (using bundle symbol)
   -s                    stop specified bundle (using bundle symbol)
 EOT
-exit 1
+    exit 1
 }
 
-
-_print_preformatted()
-{
+_print_preformatted() {
     SEP='|'
     TB=$(printf "\t")
     STATUS=${1}
@@ -60,31 +57,28 @@ _print_preformatted()
     REGEXP=".*\"id\":([0-9]+),\"name\":\"([^\"]+)\",\"fragment\":([A-Za-z]+).*,\
 \"stateRaw\":[0-9]+,\"state\":\"([A-Za-z ]+)\",\"version\":\"([^\"]+)\",\"\
 symbolicName\":\"([^\"]+)\",\"category\":\"([^\"]*)\".*"
-    filtered_items=$(printf "%s" "${STATUS}" | tr '{' '\n' | sed 's#^#{#' \
-        | grep -E "${REGEXP}")
-    items=$(printf "%s" "${filtered_items}" \
-        | ${SEDX} "s#${REGEXP}#\1${TB}\6${TB}\4${TB}\5${TB}\2#"\
-        | sort -nk1 -t "${TB}")
+    filtered_items=$(printf "%s" "${STATUS}" | tr '{' '\n' | sed 's#^#{#' |
+        grep -E "${REGEXP}")
+    items=$(printf "%s" "${filtered_items}" |
+        ${SEDX} "s#${REGEXP}#\1${TB}\6${TB}\4${TB}\5${TB}\2#" |
+        sort -nk1 -t "${TB}")
     total=$(printf "%s\n" "${items}" | wc -l | tr -d ' ')
-    if [ "${machine_friendly}" -eq 0 ]
-    then
+    if [ "${machine_friendly}" -eq 0 ]; then
         printf "%s bundles\n\n" "${total}"
         output="ID|SYMBOL|STATUS|VERSION|NAME"
         output=$(printf "%s\n%s" "${output}" "${items}")
     else
         output="${items}"
     fi
-    if [ "${machine_friendly}" -eq 1 ]
-    then
+    if [ "${machine_friendly}" -eq 1 ]; then
         printf "%s\n" "${output}"
     else
         COLUMN=$(which column)
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]; then
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "%s" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt -c 5 \
+        printf "%s\n" "${output}" | tr '\t' "${SEP}" | ${COLUMN} -xt -c 5 \
             -s "${SEP}" 2>/dev/null
     fi
 }
@@ -93,15 +87,13 @@ CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
 
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -119,38 +111,42 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 pretty=1
 machine_friendly=0
 operations=""
-while getopts ":jmr:s:${apigetopts}" opt
-do
+while getopts ":jmr:s:${apigetopts}" opt; do
     case ${opt} in
-        j)
-            pretty=0;;
-        m)
-            machine_friendly=1;;
-        r)
-            operations="${operations} R${OPTARG}";;
-        s)
-            operations="${operations} S${OPTARG}";;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    j)
+        pretty=0
+        ;;
+    m)
+        machine_friendly=1
+        ;;
+    r)
+        operations="${operations} R${OPTARG}"
+        ;;
+    s)
+        operations="${operations} S${OPTARG}"
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
-then
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]; then
     _usage
 fi
 
-if [ ${machine_friendly} -eq 1 -a ${pretty} -eq 0 ]
-then
+if [ ${machine_friendly} -eq 1 -a ${pretty} -eq 0 ]; then
     echo "Switches: -j and -m cannot be applied together." >&2
     _usage
 fi
 
-if [ "${operations}" != "" -a \( ${pretty} -eq 0 -o ${machine_friendly} -eq 1 \) ]
-then
+if [ "${operations}" != "" -a \( ${pretty} -eq 0 -o ${machine_friendly} -eq 1 \) ]; then
     echo "View options -m or -j cannot be applied together with operations:" \
         "-r/-s" >&2
     exit 2
@@ -170,55 +166,48 @@ STATUS=$(${CURLBIN} \
 
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     exit ${EXITCODE}
 fi
 STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
 "${API}" -H "${STATUSCODE}"
 EXITCODE2=${?}
-if [ ${EXITCODE2} -ne 0 ]
-then
+if [ ${EXITCODE2} -ne 0 ]; then
     exit ${EXITCODE2}
 fi
 
 STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
 
-if [ "${operations}" != "" ]
-then
+if [ "${operations}" != "" ]; then
     bundle_map=$(_print_preformatted "${STATUS}" 1 | cut -f 1,2)
     operations_by_id=""
-    for operation in ${operations}
-    do
+    for operation in ${operations}; do
         action=$(echo "${operation}" | cut -c1)
         bundle=$(echo "${operation}" | cut -c2-)
-        if [ "${action}" != "R" -a "${action}" != "S" ]
-        then
+        if [ "${action}" != "R" -a "${action}" != "S" ]; then
             echo "Only run/stop operations are permitted for bundles" >&2
             exit 2
         fi
         bundle_escaped=$(echo "${bundle}" | ${SEDX} 's#\.#\\.#g')
-        id=$(echo "${bundle_map}" | grep -E "[[:space:]]+${bundle_escaped}\$" \
-            | cut -f1)
-        if [ "${id}" = "" ]
-        then
+        id=$(echo "${bundle_map}" | grep -E "[[:space:]]+${bundle_escaped}\$" |
+            cut -f1)
+        if [ "${id}" = "" ]; then
             echo "Cannot find specified bundle: ${bundle}" >&2
             exit 3
         else
             operations_by_id="${operations_by_id} ${action}${id}${bundle}"
         fi
     done
-    for op in ${operations_by_id}
-    do
+    for op in ${operations_by_id}; do
         action=$(echo "${op}" | cut -c1)
         bundle_spec=$(echo "${op}" | cut -c2-)
         bundle_id=$(echo "${bundle_spec}" | ${SEDX} 's/^([0-9]+).+$/\1/')
         bundle=$(echo "${bundle_spec}" | ${SEDX} 's/^[0-9]+(.+)$/\1/')
 
-        [ "${action}" = "R" ] && activity="Running bundle: " \
-            || activity="Stopping bunle: "
-        [ "${action}" = "R" ] && optype="start" \
-            || optype="stop"
+        [ "${action}" = "R" ] && activity="Running bundle: " ||
+            activity="Stopping bunle: "
+        [ "${action}" = "R" ] && optype="start" ||
+            optype="stop"
         post_param="action=${optype}"
 
         echo "${activity}${bundle} (#${bundle_id})"
@@ -232,25 +221,21 @@ then
 
         EXITCODE=${?}
         "${API}" -C ${EXITCODE}
-        if [ ${EXITCODE} -ne 0 ]
-        then
+        if [ ${EXITCODE} -ne 0 ]; then
             exit ${EXITCODE}
         fi
         STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
         "${API}" -H "${STATUSCODE}"
         EXITCODE2=${?}
-        if [ ${EXITCODE2} -ne 0 ]
-        then
+        if [ ${EXITCODE2} -ne 0 ]; then
             exit ${EXITCODE2}
         fi
     done
     exit 0
 fi
 
-if [ ${pretty} -eq 1 ]
-then
+if [ ${pretty} -eq 1 ]; then
     _print_preformatted "${STATUS}" "${machine_friendly}"
 else
     echo "${STATUS}"
 fi
-
