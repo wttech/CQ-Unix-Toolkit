@@ -45,7 +45,7 @@ is performed by toolkit using three basic options:
 _Please note_ that there is a way to avoid the need to enter -u/-p/-i options
 each time by executing the following command in the current shell environment:
 
-    $ eval $(cqapi -L -u username -p password -i UR)
+    $ eval $(cqapi -L -u username -p password -i URL)
 
 Please also note that _the password is saved in plain text_ as environmental
 variable so every process can steal that information so such mode should be
@@ -231,7 +231,7 @@ The correct URL from which file can be obtained is defined in spec file in
 I want to thank every person involved in development of this tools. Personally
 I want to thank:
 
-- Arkadiusz Kita (the original author of CQ UNIX Toolkit)
+- Arkadiusz Kita (the original author of CQ Unix Toolkit)
 - Krzysztof Kamil Konopko (Quality Assurance - exploratory tests, usability
   tests and improvements (against CQ5.5 & CQ5.6)
 - Bartek Szafko (project management)

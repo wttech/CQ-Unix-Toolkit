@@ -13,9 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
-    cat << EOT
+_usage() {
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] OPERATION
 Allows to browse and modify JCR tree in easy and automated manner like UNIX ls,
 touch and mkdir commands
@@ -33,7 +32,7 @@ Examples:
   cqjcr -u admin -c /content/new   # Create (or modify) JCR node 'new' under
                                    # '/content' node with default
                                    # 'nt:unstructured' primary type
-  cqjcr -u admin -c /content/new   # Create (or modift) JCR node 'new' under
+  cqjcr -u admin -c /content/new   # Create (or modify) JCR node 'new' under
         -t cq:Page                 # '/content' node with 'cq:Page' primary
                                    # type
   cqjcr -u admin -a /content/www   # Create or modify JCR node 'www' under
@@ -66,11 +65,10 @@ Options:
                         (can be used many times but in pairs with -n)
 
 EOT
-exit 1
+    exit 1
 }
 
-_list_children()
-{
+_list_children() {
     FILEPATH="${root}.1.json"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
@@ -83,15 +81,13 @@ _list_children()
 
     EXITCODE="${?}"
     "${API}" -C "${EXITCODE}"
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
 
@@ -102,21 +98,19 @@ _list_children()
     NODE_REGEXP_FULL_EXTRACT="(${STR_SEP}${NODE_NAME}${STR_SEP}${NEW_NODE})"
     NODE_REGEXP_EXTRACT="${STR_SEP}(${NODE_NAME})${STR_SEP}${NEW_NODE}"
     FULL_NODE_REGEXP=".*${NODE_REGEXP_EXTRACT}.*"
-    CLEARED_STATUS=$(echo "${STATUS}" \
-        | tr -d '\t' \
-        | ${SEDX} "s#${NODE_REGEXP_FULL_EXTRACT}#${TAB}\1#g" \
-        | tr '\t' '\n' \
-        | grep -E "${FULL_NODE_REGEXP}" \
-        | ${SEDX} "s#${FULL_NODE_REGEXP}#\1#")
-    if [ ! -z "${CLEARED_STATUS}" ]
-    then
+    CLEARED_STATUS=$(echo "${STATUS}" |
+        tr -d '\t' |
+        ${SEDX} "s#${NODE_REGEXP_FULL_EXTRACT}#${TAB}\1#g" |
+        tr '\t' '\n' |
+        grep -E "${FULL_NODE_REGEXP}" |
+        ${SEDX} "s#${FULL_NODE_REGEXP}#\1#")
+    if [ ! -z "${CLEARED_STATUS}" ]; then
         printf "%s\n" "${CLEARED_STATUS}"
     fi
     exit 0
 }
 
-_list_properties()
-{
+_list_properties() {
     FILEPATH="${root}.json"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
@@ -129,15 +123,13 @@ _list_properties()
 
     EXITCODE=${?}
     "${API}" -C "${EXITCODE}"
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
 
@@ -156,52 +148,46 @@ _list_properties()
     TOKENS_STR="${QT}(${NODE_NAME})${QT}:${QT}(${STRING})${QT},?"
     TOKENS_NUM="${QT}(${NODE_NAME})${QT}:(${NUMBER}),?"
 
-
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
-    STATUS=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%9999%#' \
-        | ${SEDX} "s#${PROP_NUM}#${TAB}\1${TAB}#g" \
-        | tr '\t' '\n' \
-        | ${SEDX} "s#${PROP_STR}#${TAB}\1${TAB}#g" \
-        | tr '\t' '\n' \
-        | ${SEDX} "s#${PROP_BOOL}#${TAB}\1${TAB}#g" \
-        | tr '\t' '\n' \
-        | ${SEDX} "s#${PROP_ARR}#${TAB}\1${TAB}#g" \
-        | tr '\t' '\n' \
-        | grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR}|${PROP_BOOL})" \
-        | ${SEDX} "s#.*${TOKENS_NUM}.*#\1${TAB}\2#" \
-        | ${SEDX} "s#.*${TOKENS_STR}.*#\1${TAB}\2#" \
-        | ${SEDX} "s#.*${TOKENS_BOOL}.*#\1${TAB}\2#" \
-        | ${SEDX} "s#.*${TOKENS_ARR}.*#\1${TAB}\2#" \
-        | ${SEDX} 's#%9999%#"#g')
+    STATUS=$(echo "${STATUS}" | ${SEDX} 's#\\\"#%9999%#' |
+        ${SEDX} "s#${PROP_NUM}#${TAB}\1${TAB}#g" |
+        tr '\t' '\n' |
+        ${SEDX} "s#${PROP_STR}#${TAB}\1${TAB}#g" |
+        tr '\t' '\n' |
+        ${SEDX} "s#${PROP_BOOL}#${TAB}\1${TAB}#g" |
+        tr '\t' '\n' |
+        ${SEDX} "s#${PROP_ARR}#${TAB}\1${TAB}#g" |
+        tr '\t' '\n' |
+        grep -E "(${PROP_NUM}|${PROP_STR}|${PROP_ARR}|${PROP_BOOL})" |
+        ${SEDX} "s#.*${TOKENS_NUM}.*#\1${TAB}\2#" |
+        ${SEDX} "s#.*${TOKENS_STR}.*#\1${TAB}\2#" |
+        ${SEDX} "s#.*${TOKENS_BOOL}.*#\1${TAB}\2#" |
+        ${SEDX} "s#.*${TOKENS_ARR}.*#\1${TAB}\2#" |
+        ${SEDX} 's#%9999%#"#g')
 
-    if [ "${machine_friendly}" -eq 0 ]
-    then
+    if [ "${machine_friendly}" -eq 0 ]; then
         SEP='|'
         COLUMN=$(which column)
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]; then
             echo "Cannot find column utility" >&2
             exit 1
         fi
-        printf "NAME\tVALUE\n%s\n" "${STATUS}" | tr '\t' "${SEP}" \
-            | "${COLUMN}" -xt -c 2 -s "${SEP}" 2>/dev/null
+        printf "NAME\tVALUE\n%s\n" "${STATUS}" | tr '\t' "${SEP}" |
+            "${COLUMN}" -xt -c 2 -s "${SEP}" 2>/dev/null
     else
         printf "%s\n" "${STATUS}"
     fi
     exit 0
 }
 
-_modify_properties()
-{
-    if [ ${n_counter} -le 0 ]
-    then
+_modify_properties() {
+    if [ ${n_counter} -le 0 ]; then
         echo "Use -n/-v to provide property name/value to add or modify." >&2
         _usage
     fi
     echo "Creating/modyfing ${root}"
     actions=""
-    for operation in ${operations}
-    do
+    for operation in ${operations}; do
         propname=$(echo "${operation}" | cut -f1 -d '=' | ${SEDX} 's#%20# #g')
         propvalue=$(echo "${operation}" | cut -f2- -d '=' | ${SEDX} 's#%20# #g')
         echo "  Setting '${propname}' to: '${propvalue}' "
@@ -214,30 +200,27 @@ _modify_properties()
     args="${actions}${URL}"
 
     # shellcheck disable=SC2059
-    STATUS=$(printf "${args}" | \
+    STATUS=$(printf "${args}" |
         xargs -0 "${CURLBIN}" \
-        -s -X POST \
-        --write-out "%{http_code}" \
-        -u "${AUTH}" \
-        -H "${REFERERHEADER}")
+            -s -X POST \
+            --write-out "%{http_code}" \
+            -u "${AUTH}" \
+            -H "${REFERERHEADER}")
     EXITCODE=${?}
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         echo "There was a problem calling: xargs + curl" >&2
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
     echo "Successfully created/modified: ${root}"
 }
 
-_create_node()
-{
+_create_node() {
     [ -z "${type}" ] && type="nt:unstructured"
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
@@ -253,22 +236,19 @@ _create_node()
 
     EXITCODE=${?}
     "${API}" -C "${EXITCODE}"
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "$STATUS" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
     echo "Created/modified: ${root}"
 }
 
-_delete_node()
-{
+_delete_node() {
     FILEPATH="${root}"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
@@ -282,41 +262,35 @@ _delete_node()
 
     EXITCODE=${?}
     "${API}" -C ${EXITCODE}
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
     echo "Deleted: ${root}"
 }
 
-_use_option_warning()
-{
+_use_option_warning() {
     echo "You need to choose one of the following operation:" >&2
     echo " -l / -s / -c / -a" >&2
     _usage
 }
 
-
 TAB=$(printf '\t')
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null 2>/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -343,89 +317,94 @@ v_counter=0
 machine_friendly=0
 delete=0
 while getopts ":l:s:a:c:t:n:v:d:m${apigetopts}" opt; do
-  case "${opt}" in
-     l)
-      list=1
-      root="${OPTARG}";;
-     s)
-      properties=1
-      root="${OPTARG}";;
-     a)
-      modify=1
-      root="${OPTARG}";;
-     c)
-      create=1
-      root="${OPTARG}";;
-     d)
-      delete=1
-      root="${OPTARG}";;
-     m)
-      machine_friendly=1;;
-     t)
-      type="${OPTARG}";;
-     v)
-      v_counter=$((v_counter+1))
-      modify=1
-      if [ ! -z "${property_id}" ]
-      then
-          propvalue=$(echo "${OPTARG}" | sed 's# #%20#g')
-          operations="${operations} ${property_id}=${propvalue}"
-          property_id=""
-      else
-          echo "For each -v option there must be -n preceeding"\
-            "option specified" >&2
-          echo ""
-          _usage
-      fi;;
-     n)
-      n_counter=$((n_counter+1))
-      modify=1;
-      property_id=$(echo "${OPTARG}" | sed 's# #%20#g');;
-     \?)
-      echo "Invalid option: -$OPTARG" >&2; _usage;;
-     :)
-      echo "Option -$OPTARG requires an argument." >&2; _usage;;
-  esac
+    case "${opt}" in
+    l)
+        list=1
+        root="${OPTARG}"
+        ;;
+    s)
+        properties=1
+        root="${OPTARG}"
+        ;;
+    a)
+        modify=1
+        root="${OPTARG}"
+        ;;
+    c)
+        create=1
+        root="${OPTARG}"
+        ;;
+    d)
+        delete=1
+        root="${OPTARG}"
+        ;;
+    m)
+        machine_friendly=1
+        ;;
+    t)
+        type="${OPTARG}"
+        ;;
+    v)
+        v_counter=$((v_counter + 1))
+        modify=1
+        if [ ! -z "${property_id}" ]; then
+            propvalue=$(echo "${OPTARG}" | sed 's# #%20#g')
+            operations="${operations} ${property_id}=${propvalue}"
+            property_id=""
+        else
+            echo "For each -v option there must be -n preceeding" \
+                "option specified" >&2
+            echo ""
+            _usage
+        fi
+        ;;
+    n)
+        n_counter=$((n_counter + 1))
+        modify=1
+        property_id=$(echo "${OPTARG}" | sed 's# #%20#g')
+        ;;
+    \?)
+        echo "Invalid option: -$OPTARG" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -$OPTARG requires an argument." >&2
+        _usage
+        ;;
+    esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
-then
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]; then
     _use_option_warning
 fi
-if [ $((list+properties+create+delete+modify)) -ne 1 ]
-then
+if [ $((list + properties + create + delete + modify)) -ne 1 ]; then
     _use_option_warning
 fi
 
-if [ ${n_counter} -ne ${v_counter} ]
-then
+if [ ${n_counter} -ne ${v_counter} ]; then
     echo "Options: -n and -v are connected together. You need to specify" \
-     "matching pairs of such options (name/value)." >&2
+        "matching pairs of such options (name/value)." >&2
     echo ""
     _usage
 fi
-if [ ${machine_friendly} -eq 1 -a ${properties} -eq 0 ]
-then
+if [ ${machine_friendly} -eq 1 -a ${properties} -eq 0 ]; then
     echo "Option: -m can be used only in conjuction with -s" >&2
     echo ""
     _usage
 fi
-if [ ${create} -eq 0 -a ! -z "${type}" ]
-then
+if [ ${create} -eq 0 -a ! -z "${type}" ]; then
     echo "Option: -t can be used only in conjuction with -c" >&2
     echo ""
     _usage
 fi
-if [ ${modify} -eq 0 -a ${n_counter} -gt 0 ]
-then
+if [ ${modify} -eq 0 -a ${n_counter} -gt 0 ]; then
     echo "Options: -n/-v can be used only in conjuction with -a" >&2
     echo ""
     _usage
 fi
 root_valid=$(echo "${root}" | grep -c '^/')
-if [ "${root_valid}" -ne 1 ]
-then
+if [ "${root_valid}" -ne 1 ]; then
     echo "PATHSPEC argument needs to be valid JCR path, i.e. /content" >&2
     echo ""
     _usage
@@ -436,4 +415,3 @@ AUTH="${username}:${password}"
 [ ${modify} -eq 1 ] && _modify_properties
 [ ${create} -eq 1 ] && _create_node
 [ ${delete} -eq 1 ] && _delete_node
-

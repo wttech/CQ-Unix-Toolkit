@@ -15,8 +15,7 @@
 # limitations under the License.
 VERSION=1.2.0
 CMDEXEC="${0}"
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 CQ UNIX Toolkit API command.
@@ -68,26 +67,21 @@ Options:
                         machine-readable format)
 
 EOT
-exit 1
+    exit 1
 }
 
-_sedpath()
-{
+_sedpath() {
     echo "${SEDX}"
     exit
 }
 
-
-_curlpath()
-{
+_curlpath() {
     WHEREIS=$(whereis whereis 2>/dev/null | cut -f2 -d ' ')
     EXITCODE=${?}
-    if [ ${EXITCODE} -ne 0 -o -z "${WHEREIS}" ]
-    then
+    if [ ${EXITCODE} -ne 0 -o -z "${WHEREIS}" ]; then
         CURLBIN=$(which curl)
         EXITCODE=${?}
-        if [ ${EXITCODE} -ne 0 -o -z "${CURLBIN}" ]
-        then
+        if [ ${EXITCODE} -ne 0 -o -z "${CURLBIN}" ]; then
             echo "Cannot locate required command: curl (using which/whereis\
              method)." >&2
             exit 1
@@ -96,14 +90,12 @@ _curlpath()
         exit 0
     fi
     CURLBIN=$(${WHEREIS} -b curl 2>/dev/null | cut -f2 -d ' ')
-    if [ -z "${CURLBIN}" ]
-    then
+    if [ -z "${CURLBIN}" ]; then
         CURLBIN=$(${WHEREIS} curl | cut -f2 -d ' ')
     fi
 
     EXITCODE=${?}
-    if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]
-    then
+    if [ -z "${CURLBIN}" -o ${EXITCODE} -ne 0 ]; then
         echo "Cannot locate required command: curl." >&2
         exit 1
     fi
@@ -111,13 +103,12 @@ _curlpath()
     exit
 }
 
-_curlcode()
-{
-    if [ -z "${1}" -o "${1}" -eq 0 ]
-    then
+_curlcode() {
+    if [ -z "${1}" -o "${1}" -eq 0 ]; then
         exit 0
     fi
-    codes=$(cat <<-'EOF'
+    codes=$(
+        cat <<-'EOF'
     1 Unsupported protocol. This build of curl has no support for this protocol.
     2 Failed to initialize.
     3 URL malformed. The syntax was not correct.
@@ -197,25 +188,24 @@ _curlcode()
         '
 EOF
     )
-    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
-        | cut -f2- -d ' ')
-    if [ -z "${msg}" ]
-    then
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " |
+        cut -f2- -d ' ')
+    if [ -z "${msg}" ]; then
         msg="Unknown code"
     fi
     echo "CURL ERROR ${1}: ${msg}" >&2
     exit ${EXITCODE}
 }
 
-_httpcode()
-{
+_httpcode() {
     case "${1}" in
-        "")  exit 0;;
-        200) exit 0;;
-        201) exit 0;;
-        204) exit 0;;
+    "") exit 0 ;;
+    200) exit 0 ;;
+    201) exit 0 ;;
+    204) exit 0 ;;
     esac
-    codes=$(cat <<-'EOF'
+    codes=$(
+        cat <<-'EOF'
     301 Resource has been moved permanently
     302 Resource has been moved temporarily
     400 HTTP Bad request
@@ -229,45 +219,38 @@ _httpcode()
     503 Internal CQ error
 EOF
     )
-    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " \
-        | cut -f2- -d ' ')
-    if [ -z "${msg}" ]
-    then
+    msg=$(echo "${codes}" | ${SEDX} 's#^[ \t]+##' | grep "^${1} " |
+        cut -f2- -d ' ')
+    if [ -z "${msg}" ]; then
         msg="Unknown response"
     fi
     echo "HTTP RESPONSE ${1}: ${msg}" >&2
     exit 1
 }
 
-
-_java_exception()
-{
+_java_exception() {
     head -n 1 | cut -f2 -d ':' | ${SEDX} 's#^[ ]+##'
     exit
 }
 
-_java_exception_detection()
-{
+_java_exception_detection() {
     grep -Ec "(^[\.[:alnum:]]+Exception:.*\$|^[[:space:]]+at[[:space:]][\.\
         [:alnum:]]+(\(.+\))?)"
     exit
 }
 
-_parse()
-{
+_parse() {
     printf "%s\t%s\t%s\t%s\t%s" "${1}" "${2}" "${3}" "${4}" "${5}"
     exit
 }
 
-_get_nth_argument()
-{
+_get_nth_argument() {
     num=${1}
     shift $((num))
     echo "${1}"
 }
 
-_check_stand_alone_option()
-{
+_check_stand_alone_option() {
     option=${1}
     OPTARG=${2}
     actual_option=${3}
@@ -275,47 +258,44 @@ _check_stand_alone_option()
     return ${?}
 }
 
-_process_parse_mode()
-{
+_process_parse_mode() {
     [ -n "${CQ_AUTOLOGIN_INSTANCE}${CQ_AUTOLOGIN_USERNAME}${CQ_AUTOLOGIN_PASSWORD}" ] && explicit_option=1
-    [ -z "${CQ_AUTOLOGIN_INSTANCE}" ] && instance="http://localhost:5410" \
-        || instance="${CQ_AUTOLOGIN_INSTANCE}"
-    [ -z "${CQ_AUTOLOGIN_USERNAME}" ] && username=admin \
-        || username="${CQ_AUTOLOGIN_USERNAME}"
-    [ -z "${CQ_AUTOLOGIN_PASSWORD}" ] && password=admin \
-        || password="${CQ_AUTOLOGIN_PASSWORD}"
-    while [ ${#} -ne 0 ]
-    do
+    [ -z "${CQ_AUTOLOGIN_INSTANCE}" ] && instance="http://localhost:5410" ||
+        instance="${CQ_AUTOLOGIN_INSTANCE}"
+    [ -z "${CQ_AUTOLOGIN_USERNAME}" ] && username=admin ||
+        username="${CQ_AUTOLOGIN_USERNAME}"
+    [ -z "${CQ_AUTOLOGIN_PASSWORD}" ] && password=admin ||
+        password="${CQ_AUTOLOGIN_PASSWORD}"
+    while [ ${#} -ne 0 ]; do
         getopts_failed=1
-        while getopts ":${PARSE_OPTIONS}" option
-        do
+        while getopts ":${PARSE_OPTIONS}" option; do
             getopts_failed=0
-            this_arg=$(_get_nth_argument $((OPTIND-1)) "${@}")
+            this_arg=$(_get_nth_argument $((OPTIND - 1)) "${@}")
             _check_stand_alone_option "${option}" "${OPTARG}" "${this_arg}"
             is_stand_alone="${?}"
-            if [ "${is_stand_alone}" -eq 1 ]
-            then
+            if [ "${is_stand_alone}" -eq 1 ]; then
                 case "${option}" in
-                    u)
-                        username=${OPTARG}
-                        explicit_option=1;;
-                    p)
-                        password=${OPTARG}
-                        explicit_option=1;;
-                    i)
-                        instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
-                        explicit_option=1;;
+                u)
+                    username=${OPTARG}
+                    explicit_option=1
+                    ;;
+                p)
+                    password=${OPTARG}
+                    explicit_option=1
+                    ;;
+                i)
+                    instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+                    explicit_option=1
+                    ;;
                 esac
             fi
         done
-        if [ ${getopts_failed} -eq 1 ]
-        then
-            shift_num=$((OPTIND-1))
-            if [ ${shift_num} -le 0 ]
-            then
+        if [ ${getopts_failed} -eq 1 ]; then
+            shift_num=$((OPTIND - 1))
+            if [ ${shift_num} -le 0 ]; then
                 shift 1
             else
-                shift $((OPTIND-1))
+                shift $((OPTIND - 1))
             fi
             OPTIND=1
         fi
@@ -326,133 +306,120 @@ _process_parse_mode()
     exit 0
 }
 
-
-_invalid_option()
-{
-    if [ "${1}" -ne 1 ]
-    then
+_invalid_option() {
+    if [ "${1}" -ne 1 ]; then
         echo "Invalid option: -${2}" >&2
         _usage
     fi
 }
 
-_missing_argument()
-{
-    if [ "${1}" -eq 0 ]
-    then
+_missing_argument() {
+    if [ "${1}" -eq 0 ]; then
         echo "Option -${2} requires an argument." >&2
         _usage
     fi
 }
 
-_version()
-{
+_version() {
     echo ${VERSION}
     exit
 }
 
-_urlencode()
-{
+_urlencode() {
     output=$(cat -)
-    output=$(echo "${output}"  \
-        | sed 's#%20# #g'       \
-        | sed 's#%#%25#g'       \
-        | sed 's# #%20#g'       \
-        | sed 's#!#%21#g'       \
-        | ${SEDX} 's#\\#%5C#g'  \
-        | ${SEDX} 's#\$#%24#g'  \
-        | sed 's#&#%26#g'       \
-        | sed "s#'#%27#g"       \
-        | sed 's#(#%28#g'       \
-        | sed 's#)#%29#g'       \
-        | sed 's#\*#%2A#g'      \
-        | sed 's#\+#%2B#g'      \
-        | sed 's#,#%2C#g'       \
-        | sed 's#\/#%2F#g'      \
-        | sed 's#:#%3A#g'       \
-        | sed 's#\;#%3B#g'      \
-        | sed 's#=#%3D#g'       \
-        | sed 's#\?#%3F#g'      \
-        | sed 's#@#%40#g'       \
-        | sed 's#\[#%5B#g'      \
-        | sed 's#\]#%5D#g'      \
-        | sed 's#\^#%5E#g'      \
-        | sed 's#\##%23#g'      \
-        | sed 's#{#%7B#g'       \
-        | sed 's#}#%7D#g'       \
-        | sed 's#<#%3C#g'       \
-        | sed 's#>#%3E#g'
+    output=$(
+        echo "${output}" |
+            sed 's#%20# #g' |
+            sed 's#%#%25#g' |
+            sed 's# #%20#g' |
+            sed 's#!#%21#g' |
+            ${SEDX} 's#\\#%5C#g' |
+            ${SEDX} 's#\$#%24#g' |
+            sed 's#&#%26#g' |
+            sed "s#'#%27#g" |
+            sed 's#(#%28#g' |
+            sed 's#)#%29#g' |
+            sed 's#\*#%2A#g' |
+            sed 's#\+#%2B#g' |
+            sed 's#,#%2C#g' |
+            sed 's#\/#%2F#g' |
+            sed 's#:#%3A#g' |
+            sed 's#\;#%3B#g' |
+            sed 's#=#%3D#g' |
+            sed 's#\?#%3F#g' |
+            sed 's#@#%40#g' |
+            sed 's#\[#%5B#g' |
+            sed 's#\]#%5D#g' |
+            sed 's#\^#%5E#g' |
+            sed 's#\##%23#g' |
+            sed 's#{#%7B#g' |
+            sed 's#}#%7D#g' |
+            sed 's#<#%3C#g' |
+            sed 's#>#%3E#g'
     )
     echo "${output}"
     exit
 }
 
-
-_format_output()
-{
+_format_output() {
     SEP='|'
     machine_friendly=${1}
     output=$(cat -)
     output=$(echo "${output}" | sed 's#%#%%#g')
-    if [ "${machine_friendly}" -eq 1 ]
-    then
+    if [ "${machine_friendly}" -eq 1 ]; then
         # shellcheck disable=SC2059
         printf "${output}\n"
     else
         COLUMN=$(which column)
-        if [ ${?} -ne 0 -o -z "${COLUMN}" ]
-        then
+        if [ ${?} -ne 0 -o -z "${COLUMN}" ]; then
             echo "Cannot find column utility"
             exit 1
         fi
         # shellcheck disable=SC2059
-        printf "${output}\n" | tr '\t' "${SEP}" \
-            | sed "s#${SEP}${SEP}#${SEP} ${SEP}#g" \
-            | column -xt -s "${SEP}" 2>/dev/null
+        printf "${output}\n" | tr '\t' "${SEP}" |
+            sed "s#${SEP}${SEP}#${SEP} ${SEP}#g" |
+            column -xt -s "${SEP}" 2>/dev/null
     fi
     exit
 }
 
-_generate_env_exports()
-{
+_generate_env_exports() {
     username=${1}
     password=${2}
     instance=${3}
     printf "printf 'If you see below *export* commands: please run this command in command line: eval \$(%s -L -u %s -p %s -i %s)                \\\\n';\n" \
-     "${CMDEXEC}" "${username}" "${password}" "${instance}"
+        "${CMDEXEC}" "${username}" "${password}" "${instance}"
     printf "export CQ_AUTOLOGIN_USERNAME='%s';\n" "${username}"
     printf "export CQ_AUTOLOGIN_PASSWORD='%s';\n" "${password}"
     printf "export CQ_AUTOLOGIN_INSTANCE='%s';\n" "${instance}"
     printf "printf 'Auto login exported successfully. Use now cqX commands without -u/-p/-i options.\\\\n';\n"
 }
 
-_generate_autologin_environmental_variables()
-{
+_generate_autologin_environmental_variables() {
     instance="http://localhost:5410"
     username=admin
     password=admin
-    while [ ${#} -ne 0 ]
-    do
+    while [ ${#} -ne 0 ]; do
         getopts_failed=1
-        while getopts ":${PARSE_OPTIONS}" option
-        do
+        while getopts ":${PARSE_OPTIONS}" option; do
             case "${option}" in
-                u)
-                   username=${OPTARG};;
-                p)
-                   password=${OPTARG};;
-                i)
-                   instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');;
+            u)
+                username=${OPTARG}
+                ;;
+            p)
+                password=${OPTARG}
+                ;;
+            i)
+                instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+                ;;
             esac
         done
-        if [ ${getopts_failed} -eq 1 ]
-        then
-            shift_num=$((OPTIND-1))
-            if [ ${shift_num} -le 0 ]
-            then
+        if [ ${getopts_failed} -eq 1 ]; then
+            shift_num=$((OPTIND - 1))
+            if [ ${shift_num} -le 0 ]; then
                 shift 1
             else
-                shift $((OPTIND-1))
+                shift $((OPTIND - 1))
             fi
             OPTIND=1
         fi
@@ -460,8 +427,6 @@ _generate_autologin_environmental_variables()
     _generate_env_exports "${username}" "${password}" "${instance}"
     exit 0
 }
-
-
 
 OPTIONS=":Pu:p:i:csC:H:fF:ELve-:"
 PARSE_OPTIONS="u:p:i:"
@@ -475,45 +440,52 @@ parse_mode=0
 mode="?"
 argument="?"
 
-while getopts "${OPTIONS}" option
-do
+while getopts "${OPTIONS}" option; do
     mode=${option}
     case ${option} in
-        P)
-            cq_api_output=$(_process_parse_mode "${@}");
-            printf "%s\n" "${cq_api_output}"
-            exit ${?};;
-        L)
-            cq_api_output=$(_generate_autologin_environmental_variables "${@}");
-            printf "%s\n" "${cq_api_output}"
-            exit ${?};;
-        u) username=${OPTARG}; explicit_option=1;;
-        p) password=${OPTARG}; explicit_option=1;;
-        i) instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##');
-           explicit_option=1;;
-        C) argument=${OPTARG};;
-        H) argument=${OPTARG};;
-        F) argument=${OPTARG};;
-        \?) _invalid_option ${parse_mode} "${OPTARG}";;
-        :) _missing_argument ${parse_mode} "${OPTARG}";;
+    P)
+        cq_api_output=$(_process_parse_mode "${@}")
+        printf "%s\n" "${cq_api_output}"
+        exit ${?}
+        ;;
+    L)
+        cq_api_output=$(_generate_autologin_environmental_variables "${@}")
+        printf "%s\n" "${cq_api_output}"
+        exit ${?}
+        ;;
+    u)
+        username=${OPTARG}
+        explicit_option=1
+        ;;
+    p)
+        password=${OPTARG}
+        explicit_option=1
+        ;;
+    i)
+        instance=$(echo "${OPTARG}" | ${SEDX} 's#[/]+$##')
+        explicit_option=1
+        ;;
+    C) argument=${OPTARG} ;;
+    H) argument=${OPTARG} ;;
+    F) argument=${OPTARG} ;;
+    \?) _invalid_option ${parse_mode} "${OPTARG}" ;;
+    :) _missing_argument ${parse_mode} "${OPTARG}" ;;
     esac
 done
 
-shift $((OPTIND-1))
-
+shift $((OPTIND - 1))
 
 # cqapi normal modes
 case "${mode}" in
-  c) _curlpath;;
-  s) _sedpath;;
-  C) _curlcode "${argument}";;
-  H) _httpcode "${argument}";;
-  E) _java_exception;;
-  e) _java_exception_detection;;
-  v) _version;;
-  f) _urlencode;;
-  F) _format_output "${argument}";;
+c) _curlpath ;;
+s) _sedpath ;;
+C) _curlcode "${argument}" ;;
+H) _httpcode "${argument}" ;;
+E) _java_exception ;;
+e) _java_exception_detection ;;
+v) _version ;;
+f) _urlencode ;;
+F) _format_output "${argument}" ;;
 esac
 
 _usage
-
