@@ -14,7 +14,7 @@
 # limitations under the License.
 Summary: CQ Unix Toolkit
 Name: CQ-Unix-Toolkit
-Version: 1.1.0
+Version: 1.1.2
 Release: 0
 License: GPL
 Group: Tools/CQ
@@ -24,7 +24,7 @@ Vendor: Wunderman Thompson Technology
 Packager: Jakub Wadolowski <jakub.wadolowski@wundermanthompson.com>
 BuildArch: noarch
 
-# NOTE! Before building place v1.1.0.tar.gz file from above URL in SOURCES
+# NOTE! Before building place vX.Y.Z.tar.gz file from above URL in SOURCES
 # rpmbuild directory.
 
 %description
@@ -42,7 +42,7 @@ platform such as:
 
 %prep
 echo Building %{name}-%{version}-%{release}
-%setup -n CQ-Unix-Toolkit-1.1.0
+%setup -n CQ-Unix-Toolkit-1.1.2
 
 %build
 mkdir -p %buildroot/%{_bindir}/
