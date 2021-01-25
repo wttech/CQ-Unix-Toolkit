@@ -13,9 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
-    cat << EOT
+_usage() {
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...] configuration-id
 Delete specified OSGI configuration from instance passed as -i URL option.
 Please be cautious before deletion unknown configuration. This may harm your
@@ -38,11 +37,10 @@ Options:
   -i                    use specified instance URL to connect
 
 EOT
-exit 1
+    exit 1
 }
 
-_delete_configuration()
-{
+_delete_configuration() {
     CONFIGMGR="/system/console/configMgr/"
     original_config_id=$(echo "${config_id}" | sed 's#%20# #g')
 
@@ -64,37 +62,31 @@ _delete_configuration()
 
     EXITCODE=${?}
     "${API}" -C $EXITCODE
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | head -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
     exit
 }
 
-
 CWD=$(dirname "${0}")
 API="$CWD/cqapi"
 "${API}" -P >/dev/null 2>/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
-
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -106,17 +98,20 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
 while getopts ":${apigetopts}" opt; do
-  case "${opt}" in
-     \?)
-      echo "Invalid option: -${OPTARG}" >&2; _usage;;
-     :)
-      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
-  esac
+    case "${opt}" in
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
+    esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -ne 1 -o "${passed}" -eq 0 ]
-then
+if [ ${#} -ne 1 -o "${passed}" -eq 0 ]; then
     _usage
 fi
 
@@ -125,4 +120,3 @@ config_id=$(echo "${config_id}" | sed 's# #%20#g')
 AUTH="${username}:${password}"
 
 _delete_configuration
-

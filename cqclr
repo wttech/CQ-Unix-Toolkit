@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Clear cache for specified dispatcher (-i option). By default clear the whole
@@ -47,25 +46,22 @@ Options:
                         (by default the whole cache so: '/' node)
 
 EOT
-exit 1
+    exit 1
 }
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
-
 
 # API common options
 cmdapi=$("${API}" -P "${@}")
@@ -77,26 +73,29 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 path="/"
 vhost=""
-while getopts ":r:v:${apigetopts}" opt
-do
+while getopts ":r:v:${apigetopts}" opt; do
     case ${opt} in
-        r)
-            path="${OPTARG}";;
-        v)
-            vhost="${OPTARG}";;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    r)
+        path="${OPTARG}"
+        ;;
+    v)
+        vhost="${OPTARG}"
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -ge 1 -o "${passed}" -eq 0 ]
-then
+if [ ${#} -ge 1 -o "${passed}" -eq 0 ]; then
     _usage
 fi
-
 
 URL="${instance}/dispatcher/invalidate.cache"
 REFERER=${URL}
@@ -106,8 +105,7 @@ VHOSTHEADER=""
 echo "Clearing dispatcher cache:"
 echo "                     path: ${path}"
 
-if [ "${vhost}" != "" ]
-then
+if [ "${vhost}" != "" ]; then
     VHOSTHEADER="Host: ${vhost}"
     echo "           requested host: ${vhost}"
 fi
@@ -116,25 +114,23 @@ echo "           connection URL: ${instance}"
 echo ""
 
 STATUS=$(${CURLBIN} -s -X POST \
-        --output /dev/null \
-        --write-out %{http_code} \
-        -u "${AUTH}" \
-        -H "CQ-Action: Delete" \
-        -H "CQ-Handle: ${path}" \
-        -H "Content-Length: 0" \
-        -H "${VHOSTHEADER}" \
-        -H "${REFERERHEADER}" \
-        "${URL}")
+    --output /dev/null \
+    --write-out %{http_code} \
+    -u "${AUTH}" \
+    -H "CQ-Action: Delete" \
+    -H "CQ-Handle: ${path}" \
+    -H "Content-Length: 0" \
+    -H "${VHOSTHEADER}" \
+    -H "${REFERERHEADER}" \
+    "${URL}")
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     exit ${EXITCODE}
 fi
 "${API}" -H "${STATUS}"
 EXITCODE=${?}
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     exit ${EXITCODE}
 fi
 

@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...] URL
 Download specified file or resource using full URL specification. Normally
@@ -36,21 +35,19 @@ Options:
 
 
 EOT
-exit 1
+    exit 1
 }
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -62,21 +59,24 @@ password=$(echo "${cmdapi}" | cut -f2)
 apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 # Custom arguments
-while getopts ":o:${apigetopts}" opt
-do
+while getopts ":o:${apigetopts}" opt; do
     case "${opt}" in
-        o)
-            outfile="${OPTARG}";;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    o)
+        outfile="${OPTARG}"
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -ne 1 ];
-then
+if [ ${#} -ne 1 ]; then
     _usage
 fi
 URL=${1}
@@ -84,11 +84,9 @@ REFERER="${URL}"
 AUTH="${username}:${password}"
 REFERERHEADER="Referer: ${REFERER}"
 
-if [ -z "${outfile}" ]
-then
+if [ -z "${outfile}" ]; then
     outfile=$(basename "${URL}")
 fi
-
 
 STATUS=$(${CURLBIN} \
     -s \
@@ -106,14 +104,11 @@ STATUSCODE=$(echo "${STATUS}" | tail -n 1)
 "${API}" -H "${STATUSCODE}"
 
 EXITCODE2=${?}
-if [ ${EXITCODE} -eq 0 -a ${EXITCODE} -eq 0 ]
-then
-    if [ ! -z "${outfile}" ]
-    then
+if [ ${EXITCODE} -eq 0 -a ${EXITCODE} -eq 0 ]; then
+    if [ ! -z "${outfile}" ]; then
         fullfile=$(readlink -f "${outfile}")
         echo "Resource copied to: '${fullfile}'"
     fi
 fi
 
 exit $((EXITCODE + EXITCODE2))
-

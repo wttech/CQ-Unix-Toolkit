@@ -13,9 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
-    cat << EOT
+_usage() {
+    cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Return CQ instance list of OSGI configurations using instance URL.
 
@@ -32,11 +31,10 @@ Options:
   -i                    use specified instance URL to connect
 
 EOT
-exit 1
+    exit 1
 }
 
-_list_configurations()
-{
+_list_configurations() {
     FILEPATH="/system/console/components.json"
     URL="${instance}${FILEPATH}"
     REFERERHEADER="Referer: ${URL}"
@@ -50,21 +48,19 @@ _list_configurations()
 
     EXITCODE=${?}
     "${API}" -C "${EXITCODE}"
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
     CONFIG_REGEXP='"configurable":"([^"]+)"'
     STATUS=$(echo "${STATUS}" | ${SEDX} 's#[0-9]{3}$##')
 
-    CLEARED_STATUS=$(echo "${STATUS}" | ${SEDX} 's#\{#\n{#g' | \
+    CLEARED_STATUS=$(echo "${STATUS}" | ${SEDX} 's#\{#\n{#g' |
         grep -E -o "${CONFIG_REGEXP}" | ${SEDX} "s#${CONFIG_REGEXP}#\1#")
 
     FILEPATH="/system/console/config/Configurations.nfo"
@@ -80,41 +76,36 @@ _list_configurations()
 
     EXITCODE=${?}
     "${API}" -C ${EXITCODE}
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         exit ${EXITCODE}
     fi
     STATUSCODE=$(echo "${STATUS}" | grep -o -E '[0-9]{3}' | tail -n 1)
     "${API}" -H "${STATUSCODE}"
     EXITCODE2=$?
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         exit ${EXITCODE2}
     fi
 
     STATUS=$(echo "${STATUS}" | sed '$d')
-    CLEARED_STATUS2=$(echo "${STATUS}" | grep '^PID' | ${SEDX} 's#&nbsp;# #g' \
-        | ${SEDX} 's#<br/>##g' | cut -f2- -d '=' \
-        | ${SEDX} 's#^[ ]+##; s#[ ]+$##')
+    CLEARED_STATUS2=$(echo "${STATUS}" | grep '^PID' | ${SEDX} 's#&nbsp;# #g' |
+        ${SEDX} 's#<br/>##g' | cut -f2- -d '=' |
+        ${SEDX} 's#^[ ]+##; s#[ ]+$##')
 
     printf "%s\n%s" "${CLEARED_STATUS}" "${CLEARED_STATUS2}" | sort | uniq
     exit 0
 }
 
-
 CWD=$(dirname "${0}")
 API="$CWD/cqapi"
 "${API}" -P >/dev/null 2>/dev/null
 
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -130,21 +121,23 @@ passed=$(echo "${cmdapi}" | cut -f4)
 apigetopts=$(echo "${cmdapi}" | cut -f5)
 
 while getopts ":${apigetopts}" opt; do
-  case "${opt}" in
-     \?)
-      echo "Invalid option: -${OPTARG}" >&2; _usage;;
-     :)
-      echo "Option -${OPTARG} requires an argument." >&2; _usage;;
-  esac
+    case "${opt}" in
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
+    esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -gt 0 -o "${passed}" -eq 0 ]
-then
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]; then
     _usage
 fi
 
 AUTH="${username}:${password}"
 
 _list_configurations
-

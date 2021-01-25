@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...] package-name
 Removes already uploaded CRX package by group id and name in CRX Package
@@ -36,21 +35,19 @@ Options:
 
 
 EOT
-exit 1
+    exit 1
 }
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -66,31 +63,33 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 # Custom arguments
 while getopts ":g:${apigetopts}" opt; do
     case ${opt} in
-        g)
-            group="${OPTARG}";;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    g)
+        group="${OPTARG}"
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -gt 1 -o "${passed}" -eq 0 ];
-then
+if [ ${#} -gt 1 -o "${passed}" -eq 0 ]; then
     _usage
 fi
 name=${1}
 
-if [ -z "${group}" ]
-then
+if [ -z "${group}" ]; then
     group_switch=""
     group_arg=""
 else
     group_switch="-F"
     group_arg="group=${group}"
 fi
-
 
 REFERER="${instance}/crx/packmgr"
 AUTH="${username}:${password}"
@@ -106,7 +105,7 @@ STATUS=$(${CURLBIN} \
     ${group_switch} "${group_arg}" \
     -F "name=${name}" \
     "${instance}${FILEPATH}")
-    
+
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 STATUSCODE=$(echo "${STATUS}" | tail -n 1)
@@ -116,4 +115,3 @@ STATUS=$(echo "${STATUS}" | sed '$d')
 EXITCODE2=${?}
 echo "${STATUS}"
 exit $((EXITCODE + EXITCODE2))
-

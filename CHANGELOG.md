@@ -10,7 +10,7 @@
 - [new tool] local CRX package manipulations - `cqrepkg`
 - [new tool] package rollbacks - `cqrev`
 - [new tool] CRX package snapshot management - `cqsnp`
-- Shellcheck fixes across all scripts
+- all scripts re-formatted with Shellcheck
 
 ## Bugfixes
 

@@ -13,8 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-_usage()
-{
+_usage() {
     cat <<EOT
 Usage: $(basename "${0}") [OPTION...]
 Invoke DataStore compaction/garbage collection operation for specified CQ
@@ -40,21 +39,19 @@ Options:
   -f                    stops current GC session
 
 EOT
-exit 1
+    exit 1
 }
 
 CWD=$(dirname "${0}")
 API="${CWD}/cqapi"
 "${API}" -P >/dev/null
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find or test cqapi command" >&2
     exit 1
 fi
 
 CURLBIN=$("${API}" -c)
-if [ ${?} -ne 0 ]
-then
+if [ ${?} -ne 0 ]; then
     echo "Fatal: cannot find curl" >&2
     exit 1
 fi
@@ -70,26 +67,29 @@ apigetopts=$(echo "${cmdapi}" | cut -f5)
 # Custom arguments
 delay_ms=15
 force_stop=0
-while getopts ":d:f${apigetopts}" opt
-do
+while getopts ":d:f${apigetopts}" opt; do
     case ${opt} in
-        d)
-            delay_ms=$(echo "${OPTARG}" | tr -cd '[:digit:]');;
-        f)
-            force_stop=1;;
-        \?)
-            echo "Invalid option: -${OPTARG}" >&2; _usage;;
-        :)
-            echo "Option -${OPTARG} requires an argument." >&2; _usage;;
+    d)
+        delay_ms=$(echo "${OPTARG}" | tr -cd '[:digit:]')
+        ;;
+    f)
+        force_stop=1
+        ;;
+    \?)
+        echo "Invalid option: -${OPTARG}" >&2
+        _usage
+        ;;
+    :)
+        echo "Option -${OPTARG} requires an argument." >&2
+        _usage
+        ;;
     esac
 done
-shift $((OPTIND-1))
+shift $((OPTIND - 1))
 
-if [ ${#} -gt 0 -o "${passed}" -eq 0 ];
-then
+if [ ${#} -gt 0 -o "${passed}" -eq 0 ]; then
     _usage
 fi
-
 
 REFERER="${instance}/system/console/jmx/com.adobe.granite%3Atype%3DRepository"
 AUTH="${username}:${password}"
@@ -104,22 +104,20 @@ REFERERHEADER="Referer: ${REFERER}"
 ECHON=$(which echo)
 [ ${?} -ne 0 -o -z "${ECHON}" ] && ECHON="echo" || ECHON="${ECHON} -n "
 # Stopping GC sleeping phase delay
-if [ ${force_stop} -eq 1 ]
-then
+if [ ${force_stop} -eq 1 ]; then
     ${ECHON} "Stopping DataStore garbage collection (if working)..."
     STATUS=$(${CURLBIN} \
-           -s \
-           --write-out "%{http_code}" \
-           -u "${AUTH}" \
-           -H "${REFERERHEADER}" \
-           -X POST \
-           "${instance}${FILEPATH3}")
+        -s \
+        --write-out "%{http_code}" \
+        -u "${AUTH}" \
+        -H "${REFERERHEADER}" \
+        -X POST \
+        "${instance}${FILEPATH3}")
 
     EXITCODE=${?}
     "${API}" -C ${EXITCODE}
 
-    if [ ${EXITCODE} -ne 0 ]
-    then
+    if [ ${EXITCODE} -ne 0 ]; then
         echo "Cannot stop current garbage collection." >&2
         exit ${EXITCODE}
     fi
@@ -130,14 +128,12 @@ then
     "${API}" -H "${STATUSCODE}"
 
     EXITCODE2=${?}
-    if [ ${EXITCODE2} -ne 0 ]
-    then
+    if [ ${EXITCODE2} -ne 0 ]; then
         echo "Cannot stop current garbage collection." >&2
         exit ${EXITCODE2}
     fi
     sleep 5s
 fi
-
 
 # Setting GC sleeping phase delay
 ${ECHON} "Setting DataStore garbage collection sleeping phase..."
@@ -152,8 +148,7 @@ STATUS=$(${CURLBIN} \
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     echo "Cannot set garbage collection sleeping phase." >&2
     exit ${EXITCODE}
 fi
@@ -163,8 +158,7 @@ STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/;')
 echo "${STATUS}"
 "${API}" -H "${STATUSCODE}"
 EXITCODE2=${?}
-if [ ${EXITCODE2} -ne 0 ]
-then
+if [ ${EXITCODE2} -ne 0 ]; then
     echo "Cannot set garbage collection sleeping phase." >&2
     exit ${EXITCODE2}
 fi
@@ -182,8 +176,7 @@ STATUS=$(${CURLBIN} \
 EXITCODE=${?}
 "${API}" -C ${EXITCODE}
 
-if [ ${EXITCODE} -ne 0 ]
-then
+if [ ${EXITCODE} -ne 0 ]; then
     echo "Cannot invoke garbage collection." >&2
     exit ${EXITCODE}
 fi
@@ -191,17 +184,14 @@ fi
 STATUSCODE=$(echo "${STATUS}" | tail -n 1)
 STATUS=$(echo "${STATUS}" | sed '$d;s/(null)//;s/^$/DONE/')
 is_exception=$(echo "${STATUS}" | "${API}" -e)
-if [ "${is_exception}" -ge 0 ]
-then
+if [ "${is_exception}" -ge 0 ]; then
     STATUS=$(echo "${STATUS}" | "${API}" -E)
 fi
 echo "${STATUS}"
 
 "${API}" -H "${STATUSCODE}"
 EXITCODE2=${?}
-if [ ${EXITCODE2} -ne 0 ]
-then
+if [ ${EXITCODE2} -ne 0 ]; then
     echo "Cannot invoke garbage collection." >&2
     exit ${EXITCODE2}
 fi
-
