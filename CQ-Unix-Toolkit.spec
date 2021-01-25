@@ -14,11 +14,11 @@
 # limitations under the License.
 Summary: CQ Unix Toolkit
 Name: CQ-Unix-Toolkit
-Version: 1.1.2
+Version: 1.2.0
 Release: 0
 License: GPL
 Group: Tools/CQ
-Source: https://github.com/wttech/CQ-Unix-Toolkit/archive/v1.1.0.tar.gz
+Source: https://github.com/wttech/CQ-Unix-Toolkit/archive/v1.2.0.tar.gz
 URL: https://github.com/wttech/CQ-Unix-Toolkit
 Vendor: Wunderman Thompson Technology
 Packager: Jakub Wadolowski <jakub.wadolowski@wundermanthompson.com>
@@ -42,7 +42,7 @@ platform such as:
 
 %prep
 echo Building %{name}-%{version}-%{release}
-%setup -n CQ-Unix-Toolkit-1.1.2
+%setup -n CQ-Unix-Toolkit-1.2.0
 
 %build
 mkdir -p %buildroot/%{_bindir}/
